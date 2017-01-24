@@ -1627,7 +1627,7 @@ done:
 /***********************************************************************
  *              UpdateLayeredWindow   (MACDRV.@)
  */
-void macdrv_UpdateLayeredWindow(HWND hwnd, UINT flags)
+void macdrv_UpdateLayeredWindow(HWND hwnd, const BLENDFUNCTION *blend, UINT flags)
 {
     struct macdrv_win_data *data;
 
