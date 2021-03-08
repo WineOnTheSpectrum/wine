@@ -3353,6 +3353,18 @@ static void dump_get_linux_sync_device_reply( const struct get_linux_sync_device
     fprintf( stderr, " handle=%04x", req->handle );
 }
 
+static void dump_get_linux_sync_obj_request( const struct get_linux_sync_obj_request *req )
+{
+    fprintf( stderr, " handle=%04x", req->handle );
+}
+
+static void dump_get_linux_sync_obj_reply( const struct get_linux_sync_obj_reply *req )
+{
+    fprintf( stderr, " handle=%04x", req->handle );
+    fprintf( stderr, ", type=%d", req->type );
+    fprintf( stderr, ", access=%08x", req->access );
+}
+
 typedef void (*dump_func)( const void *req );
 
 static const dump_func req_dumpers[REQ_NB_REQUESTS] =
@@ -3650,6 +3662,7 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] =
     (dump_func)dump_get_next_thread_request,
     (dump_func)dump_set_keyboard_repeat_request,
     (dump_func)dump_get_linux_sync_device_request,
+    (dump_func)dump_get_linux_sync_obj_request,
 };
 
 static const dump_func reply_dumpers[REQ_NB_REQUESTS] =
@@ -3947,6 +3960,7 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] =
     (dump_func)dump_get_next_thread_reply,
     (dump_func)dump_set_keyboard_repeat_reply,
     (dump_func)dump_get_linux_sync_device_reply,
+    (dump_func)dump_get_linux_sync_obj_reply,
 };
 
 static const char * const req_names[REQ_NB_REQUESTS] =
@@ -4244,6 +4258,7 @@ static const char * const req_names[REQ_NB_REQUESTS] =
     "get_next_thread",
     "set_keyboard_repeat",
     "get_linux_sync_device",
+    "get_linux_sync_obj",
 };
 
 static const struct
