@@ -248,6 +248,7 @@ struct inproc_sync *create_inproc_event( enum inproc_sync_type type, int signale
     switch (type)
     {
     case INPROC_SYNC_AUTO_EVENT:
+    case INPROC_SYNC_AUTO_SERVER:
         args.manual = 0;
         break;
 
