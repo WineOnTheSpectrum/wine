@@ -253,6 +253,7 @@ struct inproc_sync *create_inproc_event( enum inproc_sync_type type, int signale
 
     case INPROC_SYNC_MANUAL_EVENT:
     case INPROC_SYNC_MANUAL_SERVER:
+    case INPROC_SYNC_QUEUE:
         args.manual = 1;
         break;
 
