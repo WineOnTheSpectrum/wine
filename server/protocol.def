@@ -4080,6 +4080,12 @@ struct handle_info
     int enable;                /* previous state of auto-repeat enable */
 @END
 
+enum inproc_sync_type
+{
+    INPROC_SYNC_AUTO_EVENT,
+    INPROC_SYNC_MANUAL_EVENT,
+};
+
 
 /* Obtain a handle to the ntsync device object */
 @REQ(get_linux_sync_device)

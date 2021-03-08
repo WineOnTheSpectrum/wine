@@ -5882,6 +5882,12 @@ struct set_keyboard_repeat_reply
     char __pad_12[4];
 };
 
+enum inproc_sync_type
+{
+    INPROC_SYNC_AUTO_EVENT,
+    INPROC_SYNC_MANUAL_EVENT,
+};
+
 
 
 struct get_linux_sync_device_request
@@ -6792,6 +6798,6 @@ union generic_reply
     struct get_linux_sync_device_reply get_linux_sync_device_reply;
 };
 
-#define SERVER_PROTOCOL_VERSION 856
+#define SERVER_PROTOCOL_VERSION 857
 
 #endif /* __WINE_WINE_SERVER_PROTOCOL_H */
