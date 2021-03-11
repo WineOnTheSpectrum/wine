@@ -4084,6 +4084,7 @@ enum inproc_sync_type
 {
     INPROC_SYNC_AUTO_EVENT,
     INPROC_SYNC_MANUAL_EVENT,
+    INPROC_SYNC_SEMAPHORE,
 };
 
 
