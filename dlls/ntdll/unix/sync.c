@@ -364,6 +364,12 @@ static int get_linux_sync_device(void)
  * it closes the handle; when all handles are closed, the server deletes the
  * in-process synchronization object.
  *
+ * We also need this for signal-and-wait. The signal and wait operations aren't
+ * atomic, but we can't perform the signal and then return STATUS_INVALID_HANDLE
+ * for the wait—we need to either do both operations or neither. That means we
+ * need to grab references to both objects, and prevent them from being
+ * destroyed before we're done with them.
+ *
  * We want lookup of objects from the cache to be very fast; ideally, it should
  * be lock-free. We achieve this by using atomic modifications to "refcount",
  * and guaranteeing that all other fields are valid and correct *as long as*
@@ -405,23 +411,159 @@ struct inproc_sync_obj
     int fd, needs_close;
 };
 
-static void release_inproc_sync_obj( struct inproc_sync_obj *obj )
+static void release_cached_inproc_sync_obj( struct inproc_sync_cache_entry *cache )
 {
-    /* save the handle now; as soon as the refcount hits 0 we cannot
+    /* save the handle and fd now; as soon as the refcount hits 0 we cannot
      * access the cache anymore */
-    HANDLE handle = wine_server_ptr_handle( obj->cache->handle );
-    LONG refcount;
+    HANDLE handle = wine_server_ptr_handle( cache->handle );
+    LONG refcount = InterlockedDecrement( &cache->refcount );
 
-    if (obj->needs_close) close( obj->fd );
-
-    refcount = InterlockedDecrement( &obj->cache->refcount );
     assert( refcount >= 0 );
 
     if (!refcount)
     {
-        NTSTATUS ret = NtClose( handle );
+        NTSTATUS ret;
+        int fd;
+
+        /* we can't call NtClose here as we may be inside fd_cache_mutex */
+        fd = remove_fd_from_cache( handle );
+        if (fd >= 0) close( fd );
+        SERVER_START_REQ( close_handle )
+        {
+            req->handle = wine_server_obj_handle( handle );
+            ret = wine_server_call( req );
+        }
+        SERVER_END_REQ;
+
         assert( !ret );
     }
+}
+
+static void release_inproc_sync_obj( struct inproc_sync_obj *obj )
+{
+    if (obj->needs_close) close( obj->fd );
+    release_cached_inproc_sync_obj( obj->cache );
+}
+
+
+#define INPROC_SYNC_CACHE_BLOCK_SIZE  (65536 / sizeof(struct inproc_sync_cache_entry))
+#define INPROC_SYNC_CACHE_ENTRIES     128
+
+static struct inproc_sync_cache_entry *inproc_sync_cache[INPROC_SYNC_CACHE_ENTRIES];
+static struct inproc_sync_cache_entry inproc_sync_cache_initial_block[INPROC_SYNC_CACHE_BLOCK_SIZE];
+
+static inline unsigned int inproc_sync_handle_to_index( HANDLE handle, unsigned int *entry )
+{
+    unsigned int idx = (wine_server_obj_handle(handle) >> 2) - 1;
+    *entry = idx / INPROC_SYNC_CACHE_BLOCK_SIZE;
+    return idx % INPROC_SYNC_CACHE_BLOCK_SIZE;
+}
+
+
+static struct inproc_sync_cache_entry *cache_inproc_sync_obj( HANDLE handle, obj_handle_t inproc_sync,
+                                                              enum inproc_sync_type type, unsigned int access )
+{
+    unsigned int entry, idx = inproc_sync_handle_to_index( handle, &entry );
+    struct inproc_sync_cache_entry *cache;
+    sigset_t sigset;
+    int refcount;
+
+    /* don't cache pseudo-handles; waiting on them is pointless anyway */
+    if ((ULONG)(ULONG_PTR)handle > 0xfffffffa)
+        return FALSE;
+
+    if (entry >= INPROC_SYNC_CACHE_ENTRIES)
+    {
+        FIXME( "too many allocated handles, not caching %p\n", handle );
+        return NULL;
+    }
+
+    if (!inproc_sync_cache[entry])  /* do we need to allocate a new block of entries? */
+    {
+        if (!entry) inproc_sync_cache[0] = inproc_sync_cache_initial_block;
+        else
+        {
+            static const size_t size = INPROC_SYNC_CACHE_BLOCK_SIZE * sizeof(struct inproc_sync_cache_entry);
+            void *ptr = anon_mmap_alloc( size, PROT_READ | PROT_WRITE );
+            if (ptr == MAP_FAILED) return NULL;
+            if (InterlockedCompareExchangePointer( (void **)&inproc_sync_cache[entry], ptr, NULL ))
+                munmap( ptr, size ); /* someone beat us to it */
+        }
+    }
+
+    cache = &inproc_sync_cache[entry][idx];
+
+    /* Hold fd_cache_mutex instead of a separate mutex, to prevent the same
+     * race between this function and NtClose. That is, prevent the object from
+     * being cached again between close_inproc_sync_obj() and close_handle. */
+    server_enter_uninterrupted_section( &fd_cache_mutex, &sigset );
+
+    if (InterlockedCompareExchange( &cache->refcount, 0, 0 ))
+    {
+        /* We lost the race with another thread trying to cache this object, or
+         * the handle is currently being used for another object (i.e. it was
+         * closed and then reused). We have no way of knowing which, and in the
+         * latter case we can't cache this object until the old one is
+         * completely destroyed, so always return failure. */
+        server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );
+        return NULL;
+    }
+
+    cache->handle = inproc_sync;
+    cache->type = type;
+    cache->access = access;
+    cache->closed = false;
+    /* Make sure we set the other members before the refcount; this store needs
+     * release semantics [paired with the load in get_cached_inproc_sync_obj()].
+     * Set the refcount to 2 (one for the handle, one for the caller). */
+    refcount = InterlockedExchange( &cache->refcount, 2 );
+    assert( !refcount );
+
+    server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );
+
+    return cache;
+}
+
+
+/* returns the previous value */
+static inline LONG interlocked_inc_if_nonzero( LONG *dest )
+{
+    LONG val, tmp;
+    for (val = *dest;; val = tmp)
+    {
+        if (!val || (tmp = InterlockedCompareExchange( dest, val + 1, val )) == val)
+            break;
+    }
+    return val;
+}
+
+
+static struct inproc_sync_cache_entry *get_cached_inproc_sync_obj( HANDLE handle )
+{
+    unsigned int entry, idx = inproc_sync_handle_to_index( handle, &entry );
+    struct inproc_sync_cache_entry *cache;
+
+    if (entry >= INPROC_SYNC_CACHE_ENTRIES || !inproc_sync_cache[entry])
+        return NULL;
+
+    cache = &inproc_sync_cache[entry][idx];
+
+    /* this load needs acquire semantics [paired with the store in
+     * cache_inproc_sync_obj()] */
+    if (!interlocked_inc_if_nonzero( &cache->refcount ))
+        return NULL;
+
+    if (cache->closed)
+    {
+        /* The object is still being used, but "handle" has been closed. The
+         * handle value might have been reused for another object in the
+         * meantime, in which case we have to report that valid object, so
+         * force the caller to check the server. */
+        release_cached_inproc_sync_obj( cache );
+        return NULL;
+    }
+
+    return cache;
 }
 
 
@@ -437,7 +579,10 @@ static BOOL inproc_sync_types_match( enum inproc_sync_type a, enum inproc_sync_t
 static NTSTATUS get_inproc_sync_obj( HANDLE handle, enum inproc_sync_type desired_type,
                                      ACCESS_MASK desired_access, struct inproc_sync_obj *obj )
 {
-    struct inproc_sync_cache_entry *cache = &obj->stack_cache;
+    struct inproc_sync_cache_entry *cache;
+    obj_handle_t inproc_sync_handle;
+    enum inproc_sync_type type;
+    unsigned int access;
     NTSTATUS ret;
 
     /* We don't need the device right now, but if we can't access it, that
@@ -445,23 +590,35 @@ static NTSTATUS get_inproc_sync_obj( HANDLE handle, enum inproc_sync_type desire
     if (get_linux_sync_device() < 0)
         return STATUS_NOT_IMPLEMENTED;
 
-    obj->cache = cache;
-
-    SERVER_START_REQ( get_linux_sync_obj )
+    if (!(cache = get_cached_inproc_sync_obj( handle )))
     {
-        req->handle = wine_server_obj_handle( handle );
-        if (!(ret = wine_server_call( req )))
+        /* try to retrieve it from the server */
+        SERVER_START_REQ( get_linux_sync_obj )
         {
-            cache->handle = reply->handle;
-            cache->access = reply->access;
-            cache->type = reply->type;
+            req->handle = wine_server_obj_handle( handle );
+            if (!(ret = wine_server_call( req )))
+            {
+                inproc_sync_handle = reply->handle;
+                access = reply->access;
+                type = reply->type;
+            }
+        }
+        SERVER_END_REQ;
+
+        if (ret) return ret;
+
+        if (!(cache = cache_inproc_sync_obj( handle, inproc_sync_handle, type, access )))
+        {
+            cache = &obj->stack_cache;
+            cache->handle = inproc_sync_handle;
+            cache->type = type;
+            cache->access = access;
+            cache->closed = false;
             cache->refcount = 1;
-            cache->closed = true;
         }
     }
-    SERVER_END_REQ;
 
-    if (ret) return ret;
+    obj->cache = cache;
 
     if ((ret = server_get_unix_fd( wine_server_ptr_handle( cache->handle ),
                                    0, &obj->fd, &obj->needs_close, NULL, NULL )))
@@ -480,6 +637,21 @@ static NTSTATUS get_inproc_sync_obj( HANDLE handle, enum inproc_sync_type desire
     }
 
     return STATUS_SUCCESS;
+}
+
+
+/* caller must hold fd_cache_mutex */
+void close_inproc_sync_obj( HANDLE handle )
+{
+    struct inproc_sync_cache_entry *cache = get_cached_inproc_sync_obj( handle );
+
+    if (cache)
+    {
+        cache->closed = true;
+        /* once for the reference we just grabbed, and once for the handle */
+        release_cached_inproc_sync_obj( cache );
+        release_cached_inproc_sync_obj( cache );
+    }
 }
 
 
@@ -951,6 +1123,10 @@ static NTSTATUS inproc_signal_and_wait( HANDLE signal, HANDLE wait,
 }
 
 #else
+
+void close_inproc_sync_obj( HANDLE handle )
+{
+}
 
 static NTSTATUS inproc_release_semaphore( HANDLE handle, ULONG count, ULONG *prev_count )
 {

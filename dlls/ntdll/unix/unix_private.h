@@ -207,6 +207,8 @@ extern NTSTATUS load_start_exe( WCHAR **image, void **module );
 extern ULONG_PTR redirect_arm64ec_rva( void *module, ULONG_PTR rva, const IMAGE_ARM64EC_METADATA *metadata );
 extern void start_server( BOOL debug );
 
+extern pthread_mutex_t fd_cache_mutex;
+
 extern unsigned int server_call_unlocked( void *req_ptr );
 extern void server_enter_uninterrupted_section( pthread_mutex_t *mutex, sigset_t *sigset );
 extern void server_leave_uninterrupted_section( pthread_mutex_t *mutex, sigset_t *sigset );
@@ -219,6 +221,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const union apc_ca
                                               union apc_result *result );
 extern int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
                                int *needs_close, enum server_fd_type *type, unsigned int *options );
+extern int remove_fd_from_cache( HANDLE handle );
 extern void wine_server_send_fd( int fd );
 extern void process_exit_wrapper( int status ) DECLSPEC_NORETURN;
 extern size_t server_init_process(void);
@@ -380,6 +383,8 @@ extern NTSTATUS wow64_wine_spawnvp( void *args );
 #endif
 
 extern void dbg_init(void);
+
+extern void close_inproc_sync_obj( HANDLE handle );
 
 extern NTSTATUS call_user_apc_dispatcher( CONTEXT *context_ptr, ULONG_PTR arg1, ULONG_PTR arg2, ULONG_PTR arg3,
                                           PNTAPCFUNC func, NTSTATUS status );
