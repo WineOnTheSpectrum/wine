@@ -5948,6 +5948,20 @@ struct unselect_inproc_queue_reply
 };
 
 
+
+struct get_inproc_alert_event_request
+{
+    struct request_header __header;
+    char __pad_12[4];
+};
+struct get_inproc_alert_event_reply
+{
+    struct reply_header __header;
+    obj_handle_t handle;
+    char __pad_12[4];
+};
+
+
 enum request
 {
     REQ_new_process,
@@ -6246,6 +6260,7 @@ enum request
     REQ_get_linux_sync_obj,
     REQ_select_inproc_queue,
     REQ_unselect_inproc_queue,
+    REQ_get_inproc_alert_event,
     REQ_NB_REQUESTS
 };
 
@@ -6549,6 +6564,7 @@ union generic_request
     struct get_linux_sync_obj_request get_linux_sync_obj_request;
     struct select_inproc_queue_request select_inproc_queue_request;
     struct unselect_inproc_queue_request unselect_inproc_queue_request;
+    struct get_inproc_alert_event_request get_inproc_alert_event_request;
 };
 union generic_reply
 {
@@ -6850,8 +6866,9 @@ union generic_reply
     struct get_linux_sync_obj_reply get_linux_sync_obj_reply;
     struct select_inproc_queue_reply select_inproc_queue_reply;
     struct unselect_inproc_queue_reply unselect_inproc_queue_reply;
+    struct get_inproc_alert_event_reply get_inproc_alert_event_reply;
 };
 
-#define SERVER_PROTOCOL_VERSION 864
+#define SERVER_PROTOCOL_VERSION 865
 
 #endif /* __WINE_WINE_SERVER_PROTOCOL_H */
