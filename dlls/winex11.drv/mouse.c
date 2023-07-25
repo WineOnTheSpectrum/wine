@@ -51,6 +51,7 @@ MAKE_FUNCPTR(XcursorLibraryLoadCursor);
 #define OEMRESOURCE
 
 #include "x11drv.h"
+#include "xfixes.h"
 #include "winreg.h"
 #include "wine/server.h"
 #include "wine/debug.h"
@@ -1400,8 +1401,10 @@ BOOL X11DRV_SetCursorPos( INT x, INT y )
         return FALSE;
     }
 
+    if (use_xfixes) pXFixesHideCursor( data->display, root_window );
     XWarpPointer( data->display, root_window, root_window, 0, 0, 0, 0, pos.x, pos.y );
     data->warp_serial = NextRequest( data->display );
+    if (use_xfixes) pXFixesShowCursor( data->display, root_window );
 
     if (!clipping_cursor)
         XUngrabPointer( data->display, CurrentTime );
