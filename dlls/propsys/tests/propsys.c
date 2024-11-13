@@ -457,7 +457,6 @@ static void test_PSRefreshPropertySchema(void)
     HRESULT ret;
 
     ret = PSRefreshPropertySchema();
-    todo_wine
     ok(ret == CO_E_NOTINITIALIZED,
        "Expected PSRefreshPropertySchema to return CO_E_NOTINITIALIZED, got 0x%08lx\n", ret);
 
@@ -2682,7 +2681,7 @@ static void test_PropertySystem(void)
 
     CoInitialize(NULL);
     hr = CoCreateInstance(&CLSID_PropertySystem, NULL, CLSCTX_INPROC_SERVER, &IID_IPropertySystem, (void **)&system);
-    todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+    ok(SUCCEEDED(hr), "got %#lx\n", hr);
     if (FAILED(hr))
     {
         skip("Could not create IPropertySystem instance.\n");

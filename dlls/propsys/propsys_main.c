@@ -92,19 +92,71 @@ static const IClassFactoryVtbl InMemoryPropertyStoreFactoryVtbl = {
 
 static IClassFactory InMemoryPropertyStoreFactory = { &InMemoryPropertyStoreFactoryVtbl };
 
+struct property_system
+{
+    IPropertySystem IPropertySystem_iface;
+    LONG ref;
+};
+
+static const IPropertySystemVtbl propsysvtbl;
+
+static HRESULT WINAPI propsys_factory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID iid, void **out)
+{
+    struct property_system *propsys_impl;
+    HRESULT hr;
+
+    TRACE("%p, %p, %s, %p\n", iface, outer, debugstr_guid(iid), out);
+
+    *out = NULL;
+    if (outer)
+        return CLASS_E_NOAGGREGATION;
+
+    propsys_impl = calloc(1, sizeof(*propsys_impl));
+    if (!propsys_impl)
+        return E_OUTOFMEMORY;
+
+    propsys_impl->IPropertySystem_iface.lpVtbl = &propsysvtbl;
+    propsys_impl->ref = 1;
+    hr = IPropertySystem_QueryInterface(&propsys_impl->IPropertySystem_iface, iid, out);
+    IPropertySystem_Release(&propsys_impl->IPropertySystem_iface);
+    return hr;
+}
+
+static const IClassFactoryVtbl PropertySystemFactoryVtbl =
+{
+    ClassFactory_QueryInterface,
+    ClassFactory_AddRef,
+    ClassFactory_Release,
+    propsys_factory_CreateInstance,
+    ClassFactory_LockServer
+};
+
+static IClassFactory PropertySystemFactory = { &PropertySystemFactoryVtbl };
+
 HRESULT WINAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
 {
     if(IsEqualGUID(&CLSID_InMemoryPropertyStore, rclsid)) {
         TRACE("(CLSID_InMemoryPropertyStore %s %p)\n", debugstr_guid(riid), ppv);
         return IClassFactory_QueryInterface(&InMemoryPropertyStoreFactory, riid, ppv);
     }
+    if (IsEqualGUID(&CLSID_PropertySystem, rclsid))
+    {
+        TRACE("(CLSID_PropertySystem %s %p)\n", debugstr_guid(riid), ppv);
+        return IClassFactory_QueryInterface(&PropertySystemFactory, riid, ppv);
+    }
 
     FIXME("%s %s %p\n", debugstr_guid(rclsid), debugstr_guid(riid), ppv);
     return CLASS_E_CLASSNOTAVAILABLE;
 }
 
+static inline struct property_system *impl_from_IPropertySystem( IPropertySystem *iface )
+{
+    return CONTAINING_RECORD( iface, struct property_system, IPropertySystem_iface );
+}
+
 static HRESULT WINAPI propsys_QueryInterface(IPropertySystem *iface, REFIID riid, void **obj)
 {
+    TRACE("(%p, %s, %p)\n", iface, debugstr_guid(riid), obj);
     *obj = NULL;
 
     if (IsEqualIID(riid, &IID_IPropertySystem) || IsEqualIID(riid, &IID_IUnknown)) {
@@ -119,37 +171,49 @@ static HRESULT WINAPI propsys_QueryInterface(IPropertySystem *iface, REFIID riid
 
 static ULONG WINAPI propsys_AddRef(IPropertySystem *iface)
 {
-    return 2;
+    struct property_system *impl = impl_from_IPropertySystem(iface);
+    return InterlockedIncrement(&impl->ref);
 }
 
 static ULONG WINAPI propsys_Release(IPropertySystem *iface)
 {
-    return 1;
+    struct property_system *impl;
+    ULONG ref;
+
+    impl = impl_from_IPropertySystem(iface);
+    ref = InterlockedDecrement(&impl->ref);
+    if (!ref)
+        free(impl);
+    return ref;
 }
 
 static HRESULT WINAPI propsys_GetPropertyDescription(IPropertySystem *iface,
     REFPROPERTYKEY propkey, REFIID riid, void **ppv)
 {
-    return PSGetPropertyDescription(propkey, riid, ppv);
+    FIXME("(%p, %s, %s, %p): stub\n", iface, debugstr_propkey(propkey), debugstr_guid(riid), ppv);
+    return E_NOTIMPL;
 }
 
 static HRESULT WINAPI propsys_GetPropertyDescriptionByName(IPropertySystem *iface,
     LPCWSTR canonical_name, REFIID riid, void **ppv)
 {
-    FIXME("%s %s %p: stub\n", debugstr_w(canonical_name), debugstr_guid(riid), ppv);
+    FIXME("(%p, %s, %s, %p): stub\n", iface, debugstr_w(canonical_name), debugstr_guid(riid), ppv);
     return E_NOTIMPL;
 }
 
 static HRESULT WINAPI propsys_GetPropertyDescriptionListFromString(IPropertySystem *iface,
     LPCWSTR proplist, REFIID riid, void **ppv)
 {
-    return PSGetPropertyDescriptionListFromString(proplist, riid, ppv);
+    FIXME("(%p, %s, %s, %p): stub\n", iface, debugstr_w(proplist), debugstr_guid(riid), ppv);
+    *ppv = NULL;
+    return E_NOTIMPL;
 }
 
 static HRESULT WINAPI propsys_EnumeratePropertyDescriptions(IPropertySystem *iface,
     PROPDESC_ENUMFILTER filter, REFIID riid, void **ppv)
 {
-    FIXME("%d %s %p: stub\n", filter, debugstr_guid(riid), ppv);
+    FIXME("(%p, %d, %s, %p): stub\n", iface, filter, debugstr_guid(riid), ppv);
+    *ppv = NULL;
     return E_NOTIMPL;
 }
 
@@ -157,7 +221,7 @@ static HRESULT WINAPI propsys_FormatForDisplay(IPropertySystem *iface,
     REFPROPERTYKEY key, REFPROPVARIANT propvar, PROPDESC_FORMAT_FLAGS flags,
     LPWSTR dest, DWORD destlen)
 {
-    FIXME("%p %p %x %p %ld: stub\n", key, propvar, flags, dest, destlen);
+    FIXME("(%p, %s, %p, %x, %p, %ld): stub\n", iface, debugstr_propkey(key), propvar, flags, dest, destlen);
     return E_NOTIMPL;
 }
 
@@ -165,23 +229,26 @@ static HRESULT WINAPI propsys_FormatForDisplayAlloc(IPropertySystem *iface,
     REFPROPERTYKEY key, REFPROPVARIANT propvar, PROPDESC_FORMAT_FLAGS flags,
     LPWSTR *text)
 {
-    FIXME("%p %p %x %p: stub\n", key, propvar, flags, text);
+    FIXME("(%p, %s, %p, %x, %p): stub\n", iface, debugstr_propkey(key), propvar, flags, text);
     return E_NOTIMPL;
 }
 
 static HRESULT WINAPI propsys_RegisterPropertySchema(IPropertySystem *iface, LPCWSTR path)
 {
-    return PSRegisterPropertySchema(path);
+    FIXME("(%p, %s): stub\n", iface, debugstr_w(path));
+    return S_OK;
 }
 
 static HRESULT WINAPI propsys_UnregisterPropertySchema(IPropertySystem *iface, LPCWSTR path)
 {
-    return PSUnregisterPropertySchema(path);
+    FIXME("(%p, %s): stub\n", iface, debugstr_w(path));
+    return E_NOTIMPL;
 }
 
 static HRESULT WINAPI propsys_RefreshPropertySchema(IPropertySystem *iface)
 {
-    return PSRefreshPropertySchema();
+    FIXME("(%p): stub\n", iface);
+    return S_OK;
 }
 
 static const IPropertySystemVtbl propsysvtbl = {
@@ -199,49 +266,110 @@ static const IPropertySystemVtbl propsysvtbl = {
     propsys_RefreshPropertySchema
 };
 
-static IPropertySystem propsys = { &propsysvtbl };
-
 HRESULT WINAPI PSGetPropertySystem(REFIID riid, void **obj)
 {
-    return IPropertySystem_QueryInterface(&propsys, riid, obj);
+    return CoCreateInstance(&CLSID_PropertySystem, NULL, CLSCTX_INPROC_SERVER, riid, obj);
 }
 
 HRESULT WINAPI PSRegisterPropertySchema(PCWSTR path)
 {
-    FIXME("%s stub\n", debugstr_w(path));
+    HRESULT hr;
+    IPropertySystem *system;
 
-    return S_OK;
+    TRACE("%s\n", debugstr_w(path));
+    hr = PSGetPropertySystem(&IID_IPropertySystem, (void **)&system);
+    if (SUCCEEDED(hr))
+    {
+        hr = IPropertySystem_RegisterPropertySchema(system, path);
+        IPropertySystem_Release(system);
+    }
+
+    return hr;
 }
 
 HRESULT WINAPI PSUnregisterPropertySchema(PCWSTR path)
 {
-    FIXME("%s stub\n", debugstr_w(path));
+    HRESULT hr;
+    IPropertySystem *system;
 
-    return E_NOTIMPL;
+    TRACE("%s\n", debugstr_w(path));
+    hr = PSGetPropertySystem(&IID_IPropertySystem, (void **)&system);
+    if (SUCCEEDED(hr))
+    {
+        hr = IPropertySystem_UnregisterPropertySchema(system, path);
+        IPropertySystem_Release(system);
+    }
+
+    return hr;
 }
 
 HRESULT WINAPI PSGetPropertyDescription(REFPROPERTYKEY propkey, REFIID riid, void **ppv)
 {
-    FIXME("%p, %p, %p\n", propkey, riid, ppv);
-    return E_NOTIMPL;
+    HRESULT hr;
+    IPropertySystem *system;
+
+    TRACE("%p, %p, %p\n", propkey, riid, ppv);
+    hr = PSGetPropertySystem(&IID_IPropertySystem, (void **)&system);
+    if (SUCCEEDED(hr))
+    {
+        hr = IPropertySystem_GetPropertyDescription(system, propkey, riid, ppv);
+        IPropertySystem_Release(system);
+    }
+    return hr;
 }
 
 HRESULT WINAPI PSGetPropertyDescriptionListFromString(LPCWSTR proplist, REFIID riid, void **ppv)
 {
-    FIXME("%s, %p, %p\n", debugstr_w(proplist), riid, ppv);
-    return E_NOTIMPL;
+    HRESULT hr;
+    IPropertySystem *system;
+
+    TRACE("%s, %p, %p\n", debugstr_w(proplist), riid, ppv);
+    hr = PSGetPropertySystem(&IID_IPropertySystem, (void **)&system);
+    if (SUCCEEDED(hr))
+    {
+        hr = IPropertySystem_GetPropertyDescriptionListFromString(system, proplist, riid, ppv);
+        IPropertySystem_Release(system);
+    }
+
+    return hr;
 }
 
 HRESULT WINAPI PSGetPropertyKeyFromName(PCWSTR name, PROPERTYKEY *key)
 {
-    FIXME("%s, %p\n", debugstr_w(name), key);
-    return E_NOTIMPL;
+    HRESULT hr;
+    IPropertySystem *system;
+
+    TRACE("%s, %p\n", debugstr_w(name), debugstr_propkey(key));
+    hr = PSGetPropertySystem(&IID_IPropertySystem, (void **)&system);
+    if (SUCCEEDED(hr))
+    {
+        IPropertyDescription *desc;
+        hr = IPropertySystem_GetPropertyDescriptionByName(system, name, &IID_IPropertyDescription, (void *)&desc);
+        if (SUCCEEDED(hr))
+        {
+            hr = IPropertyDescription_GetPropertyKey(desc, key);
+            IPropertyDescription_Release(desc);
+        }
+        IPropertySystem_Release(system);
+    }
+
+    return hr;
 }
 
 HRESULT WINAPI PSRefreshPropertySchema(void)
 {
-    FIXME("\n");
-    return S_OK;
+    HRESULT hr;
+    IPropertySystem *system;
+
+    TRACE("\n");
+    hr = PSGetPropertySystem(&IID_IPropertySystem, (void **)&system);
+    if (SUCCEEDED(hr))
+    {
+        hr = IPropertySystem_RefreshPropertySchema(system);
+        IPropertySystem_Release(system);
+    }
+
+    return hr;
 }
 
 HRESULT WINAPI PSStringFromPropertyKey(REFPROPERTYKEY pkey, LPWSTR psz, UINT cch)
