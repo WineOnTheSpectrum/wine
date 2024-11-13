@@ -334,6 +334,21 @@ HRESULT WINAPI PSGetPropertyDescriptionListFromString(LPCWSTR proplist, REFIID r
     return hr;
 }
 
+HRESULT WINAPI PSGetNameFromPropertyKey(REFPROPERTYKEY key, LPWSTR *name)
+{
+    HRESULT hr;
+    IPropertyDescription *desc;
+
+    TRACE("(%s, %p)\n", debugstr_propkey(key), name);
+    hr = PSGetPropertyDescription(key, &IID_IPropertyDescription, (void *)&desc);
+    if (SUCCEEDED(hr))
+    {
+        hr = IPropertyDescription_GetCanonicalName(desc, name);
+        IPropertyDescription_Release(desc);
+    }
+    return hr;
+}
+
 HRESULT WINAPI PSGetPropertyKeyFromName(PCWSTR name, PROPERTYKEY *key)
 {
     HRESULT hr;
