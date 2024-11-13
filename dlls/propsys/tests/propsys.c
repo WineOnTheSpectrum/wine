@@ -2693,6 +2693,8 @@ static void test_PropertySystem(void)
     for(i = 0; i < ARRAY_SIZE(system_props); i++)
     {
         IPropertyDescription *desc;
+        PROPERTYKEY key;
+
         winetest_push_context("system_props %d", (int)i);
 
         hr = IPropertySystem_GetPropertyDescription(system, system_props[i].key, &IID_IPropertyDescription, (void **)&desc);
@@ -2709,6 +2711,12 @@ static void test_PropertySystem(void)
             test_PropertyDescription(system_props[i].key, system_props[i].name, system_props[i].type, desc);
             IPropertyDescription_Release(desc);
         }
+
+        hr = PSGetPropertyKeyFromName(system_props[i].name, &key);
+        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        if (SUCCEEDED(hr))
+            ok(!memcmp(&key, system_props[i].key, sizeof(key)), "%s != %s\n", debugstr_propkey(&key),
+               debugstr_propkey(system_props[i].key));
 
         hr = IPropertySystem_GetPropertyDescriptionByName(system, system_props[i].name, &IID_IPropertyDescription, (void **)&desc);
         todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
