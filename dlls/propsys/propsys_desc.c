@@ -32,7 +32,13 @@ WINE_DEFAULT_DEBUG_CHANNEL( propsys );
 struct property_description
 {
     IPropertyDescription IPropertyDescription_iface;
+
+    PROPERTYKEY key;
+    VARTYPE type;
+    PROPDESC_TYPE_FLAGS type_flags;
+
     LONG ref;
+    WCHAR canonical_name[1];
 };
 
 static inline struct property_description *
@@ -83,20 +89,35 @@ static ULONG WINAPI propdesc_Release( IPropertyDescription *iface )
 
 static HRESULT WINAPI propdesc_GetPropertyKey( IPropertyDescription *iface, PROPERTYKEY *pkey )
 {
-    FIXME( "(%p, %p) stub!\n", iface, pkey );
-    return E_NOTIMPL;
+    struct property_description *impl;
+
+    TRACE( "(%p, %p)\n", iface, pkey );
+    impl = impl_from_IPropertyDescription( iface );
+    *pkey = impl->key;
+    return S_OK;
 }
 
 static HRESULT WINAPI propdesc_GetCanonicalName( IPropertyDescription *iface, LPWSTR *name )
 {
-    TRACE( "(%p, %p) stub!\n", iface, name );
-    return E_NOTIMPL;
+    struct property_description *impl;
+
+    TRACE( "(%p, %p)\n", iface, name );
+    impl = impl_from_IPropertyDescription( iface );
+    *name = CoTaskMemAlloc( wcslen( impl->canonical_name ) * sizeof( WCHAR ) );
+    if (!*name)
+        return E_OUTOFMEMORY;
+    wcscpy( *name, impl->canonical_name );
+    return S_OK;
 }
 
 static HRESULT WINAPI propdesc_GetPropertyType( IPropertyDescription *iface, VARTYPE *vt )
 {
-    FIXME( "(%p, %p) stub!\n", iface, vt );
-    return E_NOTIMPL;
+    struct property_description *impl;
+
+    TRACE( "(%p, %p)\n", iface, vt );
+    impl = impl_from_IPropertyDescription( iface );
+    *vt = impl->type;
+    return S_OK;
 }
 
 static HRESULT WINAPI propdesc_GetDisplayName( IPropertyDescription *iface, LPWSTR *name )
@@ -114,7 +135,11 @@ static HRESULT WINAPI propdesc_GetEditInvitation( IPropertyDescription *iface, L
 static HRESULT WINAPI propdesc_GetTypeFlags( IPropertyDescription *iface, PROPDESC_TYPE_FLAGS mask,
                                              PROPDESC_TYPE_FLAGS *flags )
 {
-    FIXME( "(%p, %#x, %p) stub!\n", iface, mask, flags );
+    struct property_description *impl;
+
+    TRACE( "(%p, %#x, %p)\n", iface, mask, flags );
+    impl = impl_from_IPropertyDescription( iface );
+    *flags = mask & impl->type_flags;
     return E_NOTIMPL;
 }
 
@@ -243,15 +268,52 @@ const static IPropertyDescriptionVtbl property_description_vtbl =
     propdesc_IsValueCanonical
 };
 
-static HRESULT propdesc_from_system_property( IPropertyDescription **out )
+struct system_property_description
+{
+    const WCHAR *canonical_name;
+    const PROPERTYKEY *key;
+
+    VARTYPE type;
+};
+
+/* It may be ideal to construct rb_trees for looking up property descriptions by name and key if this array gets large
+ * enough. */
+static struct system_property_description system_properties[] =
+{
+    {L"System.Devices.ContainerId", &PKEY_Devices_ContainerId, VT_CLSID},
+    {L"System.Devices.InterfaceClassGuid", &PKEY_Devices_InterfaceClassGuid, VT_CLSID},
+    {L"System.Devices.DeviceInstanceId", &PKEY_Devices_DeviceInstanceId, VT_CLSID},
+    {L"System.Devices.InterfaceEnabled", &PKEY_Devices_InterfaceEnabled, VT_BOOL},
+    {L"System.Devices.ClassGuid", &PKEY_Devices_ClassGuid, VT_CLSID},
+    {L"System.Devices.CompatibleIds", &PKEY_Devices_CompatibleIds, VT_VECTOR | VT_LPWSTR},
+    {L"System.Devices.DeviceCapabilities", &PKEY_Devices_DeviceCapabilities, VT_UI2},
+    {L"System.Devices.DeviceHasProblem", &PKEY_Devices_DeviceHasProblem, VT_BOOL},
+    {L"System.Devices.DeviceManufacturer", &PKEY_Devices_DeviceManufacturer, VT_LPWSTR},
+    {L"System.Devices.HardwareIds", &PKEY_Devices_HardwareIds, VT_VECTOR | VT_LPWSTR},
+    {L"System.Devices.Parent", &PKEY_Devices_Parent, VT_LPWSTR},
+    {L"System.ItemNameDisplay", &PKEY_ItemNameDisplay, VT_LPWSTR},
+    {L"System.Devices.Category", &PKEY_Devices_Category, VT_VECTOR | VT_LPWSTR},
+    {L"System.Devices.CategoryIds", &PKEY_Devices_CategoryIds, VT_VECTOR | VT_LPWSTR},
+    {L"System.Devices.CategoryPlural", &PKEY_Devices_CategoryPlural, VT_VECTOR | VT_LPWSTR},
+    {L"System.Devices.Connected", &PKEY_Devices_Connected, VT_BOOL},
+    {L"System.Devices.GlyphIcon", &PKEY_Devices_GlyphIcon, VT_LPWSTR},
+};
+
+static HRESULT propdesc_from_system_property( const struct system_property_description *desc, IPropertyDescription **out )
 {
     struct property_description *impl;
 
-    impl = calloc(1, sizeof( *impl ));
+    impl = calloc(1, offsetof( struct property_description, canonical_name[wcslen(desc->canonical_name)] ));
     if (!impl)
         return E_OUTOFMEMORY;
 
     impl->IPropertyDescription_iface.lpVtbl = &property_description_vtbl;
+    impl->key = *desc->key;
+    wcscpy( impl->canonical_name, desc->canonical_name );
+    impl->type = desc->type;
+    impl->type_flags = PDTF_ISINNATE;
+    if (impl->type & VT_VECTOR)
+        impl->type_flags |= PDTF_MULTIPLEVALUES;
     impl->ref = 1;
 
     *out = &impl->IPropertyDescription_iface;
@@ -260,10 +322,26 @@ static HRESULT propdesc_from_system_property( IPropertyDescription **out )
 
 HRESULT propsys_get_system_propdesc_by_name( const WCHAR *name, IPropertyDescription **desc )
 {
-    return propdesc_from_system_property( desc );
+    SIZE_T i;
+
+    for (i = 0; i < ARRAY_SIZE( system_properties ); i++)
+    {
+        if (!wcscmp( name, system_properties[i].canonical_name ))
+            return propdesc_from_system_property( &system_properties[i], desc );
+    }
+
+    return TYPE_E_ELEMENTNOTFOUND;
 }
 
 HRESULT propsys_get_system_propdesc_by_key( const PROPERTYKEY *key, IPropertyDescription **desc )
 {
-    return propdesc_from_system_property( desc );
+    SIZE_T i;
+
+    for (i = 0; i < ARRAY_SIZE( system_properties ); i++)
+    {
+        if (!memcmp( key, system_properties[i].key, sizeof( *key ) ))
+            return propdesc_from_system_property( &system_properties[i], desc );
+    }
+
+    return TYPE_E_ELEMENTNOTFOUND;
 }

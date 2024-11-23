@@ -2673,7 +2673,8 @@ static void test_PropertySystem(void)
         {&PKEY_Devices_HardwareIds, L"System.Devices.HardwareIds", VT_VECTOR | VT_LPWSTR},
         {&PKEY_Devices_ClassGuid, L"System.Devices.ClassGuid", VT_CLSID}
     };
-    PROPERTYKEY empty = {0};
+    GUID dummy = {0xdeadbeef, 0xdead, 0xdead, {0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef}};
+    PROPERTYKEY empty = {dummy, 0xdeadbeef};
     IPropertySystem *system;
     HRESULT hr;
     IPropertyDescription *desc;
@@ -2698,14 +2699,14 @@ static void test_PropertySystem(void)
         winetest_push_context("system_props %d", (int)i);
 
         hr = IPropertySystem_GetPropertyDescription(system, system_props[i].key, &IID_IPropertyDescription, (void **)&desc);
-        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        ok(SUCCEEDED(hr), "got %#lx\n", hr);
         if (SUCCEEDED(hr))
         {
             test_PropertyDescription(system_props[i].key, system_props[i].name, system_props[i].type, desc);
             IPropertyDescription_Release(desc);
         }
         hr = PSGetPropertyDescription(system_props[i].key, &IID_IPropertyDescription, (void **)&desc);
-        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        ok(SUCCEEDED(hr), "got %#lx\n", hr);
         if (SUCCEEDED(hr))
         {
             test_PropertyDescription(system_props[i].key, system_props[i].name, system_props[i].type, desc);
@@ -2713,13 +2714,13 @@ static void test_PropertySystem(void)
         }
 
         hr = PSGetPropertyKeyFromName(system_props[i].name, &key);
-        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        ok(SUCCEEDED(hr), "got %#lx\n", hr);
         if (SUCCEEDED(hr))
             ok(!memcmp(&key, system_props[i].key, sizeof(key)), "%s != %s\n", debugstr_propkey(&key),
                debugstr_propkey(system_props[i].key));
 
         hr = PSGetNameFromPropertyKey(system_props[i].key, &name);
-        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        ok(SUCCEEDED(hr), "got %#lx\n", hr);
         if (SUCCEEDED(hr))
         {
             ok(!wcscmp(name, system_props[i].name), "%s != %s\n", debugstr_w(name), debugstr_w(system_props[i].name));
@@ -2727,14 +2728,14 @@ static void test_PropertySystem(void)
         }
 
         hr = IPropertySystem_GetPropertyDescriptionByName(system, system_props[i].name, &IID_IPropertyDescription, (void **)&desc);
-        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        ok(SUCCEEDED(hr), "got %#lx\n", hr);
         if (SUCCEEDED(hr))
         {
             test_PropertyDescription(system_props[i].key, system_props[i].name, system_props[i].type, desc);
             IPropertyDescription_Release(desc);
         }
         hr = PSGetPropertyDescription(system_props[i].key, &IID_IPropertyDescription, (void **)&desc);
-        todo_wine ok(SUCCEEDED(hr), "got %#lx\n", hr);
+        ok(SUCCEEDED(hr), "got %#lx\n", hr);
         if (SUCCEEDED(hr))
         {
             test_PropertyDescription(system_props[i].key, system_props[i].name, system_props[i].type, desc);
@@ -2745,10 +2746,10 @@ static void test_PropertySystem(void)
     }
 
     hr = IPropertySystem_GetPropertyDescription(system, &empty, &IID_IPropertyDescription, (void **)&desc);
-    todo_wine ok(hr == TYPE_E_ELEMENTNOTFOUND, "%#lx != %#lx\n", hr, TYPE_E_ELEMENTNOTFOUND);
+    ok(hr == TYPE_E_ELEMENTNOTFOUND, "%#lx != %#lx\n", hr, TYPE_E_ELEMENTNOTFOUND);
 
     hr = IPropertySystem_GetPropertyDescriptionByName(system, L"Non.Existent.Property.Name", &IID_IPropertyDescription, (void **)&desc);
-    todo_wine ok(hr == TYPE_E_ELEMENTNOTFOUND, "%#lx != %#lx\n", hr, TYPE_E_ELEMENTNOTFOUND);
+    ok(hr == TYPE_E_ELEMENTNOTFOUND, "%#lx != %#lx\n", hr, TYPE_E_ELEMENTNOTFOUND);
 
     IPropertySystem_Release(system);
     CoUninitialize();
