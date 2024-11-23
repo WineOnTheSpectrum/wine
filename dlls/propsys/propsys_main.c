@@ -190,15 +190,40 @@ static ULONG WINAPI propsys_Release(IPropertySystem *iface)
 static HRESULT WINAPI propsys_GetPropertyDescription(IPropertySystem *iface,
     REFPROPERTYKEY propkey, REFIID riid, void **ppv)
 {
-    FIXME("(%p, %s, %s, %p): stub\n", iface, debugstr_propkey(propkey), debugstr_guid(riid), ppv);
-    return E_NOTIMPL;
+    HRESULT hr;
+    IPropertyDescription *desc;
+
+    FIXME("(%p, %s, %s, %p): semi-stub!\n", iface, debugstr_propkey(propkey), debugstr_guid(riid), ppv);
+
+    if (!ppv)
+        return E_INVALIDARG;
+    *ppv = NULL;
+    hr = propsys_get_system_propdesc_by_key( propkey, &desc );
+    if (FAILED( hr ))
+        return hr;
+
+    hr = IPropertyDescription_QueryInterface( desc, riid, ppv );
+    IPropertyDescription_Release( desc );
+    return hr;
 }
 
 static HRESULT WINAPI propsys_GetPropertyDescriptionByName(IPropertySystem *iface,
     LPCWSTR canonical_name, REFIID riid, void **ppv)
 {
+    HRESULT hr;
+    IPropertyDescription *desc;
+
     FIXME("(%p, %s, %s, %p): stub\n", iface, debugstr_w(canonical_name), debugstr_guid(riid), ppv);
-    return E_NOTIMPL;
+
+    if (!ppv)
+        return E_INVALIDARG;
+    *ppv = NULL;
+    hr = propsys_get_system_propdesc_by_name( canonical_name, &desc );
+    if (FAILED( hr ))
+        return hr;
+    hr = IPropertyDescription_QueryInterface( desc, riid, ppv );
+    IPropertyDescription_Release( desc );
+    return hr;
 }
 
 static HRESULT WINAPI propsys_GetPropertyDescriptionListFromString(IPropertySystem *iface,

@@ -20,6 +20,8 @@
 
 HRESULT PropertyStore_CreateInstance(IUnknown *outer, REFIID riid, void **ppv);
 
+HRESULT propsys_get_system_propdesc_by_name(const WCHAR *name, IPropertyDescription **desc);
+HRESULT propsys_get_system_propdesc_by_key(const PROPERTYKEY *key, IPropertyDescription **desc);
 static inline const char *debugstr_propkey(const PROPERTYKEY *key)
 {
     if (!key)
