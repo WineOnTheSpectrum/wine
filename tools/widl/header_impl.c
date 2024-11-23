@@ -202,6 +202,17 @@ static void write_interface( const type_t *iface )
         put_str( indent, "    }\n" );
         put_str( indent, "\n" );
 
+        put_str( indent, "#define WIDL_impl_IUnknown_methods( type, name, prefix, ... ) \\\n" );
+        put_str( indent, "    WIDL_impl_IUnknown_QueryInterface_( type, name, prefix, type ## _from_ ## name, __VA_ARGS__ ) \\\n" );
+        put_str( indent, "    WIDL_impl_IUnknown_AddRef_( type, name, prefix, type ## _from_ ## name ) \\\n" );
+        put_str( indent, "    WIDL_impl_IUnknown_Release_( type, name, prefix, type ## _from_ ## name )\n" );
+        put_str( indent, "\n" );
+        put_str( indent, "#define WIDL_impl_static_IUnknown_methods( type, name, prefix, ... ) \\\n" );
+        put_str( indent, "    WIDL_impl_IUnknown_QueryInterface_( type, name, prefix, type ## _from_ ## name, __VA_ARGS__ ) \\\n" );
+        put_str( indent, "    WIDL_impl_static_IUnknown_AddRef( type, name, prefix ) \\\n" );
+        put_str( indent, "    WIDL_impl_static_IUnknown_Release( type, name, prefix )\n" );
+        put_str( indent, "\n" );
+
         put_str( indent, "#define WIDL_impl_IUnknown_forwards( type, name, base, expr, prefix ) WIDL_impl_IUnknown_forwards_( type, name, base, expr, prefix, type ## _from_ ## name )\n" );
         put_str( indent, "#define WIDL_impl_IUnknown_forwards_( type, name, base, expr, prefix, impl_from ) \\\n" );
         put_str( indent, "    static HRESULT WINAPI prefix ## _QueryInterface( name *iface, REFIID iid, void **out ) \\\n" );
