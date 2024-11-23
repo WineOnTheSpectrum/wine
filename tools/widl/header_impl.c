@@ -126,6 +126,22 @@ static void write_interface( const type_t *iface )
 
     if (!strcmp( iface->name, "IUnknown" ))
     {
+        put_str( indent, "#define WIDL_impl_IUnknown_AddRef( type, name, prefix ) WIDL_impl_IUnknown_AddRef_( type, name, prefix, type ## _from_ ## name )\n" );
+        put_str( indent, "#define WIDL_impl_IUnknown_AddRef_( type, name, prefix, impl_from ) \\\n" );
+        put_str( indent, "    static ULONG WINAPI prefix ## _AddRef( name *iface ) \\\n" );
+        put_str( indent, "    { \\\n" );
+        put_str( indent, "        struct type *object = impl_from( iface ); \\\n" );
+        put_str( indent, "        ULONG ref = InterlockedIncrement( &object->refcount ); \\\n" );
+        put_str( indent, "        TRACE( \"object %%p increasing refcount to %%lu.\\n\", object, ref ); \\\n" );
+        put_str( indent, "        return ref; \\\n" );
+        put_str( indent, "    }\n" );
+        put_str( indent, "#define WIDL_impl_static_IUnknown_AddRef( type, name, prefix ) \\\n" );
+        put_str( indent, "    static ULONG WINAPI prefix ## _AddRef( name *iface ) \\\n" );
+        put_str( indent, "    { \\\n" );
+        put_str( indent, "        return 2; \\\n" );
+        put_str( indent, "    }\n" );
+        put_str( indent, "\n" );
+
         put_str( indent, "#define WIDL_impl_IUnknown_forwards( type, name, base, expr, prefix ) WIDL_impl_IUnknown_forwards_( type, name, base, expr, prefix, type ## _from_ ## name )\n" );
         put_str( indent, "#define WIDL_impl_IUnknown_forwards_( type, name, base, expr, prefix, impl_from ) \\\n" );
         put_str( indent, "    static HRESULT WINAPI prefix ## _QueryInterface( name *iface, REFIID iid, void **out ) \\\n" );
