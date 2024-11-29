@@ -1740,7 +1740,9 @@ static const DWORD vs_2_0[] =
 
 static void test_disassemble_shader(void)
 {
-    ID3DBlob *blob;
+    static const char fx_4_0[] = "technique10 {}";
+    static const char fx_5_0[] = "technique11 {}";
+    ID3DBlob *blob, *blob2;
     HRESULT hr;
 
     hr = D3DDisassemble(vs_2_0, 0, 0, NULL, &blob);
@@ -1752,6 +1754,34 @@ static void test_disassemble_shader(void)
 
     hr = D3DDisassemble(vs_2_0, sizeof(vs_2_0), 0, NULL, &blob);
     ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    ID3D10Blob_Release(blob);
+
+    /* Effects profiles. */
+    hr = D3DCompile(fx_4_0, strlen(fx_4_0), NULL, NULL, NULL, "", "fx_4_0", 0, 0, &blob, NULL);
+    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    hr = D3DDisassemble(ID3D10Blob_GetBufferPointer(blob), ID3D10Blob_GetBufferSize(blob), 0, NULL, &blob2);
+    todo_wine
+    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    if (SUCCEEDED(hr))
+        ID3D10Blob_Release(blob2);
+    ID3D10Blob_Release(blob);
+
+    hr = D3DCompile(fx_4_0, strlen(fx_4_0), NULL, NULL, NULL, "", "fx_4_1", 0, 0, &blob, NULL);
+    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    hr = D3DDisassemble(ID3D10Blob_GetBufferPointer(blob), ID3D10Blob_GetBufferSize(blob), 0, NULL, &blob2);
+    todo_wine
+    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    if (SUCCEEDED(hr))
+        ID3D10Blob_Release(blob2);
+    ID3D10Blob_Release(blob);
+
+    hr = D3DCompile(fx_5_0, strlen(fx_5_0), NULL, NULL, NULL, "", "fx_5_0", 0, 0, &blob, NULL);
+    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    hr = D3DDisassemble(ID3D10Blob_GetBufferPointer(blob), ID3D10Blob_GetBufferSize(blob), 0, NULL, &blob2);
+    todo_wine
+    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+    if (SUCCEEDED(hr))
+        ID3D10Blob_Release(blob2);
     ID3D10Blob_Release(blob);
 }
 
