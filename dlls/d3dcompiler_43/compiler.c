@@ -672,9 +672,12 @@ HRESULT WINAPI D3DDisassemble(const void *data, SIZE_T size, UINT flags, const c
 {
     struct vkd3d_shader_compile_info compile_info;
     enum vkd3d_shader_source_type source_type;
-    struct vkd3d_shader_code asm_code;
+    struct vkd3d_shader_code source, asm_code;
+    struct vkd3d_shader_dxbc_desc desc;
     const char *ptr = data;
+    unsigned int i;
     char *messages;
+    uint32_t token;
     HRESULT hr;
     int ret;
 
@@ -692,15 +695,36 @@ HRESULT WINAPI D3DDisassemble(const void *data, SIZE_T size, UINT flags, const c
         return E_INVALIDARG;
 #endif
 
-    if (size >= 4 && read_u32(&ptr) == TAG_DXBC)
+    source.code = data;
+    source.size = size;
+
+    source_type = VKD3D_SHADER_SOURCE_D3D_BYTECODE;
+    if (vkd3d_shader_parse_dxbc(&source, 0, &desc, NULL) >= 0)
+    {
         source_type = VKD3D_SHADER_SOURCE_DXBC_TPF;
-    else
-        source_type = VKD3D_SHADER_SOURCE_D3D_BYTECODE;
+
+        for (i = 0; i < desc.section_count; ++i)
+        {
+            if (TAG_FX10 == desc.sections[i].tag)
+            {
+                source = desc.sections[i].data;
+                source_type = VKD3D_SHADER_SOURCE_FX;
+                break;
+            }
+        }
+
+        vkd3d_shader_free_dxbc(&desc);
+    }
+    else if (size >= 4)
+    {
+        token = read_u32(&ptr);
+        if ((token & 0xffff0000) == 0xfeff0000)
+            source_type = VKD3D_SHADER_SOURCE_FX;
+    }
 
     compile_info.type = VKD3D_SHADER_STRUCTURE_TYPE_COMPILE_INFO;
     compile_info.next = NULL;
-    compile_info.source.code = data;
-    compile_info.source.size = size;
+    compile_info.source = source;
     compile_info.source_type = source_type;
     compile_info.target_type = VKD3D_SHADER_TARGET_D3D_ASM;
     compile_info.options = NULL;
