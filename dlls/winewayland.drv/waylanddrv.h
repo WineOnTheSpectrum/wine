@@ -34,6 +34,7 @@
 #include "viewporter-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
+#include "xdg-toplevel-icon-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -132,6 +133,7 @@ struct wayland
     struct wl_subcompositor *wl_subcompositor;
     struct zwp_pointer_constraints_v1 *zwp_pointer_constraints_v1;
     struct zwp_relative_pointer_manager_v1 *zwp_relative_pointer_manager_v1;
+    struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
@@ -198,6 +200,18 @@ struct wayland_client_surface
     struct wp_viewport *wp_viewport;
 };
 
+struct wayland_shm_buffer
+{
+    struct wl_list link;
+    struct wl_buffer *wl_buffer;
+    int width, height;
+    void *map_data;
+    size_t map_size;
+    BOOL busy;
+    LONG ref;
+    HRGN damage_region;
+};
+
 struct wayland_surface
 {
     HWND hwnd;
@@ -212,6 +226,9 @@ struct wayland_surface
         {
             struct xdg_surface *xdg_surface;
             struct xdg_toplevel *xdg_toplevel;
+            struct xdg_toplevel_icon_v1 *xdg_toplevel_icon;
+            struct wayland_shm_buffer *small_icon_buffer;
+            struct wayland_shm_buffer *big_icon_buffer;
         };
         struct
         {
@@ -225,18 +242,6 @@ struct wayland_surface
     struct wayland_window_config window;
     int content_width, content_height;
     HCURSOR hcursor;
-};
-
-struct wayland_shm_buffer
-{
-    struct wl_list link;
-    struct wl_buffer *wl_buffer;
-    int width, height;
-    void *map_data;
-    size_t map_size;
-    BOOL busy;
-    LONG ref;
-    HRGN damage_region;
 };
 
 /**********************************************************************
@@ -375,6 +380,7 @@ BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset);
 LRESULT WAYLAND_DesktopWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 void WAYLAND_DestroyWindow(HWND hwnd);
 void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor);
+void WAYLAND_SetWindowIcon(HWND hwnd, UINT type, HICON icon);
 void WAYLAND_SetWindowText(HWND hwnd, LPCWSTR text);
 LRESULT WAYLAND_SysCommand(HWND hwnd, WPARAM wparam, LPARAM lparam, const POINT *pos);
 UINT WAYLAND_UpdateDisplayDevices(const struct gdi_device_manager *device_manager, void *param);
