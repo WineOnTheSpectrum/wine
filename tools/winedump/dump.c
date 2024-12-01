@@ -222,7 +222,7 @@ unsigned long Offset(const void* ptr)
 static const struct dumper
 {
     enum FileSig        kind;
-    enum FileSig        (*get_kind)(void);
+    enum FileSig        (*get_kind)( int fd );
     file_dumper         dumper; /* default dump tool */
 }
 dumpers[] =
@@ -248,22 +248,36 @@ dumpers[] =
 
 BOOL dump_analysis(const char *name, file_dumper fn, enum FileSig wanted_sig)
 {
-    BOOL                ret = TRUE;
+    int                  fd;
+    struct stat          st;
+    BOOL                 ret = TRUE;
     const struct dumper *dpr;
 
     setbuf(stdout, NULL);
 
-    if (!(dump_base = read_file( name, &dump_total_len ))) fatal( "Cannot read file" );
+    if ((fd = open( name, O_RDONLY | O_BINARY )) == -1 ||
+        fstat( fd, &st ) == -1)
+    {
+        fatal( "Cannot open file\n");
+        return FALSE;
+    }
 
-    printf("Contents of %s: %zu bytes\n\n", name, dump_total_len);
+    printf("Contents of %s: %lu bytes\n\n", name, (unsigned long)st.st_size);
 
     for (dpr = dumpers; dpr->kind != SIG_UNKNOWN; dpr++)
     {
-        if (dpr->get_kind() == dpr->kind &&
+        enum FileSig kind = dpr->get_kind( fd );
+        lseek( fd, 0, SEEK_SET );
+        if (kind == dpr->kind &&
             (wanted_sig == SIG_UNKNOWN || wanted_sig == dpr->kind))
         {
-            if (fn) fn(); else dpr->dumper();
-            break;
+            dump_base = xmalloc( st.st_size );
+            if (read( fd, dump_base, st.st_size ) == st.st_size)
+            {
+                dump_total_len = st.st_size;
+                if (fn) fn(); else dpr->dumper();
+                break;
+            }
         }
     }
     if (dpr->kind == SIG_UNKNOWN)
@@ -274,6 +288,8 @@ BOOL dump_analysis(const char *name, file_dumper fn, enum FileSig wanted_sig)
 
     if (ret) printf("Done dumping %s\n", name);
     free( dump_base );
+    dump_base = NULL;
+    close( fd );
 
     return ret;
 }

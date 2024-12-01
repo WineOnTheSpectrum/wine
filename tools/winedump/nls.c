@@ -1278,7 +1278,7 @@ void nls_dump(void)
     fprintf( stderr, "Unrecognized file name '%s'\n", globals.input_name );
 }
 
-enum FileSig get_kind_nls(void)
+enum FileSig get_kind_nls( int fd )
 {
     if (strlen( globals.input_name ) < 5) return SIG_UNKNOWN;
     if (strcasecmp( globals.input_name + strlen(globals.input_name) - 4, ".nls" )) return SIG_UNKNOWN;

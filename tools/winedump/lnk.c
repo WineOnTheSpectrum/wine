@@ -514,13 +514,13 @@ static void dump_raw_block(const DATABLOCK_HEADER* bhdr)
 
 static const GUID CLSID_ShellLink = {0x00021401L, 0, 0, {0xC0,0,0,0,0,0,0,0x46}};
 
-enum FileSig get_kind_lnk(void)
+enum FileSig get_kind_lnk( int fd )
 {
-    const LINK_HEADER*        hdr;
+    LINK_HEADER hdr;
 
-    hdr = PRD(0, sizeof(*hdr));
-    if (hdr && hdr->dwSize == sizeof(LINK_HEADER) &&
-        !memcmp(&hdr->MagicGuid, &CLSID_ShellLink, sizeof(GUID)))
+    if (read( fd, &hdr, sizeof(hdr) ) == sizeof(hdr) &&
+        hdr.dwSize == sizeof(LINK_HEADER) &&
+        !memcmp( &hdr.MagicGuid, &CLSID_ShellLink, sizeof(GUID) ))
         return SIG_LNK;
     return SIG_UNKNOWN;
 }

@@ -130,10 +130,12 @@ static void dump_long_import(const void *base, const IMAGE_SECTION_HEADER *ish, 
     }
 }
 
-enum FileSig get_kind_lib(void)
+enum FileSig get_kind_lib( int fd )
 {
-    const char*         arch = PRD(0, IMAGE_ARCHIVE_START_SIZE);
-    if (arch && !strncmp(arch, IMAGE_ARCHIVE_START, IMAGE_ARCHIVE_START_SIZE))
+    char tmp[IMAGE_ARCHIVE_START_SIZE];
+
+    if (read( fd, tmp, sizeof(tmp) ) == sizeof(tmp) &&
+        !strncmp( tmp, IMAGE_ARCHIVE_START, IMAGE_ARCHIVE_START_SIZE ))
         return SIG_COFFLIB;
     return SIG_UNKNOWN;
 }

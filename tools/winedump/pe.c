@@ -4131,14 +4131,12 @@ static void dump_dir_tls(void)
     printf(" }\n\n");
 }
 
-enum FileSig get_kind_dbg(void)
+enum FileSig get_kind_dbg( int fd )
 {
-    const WORD*                pw;
+    WORD w;
 
-    pw = PRD(0, sizeof(WORD));
-    if (!pw) {printf("Can't get main signature, aborting\n"); return 0;}
-
-    if (*pw == 0x4944 /* "DI" */) return SIG_DBG;
+    if (read( fd, &w, sizeof(w) ) == sizeof(w) && w == 0x4944 /* "DI" */)
+        return SIG_DBG;
     return SIG_UNKNOWN;
 }
 
@@ -4770,27 +4768,20 @@ static void dump_symbol_table(void)
     dump_coff_symbol_table(sym, numsym, IMAGE_FIRST_SECTION(PE_nt_headers));
 }
 
-enum FileSig get_kind_exec(void)
+enum FileSig get_kind_exec( int fd )
 {
-    const WORD*                pw;
-    const DWORD*               pdw;
-    const IMAGE_DOS_HEADER*    dh;
+    IMAGE_DOS_HEADER dos_hdr;
+    DWORD            pe_sig;
 
-    pw = PRD(0, sizeof(WORD));
-    if (!pw) {printf("Can't get main signature, aborting\n"); return 0;}
-
-    if (*pw != IMAGE_DOS_SIGNATURE) return SIG_UNKNOWN;
-
-    if ((dh = PRD(0, sizeof(IMAGE_DOS_HEADER))))
+    if (read( fd, &dos_hdr, sizeof(dos_hdr) ) != sizeof(dos_hdr) ||
+        dos_hdr.e_magic != IMAGE_DOS_SIGNATURE)
+        return SIG_UNKNOWN;
+    /* the signature is the first DWORD */
+    if (pread( fd, &pe_sig, sizeof(pe_sig), dos_hdr.e_lfanew ) == sizeof(pe_sig))
     {
-        /* the signature is the first DWORD */
-        pdw = PRD(dh->e_lfanew, sizeof(DWORD));
-        if (pdw)
-        {
-            if (*pdw == IMAGE_NT_SIGNATURE)                     return SIG_PE;
-            if (*(const WORD *)pdw == IMAGE_OS2_SIGNATURE)      return SIG_NE;
-            if (*(const WORD *)pdw == IMAGE_VXD_SIGNATURE)      return SIG_LE;
-        }
+        if (pe_sig == IMAGE_NT_SIGNATURE)               return SIG_PE;
+        if (LOWORD(pe_sig) == IMAGE_OS2_SIGNATURE)      return SIG_NE;
+        if (LOWORD(pe_sig) == IMAGE_VXD_SIGNATURE)      return SIG_LE;
         return SIG_DOS;
     }
     return SIG_UNKNOWN;

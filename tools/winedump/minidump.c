@@ -42,14 +42,12 @@ static const char *get_mdmp_str(DWORD rva)
     return "<<?>>";
 }
 
-enum FileSig get_kind_mdmp(void)
+enum FileSig get_kind_mdmp(int fd)
 {
-    const DWORD*        pdw;
+    DWORD dw;
 
-    pdw = PRD(0, sizeof(DWORD));
-    if (!pdw) {printf("Can't get main signature, aborting\n"); return SIG_UNKNOWN;}
-
-    if (*pdw == 0x504D444D /* "MDMP" */) return SIG_MDMP;
+    if (read(fd, &dw, sizeof(dw)) == sizeof(dw) && dw == 0x504D444D /* "MDMP" */)
+        return SIG_MDMP;
     return SIG_UNKNOWN;
 }
 

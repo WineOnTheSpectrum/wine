@@ -1346,15 +1346,13 @@ static void pdb_ds_dump_header_root(struct pdb_reader* reader)
     }
 }
 
-enum FileSig get_kind_pdb(void)
+enum FileSig get_kind_pdb( int fd )
 {
-    const char* head;
+    char tmp[max(sizeof(pdb7), sizeof(pdb2)) - 1];
 
-    head = PRD(0, sizeof(pdb2) - 1);
-    if (head && !memcmp(head, pdb2, sizeof(pdb2) - 1))
-        return SIG_PDB;
-    head = PRD(0, sizeof(pdb7) - 1);
-    if (head && !memcmp(head, pdb7, sizeof(pdb7) - 1))
+    if (read(fd, tmp, sizeof(tmp)) == sizeof(tmp) &&
+        (!memcmp(tmp, pdb2, sizeof(pdb2) - 1) ||
+         !memcmp(tmp, pdb7, sizeof(pdb7) - 1)))
         return SIG_PDB;
     return SIG_UNKNOWN;
 }

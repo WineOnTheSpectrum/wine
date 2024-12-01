@@ -198,14 +198,14 @@ static int dump_mfrecord(void)
     return 0;
 }
 
-enum FileSig get_kind_mf(void)
+enum FileSig get_kind_mf(int fd)
 {
-    const METAHEADER *hdr;
+    METAHEADER hdr;
 
-    hdr = PRD(0, sizeof(*hdr));
-    if (hdr && (hdr->mtType == METAFILE_MEMORY || hdr->mtType == METAFILE_DISK)
-        && hdr->mtHeaderSize == sizeof(METAHEADER) / sizeof(WORD)
-        && (hdr->mtVersion == 0x0100 || hdr->mtVersion == 0x0300))
+    if (read(fd, &hdr, sizeof(hdr)) == sizeof(hdr)
+        && (hdr.mtType == METAFILE_MEMORY || hdr.mtType == METAFILE_DISK)
+        && hdr.mtHeaderSize == sizeof(METAHEADER) / sizeof(WORD)
+        && (hdr.mtVersion == 0x0100 || hdr.mtVersion == 0x0300))
         return SIG_MF;
     return SIG_UNKNOWN;
 }

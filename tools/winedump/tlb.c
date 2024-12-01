@@ -2132,9 +2132,12 @@ void tlb_dump_resource( void *ptr, size_t size, const char *prefix )
     dump_total_len = prev_dump_total_len;
 }
 
-enum FileSig get_kind_tlb(void)
+enum FileSig get_kind_tlb( int fd )
 {
-    const DWORD *sig = PRD(0, sizeof(DWORD));
-    if (sig && (*sig == MSFT_MAGIC || *sig == SLTG_MAGIC)) return SIG_TLB;
+    DWORD sig;
+
+    if (read( fd, &sig, sizeof(sig) ) == sizeof(sig) &&
+        (sig == MSFT_MAGIC || sig == SLTG_MAGIC))
+        return SIG_TLB;
     return SIG_UNKNOWN;
 }
