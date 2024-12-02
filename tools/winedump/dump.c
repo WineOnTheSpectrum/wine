@@ -224,13 +224,14 @@ static const struct dumper
     enum FileSig        kind;
     enum FileSig        (*get_kind)( int fd );
     file_dumper         dumper; /* default dump tool */
+    void                (*alt_dumper)( int fd );
 }
 dumpers[] =
 {
     {SIG_DOS,           get_kind_exec,  dos_dump},
     {SIG_PE,            get_kind_exec,  pe_dump},
     {SIG_DBG,           get_kind_dbg,   dbg_dump},
-    {SIG_PDB,           get_kind_pdb,   pdb_dump},
+    {SIG_PDB,           get_kind_pdb,   .alt_dumper = pdb_dump},
     {SIG_NE,            get_kind_exec,  ne_dump},
     {SIG_LE,            get_kind_exec,  le_dump},
     {SIG_COFFLIB,       get_kind_lib,   lib_dump},
@@ -268,16 +269,22 @@ BOOL dump_analysis(const char *name, file_dumper fn, enum FileSig wanted_sig)
     {
         enum FileSig kind = dpr->get_kind( fd );
         lseek( fd, 0, SEEK_SET );
-        if (kind == dpr->kind &&
-            (wanted_sig == SIG_UNKNOWN || wanted_sig == dpr->kind))
+        if (kind == dpr->kind && (wanted_sig == SIG_UNKNOWN || wanted_sig == dpr->kind))
         {
-            dump_base = xmalloc( st.st_size );
-            if (read( fd, dump_base, st.st_size ) == st.st_size)
+            if (fn || dpr->dumper)
             {
-                dump_total_len = st.st_size;
-                if (fn) fn(); else dpr->dumper();
-                break;
+                dump_base = xmalloc( st.st_size );
+                if (read( fd, dump_base, st.st_size ) == st.st_size)
+                {
+                    dump_total_len = st.st_size;
+                    if (fn) fn(); else dpr->dumper();
+                }
             }
+            else if (dpr->alt_dumper)
+            {
+                dpr->alt_dumper( fd );
+            }
+            break;
         }
     }
     if (dpr->kind == SIG_UNKNOWN)

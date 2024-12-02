@@ -261,7 +261,7 @@ void            emfspool_dump(void);
 enum FileSig    get_kind_mf( int fd );
 void            mf_dump(void);
 enum FileSig    get_kind_pdb( int fd );
-void            pdb_dump(void);
+void            pdb_dump(int fd);
 enum FileSig    get_kind_fnt( int fd );
 void            fnt_dump( void );
 enum FileSig    get_kind_tlb( int fd );

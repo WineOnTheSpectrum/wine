@@ -2274,7 +2274,7 @@ static BOOL codeview_snarf(const struct msc_debug_info* msc_dbg,
 {
     struct symt_function*               top_func = NULL;
     struct symt_function*               curr_func = NULL;
-    int                                 i, length;
+    unsigned int                        i, length;
     struct symt_block*                  block = NULL;
     struct symt*                        symt;
     struct symt_compiland*              compiland = NULL;
@@ -3044,7 +3044,7 @@ static BOOL pdb_global_feed_public(const struct msc_debug_info* msc_dbg, const u
  */
 
 static void* pdb_jg_read(const struct PDB_JG_HEADER* pdb, const WORD* block_list,
-                         int size)
+                         unsigned int size)
 {
     int                         i, num_blocks;
     BYTE*                       buffer;
@@ -3063,7 +3063,7 @@ static void* pdb_jg_read(const struct PDB_JG_HEADER* pdb, const WORD* block_list
 }
 
 static void* pdb_ds_read(const struct PDB_DS_HEADER* pdb, const UINT *block_list,
-                         int size)
+                         unsigned int size)
 {
     int                         i, num_blocks;
     BYTE*                       buffer;
@@ -3342,7 +3342,7 @@ static BOOL pdb_init_type_parse(const struct msc_debug_info* msc_dbg,
 {
     const BYTE* ptr;
     DWORD* offset;
-    int i;
+    unsigned int i;
 
     ctp->hash_stream = NULL;
     ctp->offset = NULL;
