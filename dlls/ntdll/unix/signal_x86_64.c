@@ -2793,6 +2793,16 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "movq 0x28(%rsp),%r12\n\t"      /* 5th argument */
                    "movq 0x30(%rsp),%r13\n\t"      /* 6th argument */
                    "leaq 0x38(%rsp),%r15\n\t"      /* 7th argument */
+                   /* %gs accesses must happen before switching to the kernel stack */
+#ifdef __linux__
+                   "movq %gs:0x320,%rsi\n\t"       /* amd64_thread_data()->pthread_teb */
+#endif
+#ifdef __APPLE__
+                   "movq %gs:0x30,%r11\n\t"
+                   "movq 0x330(%r11),%r11\n\t"
+#else
+                   "movq %gs:0x330,%r11\n\t"       /* amd64_thread_data()->syscall_table */
+#endif
                    /* switch to kernel stack */
                    "movq %rcx,%rsp\n\t"
                    /* we're now on the kernel stack, stitch unwind info with previous frame */
@@ -2809,7 +2819,6 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
 #ifdef __linux__
                    "testl $12,%r14d\n\t"           /* SYSCALL_HAVE_PTHREAD_TEB | SYSCALL_HAVE_WRFSGSBASE */
                    "jz 2f\n\t"
-                   "movq %gs:0x320,%rsi\n\t"       /* amd64_thread_data()->pthread_teb */
                    "testl $8,%r14d\n\t"            /* SYSCALL_HAVE_WRFSGSBASE */
                    "jz 1f\n\t"
                    "wrfsbase %rsi\n\t"
@@ -2821,17 +2830,10 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "2:\n\t"
 #endif
                    "movq 0x00(%rcx),%rax\n\t"
-                   "movq 0x18(%rcx),%r11\n\t"      /* 2nd argument */
                    "movl %eax,%ebx\n\t"
                    "shrl $8,%ebx\n\t"
                    "andl $0x30,%ebx\n\t"           /* syscall table number */
-#ifdef __APPLE__
-                   "movq %gs:0x30,%rcx\n\t"
-                   "movq 0x330(%rcx),%rcx\n\t"
-#else
-                   "movq %gs:0x330,%rcx\n\t"       /* amd64_thread_data()->syscall_table */
-#endif
-                   "leaq (%rcx,%rbx,2),%rbx\n\t"
+                   "leaq (%r11,%rbx,2),%rbx\n\t"
                    "andl $0xfff,%eax\n\t"          /* syscall number */
                    "cmpq 16(%rbx),%rax\n\t"        /* table->ServiceLimit */
                    "jae 5f\n\t"
@@ -2846,8 +2848,9 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "movq %r15,%rsi\n\t"
                    "cld\n\t"
                    "rep; movsq\n"
-                   "1:\tmovq %r10,%rdi\n\t"        /* 1st argument */
-                   "movq %r11,%rsi\n\t"            /* 2nd argument */
+                   "1:\tleaq -0x98(%rbp),%rcx\n\t"
+                   "movq %r10,%rdi\n\t"            /* 1st argument */
+                   "movq 0x18(%rcx),%rsi\n\t"      /* 2nd argument */
                    "movq %r8,%rdx\n\t"             /* 3rd argument */
                    "movq %r9,%rcx\n\t"             /* 4th argument */
                    "movq %r12,%r8\n\t"             /* 5th argument */
