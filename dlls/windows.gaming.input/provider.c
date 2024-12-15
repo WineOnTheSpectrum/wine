@@ -47,7 +47,8 @@ struct provider
     IWineGameControllerProvider IWineGameControllerProvider_iface;
     IGameControllerProvider IGameControllerProvider_iface;
     IAgileObject IAgileObject_iface;
-    LONG ref;
+    const WCHAR *class_name;
+    LONG refcount;
 
     IDirectInputDevice8W *dinput_device;
     WCHAR device_path[MAX_PATH];
@@ -66,86 +67,20 @@ struct provider
     HANDLE device;
 };
 
-static inline struct provider *provider_from_IWineGameControllerProvider( IWineGameControllerProvider *iface )
+static void provider_destroy( struct provider *impl )
 {
-    return CONTAINING_RECORD( iface, struct provider, IWineGameControllerProvider_iface );
+    IDirectInputDevice8_Release( impl->dinput_device );
+    HidD_FreePreparsedData( impl->preparsed );
+    CloseHandle( impl->device );
+    free( impl->report_buf );
+    free( impl );
 }
 
-static HRESULT WINAPI wine_provider_QueryInterface( IWineGameControllerProvider *iface, REFIID iid, void **out )
-{
-    struct provider *impl = provider_from_IWineGameControllerProvider( iface );
-
-    TRACE( "iface %p, iid %s, out %p.\n", iface, debugstr_guid( iid ), out );
-
-    if (IsEqualGUID( iid, &IID_IUnknown ) ||
-        IsEqualGUID( iid, &IID_IInspectable ) ||
-        IsEqualGUID( iid, &IID_IWineGameControllerProvider ))
-    {
-        IInspectable_AddRef( (*out = &impl->IWineGameControllerProvider_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IGameControllerProvider ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGameControllerProvider_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IAgileObject ))
-    {
-        IInspectable_AddRef( (*out = &impl->IAgileObject_iface) );
-        return S_OK;
-    }
-
-    FIXME( "%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid( iid ) );
-    *out = NULL;
-    return E_NOINTERFACE;
-}
-
-static ULONG WINAPI wine_provider_AddRef( IWineGameControllerProvider *iface )
-{
-    struct provider *impl = provider_from_IWineGameControllerProvider( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static ULONG WINAPI wine_provider_Release( IWineGameControllerProvider *iface )
-{
-    struct provider *impl = provider_from_IWineGameControllerProvider( iface );
-    ULONG ref = InterlockedDecrement( &impl->ref );
-
-    TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
-
-    if (!ref)
-    {
-        IDirectInputDevice8_Release( impl->dinput_device );
-        HidD_FreePreparsedData( impl->preparsed );
-        CloseHandle( impl->device );
-        free( impl->report_buf );
-        free( impl );
-    }
-
-    return ref;
-}
-
-static HRESULT WINAPI wine_provider_GetIids( IWineGameControllerProvider *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI wine_provider_GetRuntimeClassName( IWineGameControllerProvider *iface, HSTRING *class_name )
-{
-    FIXME( "iface %p, class_name %p stub!\n", iface, class_name );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI wine_provider_GetTrustLevel( IWineGameControllerProvider *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_IWineGameControllerProvider( provider, wine_provider,
+    IGameControllerProvider, game_provider,
+    IAgileObject, provider_agile,
+    END, FIXME
+);
 
 static BOOL CALLBACK count_ffb_axes( const DIDEVICEOBJECTINSTANCEW *obj, void *args )
 {
@@ -350,27 +285,7 @@ static HRESULT WINAPI wine_provider_get_ForceFeedbackMotor( IWineGameControllerP
     return S_OK;
 }
 
-static const struct IWineGameControllerProviderVtbl wine_provider_vtbl =
-{
-    wine_provider_QueryInterface,
-    wine_provider_AddRef,
-    wine_provider_Release,
-    /* IInspectable methods */
-    wine_provider_GetIids,
-    wine_provider_GetRuntimeClassName,
-    wine_provider_GetTrustLevel,
-    /* IWineGameControllerProvider methods */
-    wine_provider_get_Type,
-    wine_provider_get_AxisCount,
-    wine_provider_get_ButtonCount,
-    wine_provider_get_SwitchCount,
-    wine_provider_get_State,
-    wine_provider_get_Vibration,
-    wine_provider_put_Vibration,
-    wine_provider_get_ForceFeedbackMotor,
-};
-
-DEFINE_IINSPECTABLE( game_provider, IGameControllerProvider, provider, IWineGameControllerProvider_iface )
+WIDL_impl_IWineGameControllerProviderVtbl( provider, wine_provider );
 
 static HRESULT WINAPI game_provider_get_FirmwareVersionInfo( IGameControllerProvider *iface, GameControllerVersionInfo *value )
 {
@@ -416,24 +331,8 @@ static HRESULT WINAPI game_provider_get_IsConnected( IGameControllerProvider *if
     return E_NOTIMPL;
 }
 
-static const struct IGameControllerProviderVtbl game_provider_vtbl =
-{
-    game_provider_QueryInterface,
-    game_provider_AddRef,
-    game_provider_Release,
-    /* IInspectable methods */
-    game_provider_GetIids,
-    game_provider_GetRuntimeClassName,
-    game_provider_GetTrustLevel,
-    /* IGameControllerProvider methods */
-    game_provider_get_FirmwareVersionInfo,
-    game_provider_get_HardwareProductId,
-    game_provider_get_HardwareVendorId,
-    game_provider_get_HardwareVersionInfo,
-    game_provider_get_IsConnected,
-};
-
-DEFINE_IAGILEOBJECT( provider, IWineGameControllerProvider, &object->IWineGameControllerProvider_iface );
+WIDL_impl_IGameControllerProviderVtbl( provider, game_provider );
+WIDL_impl_IAgileObjectVtbl( provider, provider_agile );
 
 static void check_haptics_caps( struct provider *provider, HANDLE device, PHIDP_PREPARSED_DATA preparsed,
                                 HIDP_LINK_COLLECTION_NODE *collections, HIDP_VALUE_CAPS *caps )
@@ -584,7 +483,7 @@ void provider_create( const WCHAR *device_path )
     impl->IAgileObject_iface.lpVtbl = &provider_agile_vtbl;
     IDirectInputDevice_AddRef( dinput_device );
     impl->dinput_device = dinput_device;
-    impl->ref = 1;
+    impl->refcount = 1;
 
     wcscpy( impl->device_path, device_path );
     list_init( &impl->entry );

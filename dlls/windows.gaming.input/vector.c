@@ -27,18 +27,22 @@ struct iterator
 {
     IIterator_IInspectable IIterator_IInspectable_iface;
     IAgileObject IAgileObject_iface;
+    const WCHAR *class_name;
     const GUID *iid;
-    LONG ref;
+    LONG refcount;
 
     IVectorView_IInspectable *view;
     UINT32 index;
     UINT32 size;
 };
 
-static inline struct iterator *iterator_from_IIterator_IInspectable( IIterator_IInspectable *iface )
+static void iterator_destroy( struct iterator *impl )
 {
-    return CONTAINING_RECORD( iface, struct iterator, IIterator_IInspectable_iface );
+    IVectorView_IInspectable_Release( impl->view );
+    free( impl );
 }
+
+WIDL_impl_from_IIterator_IInspectable( iterator );
 
 static HRESULT WINAPI iterator_QueryInterface( IIterator_IInspectable *iface, REFIID iid, void **out )
 {
@@ -54,58 +58,16 @@ static HRESULT WINAPI iterator_QueryInterface( IIterator_IInspectable *iface, RE
         return S_OK;
     }
 
-    if (IsEqualGUID( iid, &IID_IAgileObject ))
-    {
-        IInspectable_AddRef( (*out = &impl->IAgileObject_iface) );
-        return S_OK;
-    }
+    WIDL_impl_QueryInterface_IAgileObject( impl, iid, out, IAgileObject_iface );
 
     FIXME( "%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid( iid ) );
     *out = NULL;
     return E_NOINTERFACE;
 }
 
-static ULONG WINAPI iterator_AddRef( IIterator_IInspectable *iface )
-{
-    struct iterator *impl = iterator_from_IIterator_IInspectable( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static ULONG WINAPI iterator_Release( IIterator_IInspectable *iface )
-{
-    struct iterator *impl = iterator_from_IIterator_IInspectable( iface );
-    ULONG ref = InterlockedDecrement( &impl->ref );
-
-    TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
-
-    if (!ref)
-    {
-        IVectorView_IInspectable_Release( impl->view );
-        free( impl );
-    }
-
-    return ref;
-}
-
-static HRESULT WINAPI iterator_GetIids( IIterator_IInspectable *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI iterator_GetRuntimeClassName( IIterator_IInspectable *iface, HSTRING *class_name )
-{
-    FIXME( "iface %p, class_name %p stub!\n", iface, class_name );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI iterator_GetTrustLevel( IIterator_IInspectable *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_IUnknown_AddRef( iterator, IIterator_IInspectable, iterator );
+WIDL_impl_IUnknown_Release( iterator, IIterator_IInspectable, iterator );
+WIDL_impl_IInspectable_methods( iterator, IIterator_IInspectable, iterator );
 
 static HRESULT WINAPI iterator_get_Current( IIterator_IInspectable *iface, IInspectable **value )
 {
@@ -142,23 +104,10 @@ static HRESULT WINAPI iterator_GetMany( IIterator_IInspectable *iface, UINT32 it
     return IVectorView_IInspectable_GetMany( impl->view, impl->index, items_size, items, count );
 }
 
-static const IIterator_IInspectableVtbl iterator_vtbl =
-{
-    iterator_QueryInterface,
-    iterator_AddRef,
-    iterator_Release,
-    /* IInspectable methods */
-    iterator_GetIids,
-    iterator_GetRuntimeClassName,
-    iterator_GetTrustLevel,
-    /* IIterator<IInspectable*> methods */
-    iterator_get_Current,
-    iterator_get_HasCurrent,
-    iterator_MoveNext,
-    iterator_GetMany,
-};
+WIDL_impl_IIterator_IInspectableVtbl( iterator, iterator );
 
-DEFINE_IAGILEOBJECT( iterator, IIterator_IInspectable, &object->IIterator_IInspectable_iface );
+WIDL_impl_forwards_IAgileObject( iterator, IIterator_IInspectable, &object->IIterator_IInspectable_iface, iterator_agile );
+WIDL_impl_IAgileObjectVtbl( iterator, iterator_agile );
 
 struct vector_view
 {
@@ -166,16 +115,21 @@ struct vector_view
     IIterable_IInspectable IIterable_IInspectable_iface;
     IAgileObject IAgileObject_iface;
     struct vector_iids iids;
-    LONG ref;
+    const WCHAR *class_name;
+    LONG refcount;
 
     UINT32 size;
     IInspectable *elements[1];
 };
 
-static inline struct vector_view *vector_view_from_IVectorView_IInspectable( IVectorView_IInspectable *iface )
+static void vector_view_destroy( struct vector_view *impl )
 {
-    return CONTAINING_RECORD( iface, struct vector_view, IVectorView_IInspectable_iface );
+    UINT i;
+    for (i = 0; i < impl->size; ++i) IInspectable_Release( impl->elements[i] );
+    free( impl );
 }
+
+WIDL_impl_from_IVectorView_IInspectable( vector_view );
 
 static HRESULT WINAPI vector_view_QueryInterface( IVectorView_IInspectable *iface, REFIID iid, void **out )
 {
@@ -197,58 +151,16 @@ static HRESULT WINAPI vector_view_QueryInterface( IVectorView_IInspectable *ifac
         return S_OK;
     }
 
-    if (IsEqualGUID( iid, &IID_IAgileObject ))
-    {
-        IInspectable_AddRef( (*out = &impl->IAgileObject_iface) );
-        return S_OK;
-    }
+    WIDL_impl_QueryInterface_IAgileObject( impl, iid, out, IAgileObject_iface );
 
     FIXME( "%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid( iid ) );
     *out = NULL;
     return E_NOINTERFACE;
 }
 
-static ULONG WINAPI vector_view_AddRef( IVectorView_IInspectable *iface )
-{
-    struct vector_view *impl = vector_view_from_IVectorView_IInspectable( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static ULONG WINAPI vector_view_Release( IVectorView_IInspectable *iface )
-{
-    struct vector_view *impl = vector_view_from_IVectorView_IInspectable( iface );
-    ULONG i, ref = InterlockedDecrement( &impl->ref );
-
-    TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
-
-    if (!ref)
-    {
-        for (i = 0; i < impl->size; ++i) IInspectable_Release( impl->elements[i] );
-        free( impl );
-    }
-
-    return ref;
-}
-
-static HRESULT WINAPI vector_view_GetIids( IVectorView_IInspectable *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI vector_view_GetRuntimeClassName( IVectorView_IInspectable *iface, HSTRING *class_name )
-{
-    FIXME( "iface %p, class_name %p stub!\n", iface, class_name );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI vector_view_GetTrustLevel( IVectorView_IInspectable *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_IUnknown_AddRef( vector_view, IVectorView_IInspectable, vector_view );
+WIDL_impl_IUnknown_Release( vector_view, IVectorView_IInspectable, vector_view );
+WIDL_impl_IInspectable_methods( vector_view, IVectorView_IInspectable, vector_view );
 
 static HRESULT WINAPI vector_view_GetAt( IVectorView_IInspectable *iface, UINT32 index, IInspectable **value )
 {
@@ -309,24 +221,9 @@ static HRESULT WINAPI vector_view_GetMany( IVectorView_IInspectable *iface, UINT
     return S_OK;
 }
 
-static const struct IVectorView_IInspectableVtbl vector_view_vtbl =
-{
-    vector_view_QueryInterface,
-    vector_view_AddRef,
-    vector_view_Release,
-    /* IInspectable methods */
-    vector_view_GetIids,
-    vector_view_GetRuntimeClassName,
-    vector_view_GetTrustLevel,
-    /* IVectorView<IInspectable*> methods */
-    vector_view_GetAt,
-    vector_view_get_Size,
-    vector_view_IndexOf,
-    vector_view_GetMany,
-};
+WIDL_impl_IVectorView_IInspectableVtbl( vector_view, vector_view );
 
-DEFINE_IINSPECTABLE_( iterable_view, IIterable_IInspectable, vector_view, vector_view_from_IIterable_IInspectable,
-                      (IInspectable *)&object->IVectorView_IInspectable_iface )
+WIDL_impl_forwards_IIterable_IInspectable( vector_view, IVectorView_IInspectable, &object->IVectorView_IInspectable_iface, iterable_view );
 
 static HRESULT WINAPI iterable_view_First( IIterable_IInspectable *iface, IIterator_IInspectable **value )
 {
@@ -339,7 +236,7 @@ static HRESULT WINAPI iterable_view_First( IIterable_IInspectable *iface, IItera
     iter->IIterator_IInspectable_iface.lpVtbl = &iterator_vtbl;
     iter->IAgileObject_iface.lpVtbl = &iterator_agile_vtbl;
     iter->iid = impl->iids.iterator;
-    iter->ref = 1;
+    iter->refcount = 1;
 
     IVectorView_IInspectable_AddRef( (iter->view = &impl->IVectorView_IInspectable_iface) );
     iter->size = impl->size;
@@ -348,20 +245,10 @@ static HRESULT WINAPI iterable_view_First( IIterable_IInspectable *iface, IItera
     return S_OK;
 }
 
-static const struct IIterable_IInspectableVtbl iterable_view_vtbl =
-{
-    iterable_view_QueryInterface,
-    iterable_view_AddRef,
-    iterable_view_Release,
-    /* IInspectable methods */
-    iterable_view_GetIids,
-    iterable_view_GetRuntimeClassName,
-    iterable_view_GetTrustLevel,
-    /* IIterable<T> methods */
-    iterable_view_First,
-};
+WIDL_impl_IIterable_IInspectableVtbl( vector_view, iterable_view );
 
-DEFINE_IAGILEOBJECT( vector_view, IVectorView_IInspectable, &object->IVectorView_IInspectable_iface );
+WIDL_impl_forwards_IAgileObject( vector_view, IIterable_IInspectable, &object->IIterable_IInspectable_iface, vector_view_agile );
+WIDL_impl_IAgileObjectVtbl( vector_view_IAgileObject, vector_view_agile );
 
 struct vector
 {
@@ -369,17 +256,21 @@ struct vector
     IIterable_IInspectable IIterable_IInspectable_iface;
     IAgileObject IAgileObject_iface;
     struct vector_iids iids;
-    LONG ref;
+    const WCHAR *class_name;
+    LONG refcount;
 
     UINT32 size;
     UINT32 capacity;
     IInspectable **elements;
 };
 
-static inline struct vector *vector_from_IVector_IInspectable( IVector_IInspectable *iface )
+static void vector_destroy( struct vector *impl )
 {
-    return CONTAINING_RECORD( iface, struct vector, IVector_IInspectable_iface );
+    IVector_IInspectable_Clear( &impl->IVector_IInspectable_iface );
+    free( impl );
 }
+
+WIDL_impl_from_IVector_IInspectable( vector );
 
 static HRESULT WINAPI vector_QueryInterface( IVector_IInspectable *iface, REFIID iid, void **out )
 {
@@ -401,58 +292,16 @@ static HRESULT WINAPI vector_QueryInterface( IVector_IInspectable *iface, REFIID
         return S_OK;
     }
 
-    if (IsEqualGUID( iid, &IID_IAgileObject ))
-    {
-        IInspectable_AddRef( (*out = &impl->IAgileObject_iface) );
-        return S_OK;
-    }
+    WIDL_impl_QueryInterface_IAgileObject( impl, iid, out, IAgileObject_iface );
 
     FIXME( "%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid( iid ) );
     *out = NULL;
     return E_NOINTERFACE;
 }
 
-static ULONG WINAPI vector_AddRef( IVector_IInspectable *iface )
-{
-    struct vector *impl = vector_from_IVector_IInspectable( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static ULONG WINAPI vector_Release( IVector_IInspectable *iface )
-{
-    struct vector *impl = vector_from_IVector_IInspectable( iface );
-    ULONG ref = InterlockedDecrement( &impl->ref );
-
-    TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
-
-    if (!ref)
-    {
-        IVector_IInspectable_Clear( iface );
-        free( impl );
-    }
-
-    return ref;
-}
-
-static HRESULT WINAPI vector_GetIids( IVector_IInspectable *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI vector_GetRuntimeClassName( IVector_IInspectable *iface, HSTRING *class_name )
-{
-    FIXME( "iface %p, class_name %p stub!\n", iface, class_name );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI vector_GetTrustLevel( IVector_IInspectable *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_IUnknown_AddRef( vector, IVector_IInspectable, vector );
+WIDL_impl_IUnknown_Release( vector, IVector_IInspectable, vector );
+WIDL_impl_IInspectable_methods( vector, IVector_IInspectable, vector );
 
 static HRESULT WINAPI vector_GetAt( IVector_IInspectable *iface, UINT32 index, IInspectable **value )
 {
@@ -488,7 +337,7 @@ static HRESULT WINAPI vector_GetView( IVector_IInspectable *iface, IVectorView_I
     view->IIterable_IInspectable_iface.lpVtbl = &iterable_view_vtbl;
     view->IAgileObject_iface.lpVtbl = &vector_view_agile_vtbl;
     view->iids = impl->iids;
-    view->ref = 1;
+    view->refcount = 1;
 
     for (i = 0; i < impl->size; ++i) IInspectable_AddRef( (view->elements[view->size++] = impl->elements[i]) );
 
@@ -622,31 +471,9 @@ static HRESULT WINAPI vector_ReplaceAll( IVector_IInspectable *iface, UINT32 cou
     return hr;
 }
 
-static const struct IVector_IInspectableVtbl vector_vtbl =
-{
-    vector_QueryInterface,
-    vector_AddRef,
-    vector_Release,
-    /* IInspectable methods */
-    vector_GetIids,
-    vector_GetRuntimeClassName,
-    vector_GetTrustLevel,
-    /* IVector<IInspectable*> methods */
-    vector_GetAt,
-    vector_get_Size,
-    vector_GetView,
-    vector_IndexOf,
-    vector_SetAt,
-    vector_InsertAt,
-    vector_RemoveAt,
-    vector_Append,
-    vector_RemoveAtEnd,
-    vector_Clear,
-    vector_GetMany,
-    vector_ReplaceAll,
-};
+WIDL_impl_IVector_IInspectableVtbl( vector, vector );
 
-DEFINE_IINSPECTABLE( iterable, IIterable_IInspectable, vector, IVector_IInspectable_iface )
+WIDL_impl_forwards_IIterable_IInspectable( vector, IVector_IInspectable, &object->IVector_IInspectable_iface, iterable );
 
 static HRESULT WINAPI iterable_First( IIterable_IInspectable *iface, IIterator_IInspectable **value )
 {
@@ -668,20 +495,10 @@ static HRESULT WINAPI iterable_First( IIterable_IInspectable *iface, IIterator_I
     return hr;
 }
 
-static const struct IIterable_IInspectableVtbl iterable_vtbl =
-{
-    iterable_QueryInterface,
-    iterable_AddRef,
-    iterable_Release,
-    /* IInspectable methods */
-    iterable_GetIids,
-    iterable_GetRuntimeClassName,
-    iterable_GetTrustLevel,
-    /* IIterable<T> methods */
-    iterable_First,
-};
+WIDL_impl_IIterable_IInspectableVtbl( vector, iterable );
 
-DEFINE_IAGILEOBJECT( vector, IVector_IInspectable, &object->IVector_IInspectable_iface );
+WIDL_impl_forwards_IAgileObject( vector, IVector_IInspectable, &object->IVector_IInspectable_iface, vector_agile );
+WIDL_impl_IAgileObjectVtbl( vector, vector_agile );
 
 HRESULT vector_create( const struct vector_iids *iids, void **out )
 {
@@ -694,7 +511,7 @@ HRESULT vector_create( const struct vector_iids *iids, void **out )
     impl->IIterable_IInspectable_iface.lpVtbl = &iterable_vtbl;
     impl->IAgileObject_iface.lpVtbl = &vector_agile_vtbl;
     impl->iids = *iids;
-    impl->ref = 1;
+    impl->refcount = 1;
 
     *out = &impl->IVector_IInspectable_iface;
     TRACE( "created %p\n", *out );
