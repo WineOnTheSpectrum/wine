@@ -179,18 +179,7 @@ static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameCo
     return hr;
 }
 
-static const struct IGameControllerImplVtbl controller_vtbl =
-{
-    controller_QueryInterface,
-    controller_AddRef,
-    controller_Release,
-    /* IInspectable methods */
-    controller_GetIids,
-    controller_GetRuntimeClassName,
-    controller_GetTrustLevel,
-    /* IGameControllerImpl methods */
-    controller_Initialize,
-};
+WIDL_impl_IGameControllerImplVtbl( controller, controller );
 
 DEFINE_IINSPECTABLE_OUTER( input_sink, IGameControllerInputSink, controller, IGameController_outer )
 
@@ -206,19 +195,7 @@ static HRESULT WINAPI input_sink_OnInputSuspended( IGameControllerInputSink *ifa
     return E_NOTIMPL;
 }
 
-static const struct IGameControllerInputSinkVtbl input_sink_vtbl =
-{
-    input_sink_QueryInterface,
-    input_sink_AddRef,
-    input_sink_Release,
-    /* IInspectable methods */
-    input_sink_GetIids,
-    input_sink_GetRuntimeClassName,
-    input_sink_GetTrustLevel,
-    /* IGameControllerInputSink methods */
-    input_sink_OnInputResumed,
-    input_sink_OnInputSuspended,
-};
+WIDL_impl_IGameControllerInputSinkVtbl( controller, input_sink );
 
 DEFINE_IINSPECTABLE_OUTER( raw_controller, IRawGameController, controller, IGameController_outer )
 
@@ -316,26 +293,7 @@ static HRESULT WINAPI raw_controller_GetSwitchKind( IRawGameController *iface, I
     return E_NOTIMPL;
 }
 
-static const struct IRawGameControllerVtbl raw_controller_vtbl =
-{
-    raw_controller_QueryInterface,
-    raw_controller_AddRef,
-    raw_controller_Release,
-    /* IInspectable methods */
-    raw_controller_GetIids,
-    raw_controller_GetRuntimeClassName,
-    raw_controller_GetTrustLevel,
-    /* IRawGameController methods */
-    raw_controller_get_AxisCount,
-    raw_controller_get_ButtonCount,
-    raw_controller_get_ForceFeedbackMotors,
-    raw_controller_get_HardwareProductId,
-    raw_controller_get_HardwareVendorId,
-    raw_controller_get_SwitchCount,
-    raw_controller_GetButtonLabel,
-    raw_controller_GetCurrentReading,
-    raw_controller_GetSwitchKind,
-};
+WIDL_impl_IRawGameControllerVtbl( controller, raw_controller );
 
 DEFINE_IINSPECTABLE_OUTER( raw_controller_2, IRawGameController2, controller, IGameController_outer )
 
@@ -374,20 +332,7 @@ static HRESULT WINAPI raw_controller_2_get_DisplayName( IRawGameController2 *ifa
     return E_NOTIMPL;
 }
 
-static const struct IRawGameController2Vtbl raw_controller_2_vtbl =
-{
-    raw_controller_2_QueryInterface,
-    raw_controller_2_AddRef,
-    raw_controller_2_Release,
-    /* IInspectable methods */
-    raw_controller_2_GetIids,
-    raw_controller_2_GetRuntimeClassName,
-    raw_controller_2_GetTrustLevel,
-    /* IRawGameController2 methods */
-    raw_controller_2_get_SimpleHapticsControllers,
-    raw_controller_2_get_NonRoamableId,
-    raw_controller_2_get_DisplayName,
-};
+WIDL_impl_IRawGameController2Vtbl( controller, raw_controller_2 );
 
 struct controller_statics
 {
@@ -480,18 +425,7 @@ static HRESULT WINAPI factory_ActivateInstance( IActivationFactory *iface, IInsp
     return E_NOTIMPL;
 }
 
-static const struct IActivationFactoryVtbl factory_vtbl =
-{
-    factory_QueryInterface,
-    factory_AddRef,
-    factory_Release,
-    /* IInspectable methods */
-    factory_GetIids,
-    factory_GetRuntimeClassName,
-    factory_GetTrustLevel,
-    /* IActivationFactory methods */
-    factory_ActivateInstance,
-};
+WIDL_impl_IActivationFactoryVtbl( controller_statics, factory );
 
 DEFINE_IINSPECTABLE( statics, IRawGameControllerStatics, controller_statics, IActivationFactory_iface )
 
@@ -559,23 +493,7 @@ static HRESULT WINAPI statics_FromGameController( IRawGameControllerStatics *ifa
     return hr;
 }
 
-static const struct IRawGameControllerStaticsVtbl statics_vtbl =
-{
-    statics_QueryInterface,
-    statics_AddRef,
-    statics_Release,
-    /* IInspectable methods */
-    statics_GetIids,
-    statics_GetRuntimeClassName,
-    statics_GetTrustLevel,
-    /* IRawGameControllerStatics methods */
-    statics_add_RawGameControllerAdded,
-    statics_remove_RawGameControllerAdded,
-    statics_add_RawGameControllerRemoved,
-    statics_remove_RawGameControllerRemoved,
-    statics_get_RawGameControllers,
-    statics_FromGameController,
-};
+WIDL_impl_IRawGameControllerStaticsVtbl( controller_statics, statics );
 
 DEFINE_IINSPECTABLE( controller_factory, ICustomGameControllerFactory, controller_statics, IActivationFactory_iface )
 
@@ -648,20 +566,7 @@ static HRESULT WINAPI controller_factory_OnGameControllerRemoved( ICustomGameCon
     return S_OK;
 }
 
-static const struct ICustomGameControllerFactoryVtbl controller_factory_vtbl =
-{
-    controller_factory_QueryInterface,
-    controller_factory_AddRef,
-    controller_factory_Release,
-    /* IInspectable methods */
-    controller_factory_GetIids,
-    controller_factory_GetRuntimeClassName,
-    controller_factory_GetTrustLevel,
-    /* ICustomGameControllerFactory methods */
-    controller_factory_CreateGameController,
-    controller_factory_OnGameControllerAdded,
-    controller_factory_OnGameControllerRemoved,
-};
+WIDL_impl_ICustomGameControllerFactoryVtbl( controller_statics, controller_factory );
 
 DEFINE_IAGILEOBJECT( controller_statics, IActivationFactory, &object->IActivationFactory_iface );
 
