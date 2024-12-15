@@ -63,7 +63,7 @@ struct controller
     IRawGameController IRawGameController_iface;
     IRawGameController2 IRawGameController2_iface;
     IGameController *IGameController_outer;
-    LONG ref;
+    LONG refcount;
 
     IGameControllerProvider *provider;
     IWineGameControllerProvider *wine_provider;
@@ -108,18 +108,10 @@ static HRESULT WINAPI controller_QueryInterface( IGameControllerImpl *iface, REF
     return E_NOINTERFACE;
 }
 
-static ULONG WINAPI controller_AddRef( IGameControllerImpl *iface )
-{
-    struct controller *impl = controller_from_IGameControllerImpl( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
 static ULONG WINAPI controller_Release( IGameControllerImpl *iface )
 {
     struct controller *impl = controller_from_IGameControllerImpl( iface );
-    ULONG ref = InterlockedDecrement( &impl->ref );
+    ULONG ref = InterlockedDecrement( &impl->refcount );
 
     TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
 
@@ -133,6 +125,8 @@ static ULONG WINAPI controller_Release( IGameControllerImpl *iface )
 
     return ref;
 }
+
+WIDL_impl_IUnknown_AddRef( controller, IGameControllerImpl, controller );
 
 static HRESULT WINAPI controller_GetIids( IGameControllerImpl *iface, ULONG *iid_count, IID **iids )
 {
@@ -379,13 +373,7 @@ static HRESULT WINAPI factory_QueryInterface( IActivationFactory *iface, REFIID 
     return E_NOINTERFACE;
 }
 
-static ULONG WINAPI factory_AddRef( IActivationFactory *iface )
-{
-    struct controller_statics *impl = controller_statics_from_IActivationFactory( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
+WIDL_impl_static_IUnknown_AddRef( controller_statics, IActivationFactory, factory );
 
 static ULONG WINAPI factory_Release( IActivationFactory *iface )
 {
@@ -503,7 +491,7 @@ static HRESULT WINAPI controller_factory_CreateGameController( ICustomGameContro
     impl->IGameControllerInputSink_iface.lpVtbl = &input_sink_vtbl;
     impl->IRawGameController_iface.lpVtbl = &raw_controller_vtbl;
     impl->IRawGameController2_iface.lpVtbl = &raw_controller_2_vtbl;
-    impl->ref = 1;
+    impl->refcount = 1;
 
     TRACE( "created RawGameController %p\n", impl );
 
