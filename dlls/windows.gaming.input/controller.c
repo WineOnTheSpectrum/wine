@@ -62,15 +62,13 @@ struct controller
     IGameControllerInputSink IGameControllerInputSink_iface;
     IRawGameController IRawGameController_iface;
     IRawGameController2 IRawGameController2_iface;
-    IGameController *IGameController_outer;
+    IInspectable *outer;
     const WCHAR *class_name;
     LONG refcount;
 
     IGameControllerProvider *provider;
     IWineGameControllerProvider *wine_provider;
 };
-
-WIDL_impl_from_IGameControllerImpl( controller );
 
 static void controller_destroy( struct controller *impl )
 {
@@ -79,14 +77,12 @@ static void controller_destroy( struct controller *impl )
     free( impl );
 }
 
-WIDL_impl_IUnknown_methods( controller,
-    IGameControllerImpl, controller,
+WIDL_impl_outer_IGameControllerImpl( controller, controller,
     IGameControllerInputSink, input_sink,
     IRawGameController, raw_controller,
     IRawGameController2, raw_controller_2,
     END, FIXME
 );
-WIDL_impl_IInspectable_methods( controller, IGameControllerImpl, controller );
 
 static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameController *outer,
                                              IGameControllerProvider *provider )
@@ -96,7 +92,7 @@ static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameCo
 
     TRACE( "iface %p, outer %p, provider %p.\n", iface, outer, provider );
 
-    impl->IGameController_outer = outer;
+    impl->outer = (IInspectable *)outer;
     IGameControllerProvider_AddRef( (impl->provider = provider) );
 
     hr = IGameControllerProvider_QueryInterface( provider, &IID_IWineGameControllerProvider,
@@ -113,8 +109,6 @@ static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameCo
 
 WIDL_impl_IGameControllerImplVtbl( controller, controller );
 
-DEFINE_IINSPECTABLE_OUTER( input_sink, IGameControllerInputSink, controller, IGameController_outer )
-
 static HRESULT WINAPI input_sink_OnInputResumed( IGameControllerInputSink *iface, UINT64 timestamp )
 {
     FIXME( "iface %p, timestamp %I64u stub!\n", iface, timestamp );
@@ -128,8 +122,6 @@ static HRESULT WINAPI input_sink_OnInputSuspended( IGameControllerInputSink *ifa
 }
 
 WIDL_impl_IGameControllerInputSinkVtbl( controller, input_sink );
-
-DEFINE_IINSPECTABLE_OUTER( raw_controller, IRawGameController, controller, IGameController_outer )
 
 static HRESULT WINAPI raw_controller_get_AxisCount( IRawGameController *iface, INT32 *value )
 {
@@ -227,8 +219,6 @@ static HRESULT WINAPI raw_controller_GetSwitchKind( IRawGameController *iface, I
 
 WIDL_impl_IRawGameControllerVtbl( controller, raw_controller );
 
-DEFINE_IINSPECTABLE_OUTER( raw_controller_2, IRawGameController2, controller, IGameController_outer )
-
 static HRESULT WINAPI raw_controller_2_get_SimpleHapticsControllers( IRawGameController2 *iface, IVectorView_SimpleHapticsController** value)
 {
     static const struct vector_iids iids =
@@ -275,15 +265,12 @@ struct controller_statics
     const WCHAR *class_name;
 };
 
-WIDL_impl_from_IActivationFactory( controller_statics );
-WIDL_impl_static_IUnknown_methods( controller_statics,
-    IActivationFactory, factory,
+WIDL_impl_static_IActivationFactory( controller_statics, factory,
     IRawGameControllerStatics, statics,
     ICustomGameControllerFactory, controller_factory,
-    IAgileObject, agile,
+    IAgileObject, controller_statics_agile,
     END, FIXME
 );
-WIDL_impl_IInspectable_methods( controller_statics, IActivationFactory, factory );
 
 static HRESULT WINAPI factory_ActivateInstance( IActivationFactory *iface, IInspectable **instance )
 {
@@ -292,8 +279,6 @@ static HRESULT WINAPI factory_ActivateInstance( IActivationFactory *iface, IInsp
 }
 
 WIDL_impl_IActivationFactoryVtbl( controller_statics, factory );
-
-DEFINE_IINSPECTABLE( statics, IRawGameControllerStatics, controller_statics, IActivationFactory_iface )
 
 static HRESULT WINAPI statics_add_RawGameControllerAdded( IRawGameControllerStatics *iface,
                                                           IEventHandler_RawGameController *handler,
@@ -360,8 +345,6 @@ static HRESULT WINAPI statics_FromGameController( IRawGameControllerStatics *ifa
 }
 
 WIDL_impl_IRawGameControllerStaticsVtbl( controller_statics, statics );
-
-DEFINE_IINSPECTABLE( controller_factory, ICustomGameControllerFactory, controller_statics, IActivationFactory_iface )
 
 static HRESULT WINAPI controller_factory_CreateGameController( ICustomGameControllerFactory *iface, IGameControllerProvider *provider,
                                                                IInspectable **value )
@@ -435,7 +418,7 @@ static HRESULT WINAPI controller_factory_OnGameControllerRemoved( ICustomGameCon
 
 WIDL_impl_ICustomGameControllerFactoryVtbl( controller_statics, controller_factory );
 
-DEFINE_IAGILEOBJECT( controller_statics, IActivationFactory, &object->IActivationFactory_iface );
+WIDL_impl_IAgileObjectVtbl( controller_statics, controller_statics_agile );
 
 static struct controller_statics controller_statics =
 {
