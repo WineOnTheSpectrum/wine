@@ -78,15 +78,13 @@ static void controller_destroy( struct controller *impl )
     free( impl );
 }
 
-WIDL_impl_IUnknown_QueryInterface( controller,
+WIDL_impl_IUnknown_methods( controller,
     IGameControllerImpl, controller,
     IGameControllerInputSink, input_sink,
     IRawGameController, raw_controller,
     IRawGameController2, raw_controller_2,
     END, FIXME
 );
-WIDL_impl_IUnknown_AddRef( controller, IGameControllerImpl, controller );
-WIDL_impl_IUnknown_Release( controller, IGameControllerImpl, controller );
 
 static HRESULT WINAPI controller_GetIids( IGameControllerImpl *iface, ULONG *iid_count, IID **iids )
 {
@@ -295,15 +293,13 @@ struct controller_statics
 };
 
 WIDL_impl_from_IActivationFactory( controller_statics );
-WIDL_impl_IUnknown_QueryInterface( controller_statics,
+WIDL_impl_static_IUnknown_methods( controller_statics,
     IActivationFactory, factory,
     IRawGameControllerStatics, statics,
     ICustomGameControllerFactory, controller_factory,
     IAgileObject, agile,
     END, FIXME
 );
-WIDL_impl_static_IUnknown_AddRef( controller_statics, IActivationFactory, factory );
-WIDL_impl_static_IUnknown_Release( controller_statics, IActivationFactory, factory );
 
 static HRESULT WINAPI factory_GetIids( IActivationFactory *iface, ULONG *iid_count, IID **iids )
 {
