@@ -73,6 +73,7 @@ static void write_widl_using_macros( const type_t *iface )
 
     put_str( indent, "#define WIDL_impl_from_%s   WIDL_impl_from_%s\n", name, iface->c_name );
     put_str( indent, "#define WIDL_impl_QueryInterface_%s  WIDL_impl_QueryInterface_%s\n", name, iface->c_name );
+    put_str( indent, "#define WIDL_impl_each_QueryInterface_%s WIDL_impl_each_QueryInterface_%s\n", name, iface->c_name );
     put_str( indent, "#define WIDL_impl_%sVtbl    WIDL_impl_%sVtbl\n", name, iface->c_name );
 
     put_str( indent, "#endif /* %s */\n\n", macro );
@@ -111,7 +112,8 @@ static void write_widl_impl_macros( const type_t *iface )
         put_str( indent, "    }\n" );
         put_str( indent, "\n" );
 
-        put_str( indent, "#define WIDL_impl_QueryInterface_%s( object, iid, out, mem ) \\\n", iface->c_name );
+        put_str( indent, "#define WIDL_impl_QueryInterface_%s( object, iid, out, mem ) WIDL_impl_QueryInterface_%s_( object, iid, out, mem, _ )\n", iface->c_name, iface->c_name );
+        put_str( indent, "#define WIDL_impl_QueryInterface_%s_( object, iid, out, mem, prefix ) \\\n", iface->c_name );
         put_str( indent, "    do if ((object)->mem.lpVtbl) \\\n" );
         put_str( indent, "    { \\\n" );
         put_str( indent, "        if (0 " );
@@ -124,6 +126,11 @@ static void write_widl_impl_macros( const type_t *iface )
         put_str( indent, "            return S_OK; \\\n" );
         put_str( indent, "        } \\\n" );
         put_str( indent, "    } while (0)\n" );
+
+        put_str( indent, "#define WIDL_impl_each_QueryInterface_%s( object, iid, out, prefix, X, Y, ... ) \\\n", iface->c_name );
+        put_str( indent, "    WIDL_impl_QueryInterface_%s_( object, iid, out, %s_iface, prefix ); \\\n", iface->c_name, name );
+        put_str( indent, "    WIDL_impl_each_QueryInterface_ ## X( object, iid, out, Y, __VA_ARGS__ )\n" );
+        put_str( indent, "\n" );
 
         put_str( indent, "#define WIDL_impl_%sVtbl( type, prefix ) \\\n", iface->c_name );
         put_str( indent, "    static const %sVtbl prefix ## _vtbl = \\\n", iface->c_name );
@@ -142,6 +149,22 @@ static void write_interface( const type_t *iface )
 
     if (!strcmp( iface->name, "IUnknown" ))
     {
+        put_str( indent, "#define WIDL_impl_each_QueryInterface( object, iid, out, X, Y, ... ) WIDL_impl_each_QueryInterface_ ## X( object, iid, out, Y, __VA_ARGS__ )\n" );
+        put_str( indent, "#define WIDL_impl_each_QueryInterface_END( object, iid, out, trace, ... ) \\\n" );
+        put_str( indent, "        *out = NULL; \\\n" );
+        put_str( indent, "        trace( \"%%s not implemented, returning E_NOINTERFACE.\\n\", debugstr_guid(iid) ); \\\n" );
+        put_str( indent, "        return E_NOINTERFACE;\n" );
+        put_str( indent, "\n" );
+        put_str( indent, "#define WIDL_impl_IUnknown_QueryInterface( type, name, prefix, ... ) WIDL_impl_IUnknown_QueryInterface_( type, name, prefix, type ## _from_ ## name, __VA_ARGS__ )\n" );
+        put_str( indent, "#define WIDL_impl_IUnknown_QueryInterface_( type, name, prefix, impl_from, ... ) \\\n" );
+        put_str( indent, "    static HRESULT WINAPI prefix ## _QueryInterface( name *iface, REFIID iid, void **out ) \\\n" );
+        put_str( indent, "    { \\\n" );
+        put_str( indent, "        struct type *object = impl_from( iface ); \\\n" );
+        put_str( indent, "        TRACE( \"object %%p, iid %%s, out %%p.\\n\", object, debugstr_guid(iid), out ); \\\n" );
+        put_str( indent, "        WIDL_impl_each_QueryInterface( object, iid, out, name, prefix, __VA_ARGS__ ); \\\n" );
+        put_str( indent, "    }\n" );
+        put_str( indent, "\n" );
+
         put_str( indent, "#define WIDL_impl_IUnknown_AddRef( type, name, prefix ) WIDL_impl_IUnknown_AddRef_( type, name, prefix, type ## _from_ ## name )\n" );
         put_str( indent, "#define WIDL_impl_IUnknown_AddRef_( type, name, prefix, impl_from ) \\\n" );
         put_str( indent, "    static ULONG WINAPI prefix ## _AddRef( name *iface ) \\\n" );
