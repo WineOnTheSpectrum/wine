@@ -63,6 +63,7 @@ struct controller
     IRawGameController IRawGameController_iface;
     IRawGameController2 IRawGameController2_iface;
     IGameController *IGameController_outer;
+    const WCHAR *class_name;
     LONG refcount;
 
     IGameControllerProvider *provider;
@@ -85,25 +86,7 @@ WIDL_impl_IUnknown_methods( controller,
     IRawGameController2, raw_controller_2,
     END, FIXME
 );
-
-static HRESULT WINAPI controller_GetIids( IGameControllerImpl *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI controller_GetRuntimeClassName( IGameControllerImpl *iface, HSTRING *class_name )
-{
-    return WindowsCreateString( RuntimeClass_Windows_Gaming_Input_RawGameController,
-                                ARRAY_SIZE(RuntimeClass_Windows_Gaming_Input_RawGameController),
-                                class_name );
-}
-
-static HRESULT WINAPI controller_GetTrustLevel( IGameControllerImpl *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_IInspectable_methods( controller, IGameControllerImpl, controller );
 
 static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameController *outer,
                                              IGameControllerProvider *provider )
@@ -289,7 +272,7 @@ struct controller_statics
     IRawGameControllerStatics IRawGameControllerStatics_iface;
     ICustomGameControllerFactory ICustomGameControllerFactory_iface;
     IAgileObject IAgileObject_iface;
-    LONG ref;
+    const WCHAR *class_name;
 };
 
 WIDL_impl_from_IActivationFactory( controller_statics );
@@ -300,24 +283,7 @@ WIDL_impl_static_IUnknown_methods( controller_statics,
     IAgileObject, agile,
     END, FIXME
 );
-
-static HRESULT WINAPI factory_GetIids( IActivationFactory *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI factory_GetRuntimeClassName( IActivationFactory *iface, HSTRING *class_name )
-{
-    FIXME( "iface %p, class_name %p stub!\n", iface, class_name );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI factory_GetTrustLevel( IActivationFactory *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_IInspectable_methods( controller_statics, IActivationFactory, factory );
 
 static HRESULT WINAPI factory_ActivateInstance( IActivationFactory *iface, IInspectable **instance )
 {
@@ -409,6 +375,7 @@ static HRESULT WINAPI controller_factory_CreateGameController( ICustomGameContro
     impl->IGameControllerInputSink_iface.lpVtbl = &input_sink_vtbl;
     impl->IRawGameController_iface.lpVtbl = &raw_controller_vtbl;
     impl->IRawGameController2_iface.lpVtbl = &raw_controller_2_vtbl;
+    impl->class_name = RuntimeClass_Windows_Gaming_Input_RawGameController;
     impl->refcount = 1;
 
     TRACE( "created RawGameController %p\n", impl );
@@ -476,7 +443,7 @@ static struct controller_statics controller_statics =
     {&statics_vtbl},
     {&controller_factory_vtbl},
     {&controller_statics_agile_vtbl},
-    1,
+    RuntimeClass_Windows_Gaming_Input_RawGameController,
 };
 
 ICustomGameControllerFactory *controller_factory = &controller_statics.ICustomGameControllerFactory_iface;
