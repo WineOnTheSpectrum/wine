@@ -1,5 +1,5 @@
 TESTDLL   = advpack.dll
-IMPORTS   = cabinet advapi32 advpack
+IMPORTS   = cabinet advapi32 advpack user32
 
 SOURCES = \
 	advpack.c \
