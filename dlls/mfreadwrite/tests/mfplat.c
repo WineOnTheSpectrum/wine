@@ -1612,23 +1612,19 @@ static void test_sink_writer_mp4(void)
 
     hr = MFCreateSinkWriterFromURL(NULL, stream, attr, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
-    if (hr == S_OK)
-        IMFSinkWriter_Release(writer);
+    IMFSinkWriter_Release(writer);
 
     hr = MFCreateSinkWriterFromURL(tmp_file, NULL, NULL, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
-    if (hr == S_OK)
-        IMFSinkWriter_Release(writer);
+    IMFSinkWriter_Release(writer);
 
     hr = MFCreateSinkWriterFromURL(tmp_file, NULL, attr, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
-    if (hr == S_OK)
-        IMFSinkWriter_Release(writer);
+    IMFSinkWriter_Release(writer);
 
     hr = MFCreateSinkWriterFromURL(tmp_file, stream, NULL, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
-    if (hr == S_OK)
-        IMFSinkWriter_Release(writer);
+    IMFSinkWriter_Release(writer);
 
     hr = MFCreateSinkWriterFromURL(tmp_file, stream, attr, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
