@@ -1582,11 +1582,31 @@ static void test_sink_writer_create(void)
 
 static void test_sink_writer_mp4(void)
 {
+    static const struct attribute_desc video_stream_type_desc[] =
+    {
+        ATTR_GUID(MF_MT_MAJOR_TYPE, MFMediaType_Video),
+        ATTR_GUID(MF_MT_SUBTYPE, MFVideoFormat_H264),
+        ATTR_RATIO(MF_MT_FRAME_SIZE, 96, 96),
+        ATTR_RATIO(MF_MT_FRAME_RATE, 30000, 1001),
+        ATTR_UINT32(MF_MT_AVG_BITRATE, 193540),
+        ATTR_UINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive),
+        {0},
+    };
+    static const struct attribute_desc video_input_type_desc[] =
+    {
+        ATTR_GUID(MF_MT_MAJOR_TYPE, MFMediaType_Video),
+        ATTR_GUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32),
+        ATTR_RATIO(MF_MT_FRAME_SIZE, 96, 96),
+        ATTR_RATIO(MF_MT_FRAME_RATE, 30000, 1001),
+        {0},
+    };
+    IMFMediaType *stream_type, *input_type;
     WCHAR tmp_file[MAX_PATH];
     IMFSinkWriter *writer;
     IMFByteStream *stream;
     IMFAttributes *attr;
     IMFMediaSink *sink;
+    DWORD index;
     HRESULT hr;
 
     GetTempPathW(ARRAY_SIZE(tmp_file), tmp_file);
@@ -1597,6 +1617,10 @@ static void test_sink_writer_mp4(void)
     hr = IMFAttributes_SetGUID(attr, &MF_TRANSCODE_CONTAINERTYPE, &MFTranscodeContainerType_MPEG4);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     hr = MFCreateTempFile(MF_ACCESSMODE_READWRITE, MF_OPENMODE_DELETE_IF_EXIST, MF_FILEFLAGS_NONE, &stream);
+    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+    hr = MFCreateMediaType(&stream_type);
+    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+    hr = MFCreateMediaType(&input_type);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
     /* Test MFCreateSinkWriterFromURL. */
@@ -1629,7 +1653,43 @@ static void test_sink_writer_mp4(void)
     hr = MFCreateSinkWriterFromURL(tmp_file, stream, attr, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
-    /* Test GetServiceForStream. */
+    /* BeginWriting fails before calling AddStream. */
+    hr = IMFSinkWriter_BeginWriting(writer);
+    ok(hr == MF_E_INVALIDREQUEST, "BeginWriting returned %#lx.\n", hr);
+
+    /* Test AddStream. */
+    init_media_type(stream_type, video_stream_type_desc, -1);
+
+    hr = IMFSinkWriter_AddStream(writer, NULL, NULL);
+    ok(hr == E_INVALIDARG, "AddStream returned %#lx.\n", hr);
+    hr = IMFSinkWriter_AddStream(writer, stream_type, NULL);
+    ok(hr == E_POINTER, "AddStream returned %#lx.\n", hr);
+
+    index = 0xdeadbeef;
+    hr = IMFSinkWriter_AddStream(writer, NULL, &index);
+    ok(hr == E_INVALIDARG, "AddStream returned %#lx.\n", hr);
+    ok(index == 0xdeadbeef, "Unexpected index %lu.\n", index);
+
+    hr = IMFSinkWriter_AddStream(writer, stream_type, &index);
+    ok(hr == S_OK, "AddStream returned %#lx.\n", hr);
+    ok(index == 0, "Unexpected index %lu.\n", index);
+
+    /* Test SetInputMediaType. */
+    init_media_type(input_type, video_input_type_desc, -1);
+    hr = IMFSinkWriter_SetInputMediaType(writer, 0xdeadbeef, NULL, NULL);
+    todo_wine
+    ok(hr == E_INVALIDARG, "SetInputMediaType returned %#lx.\n", hr);
+    hr = IMFSinkWriter_SetInputMediaType(writer, 0, NULL, NULL);
+    todo_wine
+    ok(hr == E_INVALIDARG, "SetInputMediaType returned %#lx.\n", hr);
+    hr = IMFSinkWriter_SetInputMediaType(writer, 0xdeadbeef, input_type, NULL);
+    todo_wine
+    ok(hr == MF_E_INVALIDSTREAMNUMBER, "SetInputMediaType returned %#lx.\n", hr);
+    hr = IMFSinkWriter_SetInputMediaType(writer, 0, input_type, NULL);
+    todo_wine
+    ok(hr == S_OK, "SetInputMediaType returned %#lx.\n", hr);
+
+    /* Test GetServiceForStream before calling BeginWriting. */
     sink = (void *)0xdeadbeef;
     hr = IMFSinkWriter_GetServiceForStream(writer, MF_SINK_WRITER_MEDIASINK,
             &GUID_NULL, &IID_IMFMediaSink, (void **)&sink);
@@ -1638,8 +1698,24 @@ static void test_sink_writer_mp4(void)
     todo_wine
     ok(!sink, "Unexpected pointer %p.\n", sink);
 
+    /* Test BeginWriting. */
+    hr = IMFSinkWriter_BeginWriting(writer);
+    todo_wine
+    ok(hr == S_OK, "BeginWriting returned %#lx.\n", hr);
+    hr = IMFSinkWriter_BeginWriting(writer);
+    todo_wine
+    ok(hr == MF_E_INVALIDREQUEST, "BeginWriting returned %#lx.\n", hr);
+
+    /* Test GetServiceForStream after calling BeginWriting. */
+    hr = IMFSinkWriter_GetServiceForStream(writer, MF_SINK_WRITER_MEDIASINK,
+            &GUID_NULL, &IID_IMFMediaSink, (void **)&sink);
+    ok(hr == S_OK, "GetServiceForStream returned %#lx.\n", hr);
+    IMFMediaSink_Release(sink);
+
     DeleteFileW(tmp_file);
     IMFSinkWriter_Release(writer);
+    IMFMediaType_Release(input_type);
+    IMFMediaType_Release(stream_type);
     IMFByteStream_Release(stream);
     IMFAttributes_Release(attr);
 }
