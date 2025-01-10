@@ -162,6 +162,37 @@ static void init_attributes_(const char *file, int line, IMFAttributes *attribut
     }
 }
 
+static IMFSample *create_sample(const BYTE *data, DWORD size)
+{
+    IMFMediaBuffer *media_buffer;
+    IMFSample *sample;
+    BYTE *buffer;
+    DWORD length;
+    HRESULT hr;
+    ULONG ret;
+
+    hr = MFCreateSample(&sample);
+    ok(hr == S_OK, "MFCreateSample returned %#lx\n", hr);
+    hr = MFCreateMemoryBuffer(size, &media_buffer);
+    ok(hr == S_OK, "MFCreateMemoryBuffer returned %#lx\n", hr);
+
+    hr = IMFMediaBuffer_Lock(media_buffer, &buffer, NULL, &length);
+    ok(hr == S_OK, "Lock returned %#lx\n", hr);
+    ok(length == 0, "Unexpected length %lu\n", length);
+    memcpy(buffer, data, size);
+    hr = IMFMediaBuffer_Unlock(media_buffer);
+    ok(hr == S_OK, "Unlock returned %#lx\n", hr);
+
+    hr = IMFMediaBuffer_SetCurrentLength(media_buffer, size);
+    ok(hr == S_OK, "SetCurrentLength returned %#lx\n", hr);
+    hr = IMFSample_AddBuffer(sample, media_buffer);
+    ok(hr == S_OK, "AddBuffer returned %#lx\n", hr);
+    ret = IMFMediaBuffer_Release(media_buffer);
+    ok(ret == 1, "Release returned %lu\n", ret);
+
+    return sample;
+}
+
 static ULONG get_refcount(void *iface)
 {
     IUnknown *unknown = iface;
@@ -1602,13 +1633,15 @@ static void test_sink_writer_mp4(void)
     };
     IMFMediaType *stream_type, *input_type;
     IMFSinkWriterEx *writer_ex = NULL;
+    DWORD rgb32_data[96 * 96];
     WCHAR tmp_file[MAX_PATH];
     IMFTransform *transform;
     IMFSinkWriter *writer;
     IMFByteStream *stream;
+    DWORD index, i, size;
     IMFAttributes *attr;
     IMFMediaSink *sink;
-    DWORD index;
+    HANDLE file;
     HRESULT hr;
     GUID guid;
 
@@ -1641,10 +1674,6 @@ static void test_sink_writer_mp4(void)
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     IMFSinkWriter_Release(writer);
 
-    hr = MFCreateSinkWriterFromURL(tmp_file, NULL, NULL, &writer);
-    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
-    IMFSinkWriter_Release(writer);
-
     hr = MFCreateSinkWriterFromURL(tmp_file, NULL, attr, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     IMFSinkWriter_Release(writer);
@@ -1654,6 +1683,10 @@ static void test_sink_writer_mp4(void)
     IMFSinkWriter_Release(writer);
 
     hr = MFCreateSinkWriterFromURL(tmp_file, stream, attr, &writer);
+    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+    IMFSinkWriter_Release(writer);
+
+    hr = MFCreateSinkWriterFromURL(tmp_file, NULL, NULL, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
     hr = IMFSinkWriter_QueryInterface(writer, &IID_IMFSinkWriterEx, (void **)&writer_ex);
@@ -1754,6 +1787,35 @@ static void test_sink_writer_mp4(void)
             &GUID_NULL, &IID_IMFMediaSink, (void **)&sink);
     ok(hr == S_OK, "GetServiceForStream returned %#lx.\n", hr);
     IMFMediaSink_Release(sink);
+
+    /* WriteSample. */
+    for (i = 0; i < ARRAY_SIZE(rgb32_data); ++i)
+        rgb32_data[i] = 0x0000ff00;
+    for (i = 0; i < 30; ++i)
+    {
+        IMFSample *sample = create_sample((const BYTE *)rgb32_data, sizeof(rgb32_data));
+        hr = IMFSample_SetSampleTime(sample, 333333 * i);
+        ok(hr == S_OK, "SetSampleTime returned %#lx.\n", hr);
+        hr = IMFSample_SetSampleDuration(sample, 333333);
+        ok(hr == S_OK, "SetSampleDuration returned %#lx.\n", hr);
+        hr = IMFSinkWriter_WriteSample(writer, 0, sample);
+        todo_wine
+        ok(hr == S_OK, "WriteSample returned %#lx.\n", hr);
+        IMFSample_Release(sample);
+    }
+
+    /* Finalize. */
+    hr = IMFSinkWriter_Finalize(writer);
+    todo_wine
+    ok(hr == S_OK, "Finalize returned %#lx.\n", hr);
+
+    /* Check the output file. */
+    file = CreateFileW(tmp_file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    todo_wine
+    ok(file != INVALID_HANDLE_VALUE, "CreateFileW failed.\n");
+    size = GetFileSize(file, NULL);
+    todo_wine
+    ok(size != INVALID_FILE_SIZE && size > 0x400, "Unexpected file size %#lx.\n", size);
 
     if (writer_ex)
         IMFSinkWriterEx_Release(writer_ex);
