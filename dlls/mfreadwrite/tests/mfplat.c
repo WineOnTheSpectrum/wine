@@ -1601,13 +1601,16 @@ static void test_sink_writer_mp4(void)
         {0},
     };
     IMFMediaType *stream_type, *input_type;
+    IMFSinkWriterEx *writer_ex = NULL;
     WCHAR tmp_file[MAX_PATH];
+    IMFTransform *transform;
     IMFSinkWriter *writer;
     IMFByteStream *stream;
     IMFAttributes *attr;
     IMFMediaSink *sink;
     DWORD index;
     HRESULT hr;
+    GUID guid;
 
     GetTempPathW(ARRAY_SIZE(tmp_file), tmp_file);
     wcscat(tmp_file, L"tmp.mp4");
@@ -1653,6 +1656,10 @@ static void test_sink_writer_mp4(void)
     hr = MFCreateSinkWriterFromURL(tmp_file, stream, attr, &writer);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
+    hr = IMFSinkWriter_QueryInterface(writer, &IID_IMFSinkWriterEx, (void **)&writer_ex);
+    todo_wine
+    ok(hr == S_OK, "QueryInterface returned %#lx.\n", hr);
+
     /* BeginWriting fails before calling AddStream. */
     hr = IMFSinkWriter_BeginWriting(writer);
     ok(hr == MF_E_INVALIDREQUEST, "BeginWriting returned %#lx.\n", hr);
@@ -1674,6 +1681,19 @@ static void test_sink_writer_mp4(void)
     ok(hr == S_OK, "AddStream returned %#lx.\n", hr);
     ok(index == 0, "Unexpected index %lu.\n", index);
 
+    /* Get transform before SetInputMediaType. */
+    transform = (void *)0xdeadbeef;
+    hr = IMFSinkWriter_GetServiceForStream(writer, 0, &GUID_NULL, &IID_IMFTransform, (void **)&transform);
+    todo_wine
+    ok(hr == MF_E_UNSUPPORTED_SERVICE, "GetServiceForStream returned %#lx.\n", hr);
+    ok(!transform, "Unexpected pointer %p.\n", transform);
+
+    if (writer_ex)
+    {
+        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 0, &guid, &transform);
+        ok(hr == MF_E_INVALIDINDEX, "GetTransformForStream returned %#lx.\n", hr);
+    }
+
     /* Test SetInputMediaType. */
     init_media_type(input_type, video_input_type_desc, -1);
     hr = IMFSinkWriter_SetInputMediaType(writer, 0xdeadbeef, NULL, NULL);
@@ -1689,7 +1709,30 @@ static void test_sink_writer_mp4(void)
     todo_wine
     ok(hr == S_OK, "SetInputMediaType returned %#lx.\n", hr);
 
-    /* Test GetServiceForStream before calling BeginWriting. */
+    /* Get transform after SetInputMediaType. */
+    hr = IMFSinkWriter_GetServiceForStream(writer, 0, &GUID_NULL, &IID_IMFTransform, (void **)&transform);
+    todo_wine
+    ok(hr == S_OK, "GetServiceForStream returned %#lx.\n", hr);
+    if (hr == S_OK)
+        IMFTransform_Release(transform);
+
+    if (writer_ex)
+    {
+        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 0, &guid, &transform);
+        ok(hr == S_OK, "GetTransformForStream returned %#lx.\n", hr);
+        ok(IsEqualGUID(&guid, &MFT_CATEGORY_VIDEO_PROCESSOR), "Unexpected guid %s.\n", debugstr_guid(&guid));
+        IMFTransform_Release(transform);
+
+        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 1, &guid, &transform);
+        ok(hr == S_OK, "GetTransformForStream returned %#lx.\n", hr);
+        ok(IsEqualGUID(&guid, &MFT_CATEGORY_VIDEO_ENCODER), "Unexpected guid %s.\n", debugstr_guid(&guid));
+        IMFTransform_Release(transform);
+
+        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 2, &guid, &transform);
+        ok(hr == MF_E_INVALIDINDEX, "GetTransformForStream returned %#lx.\n", hr);
+    }
+
+    /* Get media sink before BeginWriting. */
     sink = (void *)0xdeadbeef;
     hr = IMFSinkWriter_GetServiceForStream(writer, MF_SINK_WRITER_MEDIASINK,
             &GUID_NULL, &IID_IMFMediaSink, (void **)&sink);
@@ -1706,12 +1749,14 @@ static void test_sink_writer_mp4(void)
     todo_wine
     ok(hr == MF_E_INVALIDREQUEST, "BeginWriting returned %#lx.\n", hr);
 
-    /* Test GetServiceForStream after calling BeginWriting. */
+    /* Get media sink after BeginWriting. */
     hr = IMFSinkWriter_GetServiceForStream(writer, MF_SINK_WRITER_MEDIASINK,
             &GUID_NULL, &IID_IMFMediaSink, (void **)&sink);
     ok(hr == S_OK, "GetServiceForStream returned %#lx.\n", hr);
     IMFMediaSink_Release(sink);
 
+    if (writer_ex)
+        IMFSinkWriterEx_Release(writer_ex);
     DeleteFileW(tmp_file);
     IMFSinkWriter_Release(writer);
     IMFMediaType_Release(input_type);
