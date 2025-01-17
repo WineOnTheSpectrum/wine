@@ -799,6 +799,41 @@ static inline unsigned int get_unique_id(void)
     return id;
 }
 
+/* try to merge a WM_MOUSEWHEEL message with the last in the list; return 1 if successful */
+static int merge_mousewheel( struct thread_input *input, const struct message *msg )
+{
+    struct message *prev;
+    struct list *ptr;
+
+    for (ptr = list_tail( &input->msg_list ); ptr; ptr = list_prev( &input->msg_list, ptr ))
+    {
+        prev = LIST_ENTRY( ptr, struct message, entry );
+        if (prev->msg >> 31) continue; /* ignore internal messages */
+        if (prev->msg != WM_INPUT) break;
+    }
+    if (!ptr) return 0;
+    if (prev->result) return 0;
+    if (prev->win && msg->win && prev->win != msg->win) return 0;
+    if (prev->msg != msg->msg) return 0;
+    if (prev->type != msg->type) return 0;
+    if (prev->x != msg->x || prev->y != msg->y) return 0;
+    /* now we can merge it */
+    prev->wparam += msg->wparam;
+    prev->lparam  = msg->lparam;
+    prev->x       = msg->x;
+    prev->y       = msg->y;
+    prev->time    = msg->time;
+    if (msg->type == MSG_HARDWARE && prev->data && msg->data)
+    {
+        struct hardware_msg_data *prev_data = prev->data;
+        struct hardware_msg_data *msg_data = msg->data;
+        prev_data->info = msg_data->info;
+    }
+    list_remove( ptr );
+    list_add_tail( &input->msg_list, ptr );
+    return 1;
+}
+
 /* try to merge a WM_MOUSEMOVE message with the last in the list; return 1 if successful */
 static int merge_mousemove( struct thread_input *input, const struct message *msg )
 {
@@ -861,6 +896,7 @@ static int merge_unique_message( struct thread_input *input, unsigned int messag
 /* try to merge a message with the messages in the list; return 1 if successful */
 static int merge_message( struct thread_input *input, const struct message *msg )
 {
+    if (msg->msg == WM_MOUSEWHEEL) return merge_mousewheel( input, msg );
     if (msg->msg == WM_MOUSEMOVE) return merge_mousemove( input, msg );
     if (msg->msg == WM_WINE_CLIPCURSOR) return merge_unique_message( input, WM_WINE_CLIPCURSOR, msg );
     if (msg->msg == WM_WINE_SETCURSOR) return merge_unique_message( input, WM_WINE_SETCURSOR, msg );
