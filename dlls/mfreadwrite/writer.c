@@ -181,6 +181,19 @@ static void stream_release_transforms(struct stream *stream)
     memset(stream->transforms, 0, sizeof(stream->transforms));
 }
 
+static HRESULT create_transform(IMFMediaType *input_type, IMFMediaType *output_type, BOOL use_encoder,
+        struct transform *out)
+{
+    return E_NOTIMPL;
+}
+
+static struct stream *sink_writer_get_stream(const struct sink_writer *writer, DWORD index)
+{
+    if (index >= writer->streams.count)
+        return NULL;
+    return &writer->streams.items[index];
+}
+
 static void sink_writer_release_pending_item(struct pending_item *item)
 {
     list_remove(&item->entry);
@@ -321,8 +334,46 @@ static HRESULT WINAPI sink_writer_AddStream(IMFSinkWriter *iface, IMFMediaType *
 static HRESULT WINAPI sink_writer_SetInputMediaType(IMFSinkWriter *iface, DWORD index, IMFMediaType *type,
         IMFAttributes *parameters)
 {
-    FIXME("%p, %lu, %p, %p.\n", iface, index, type, parameters);
-    return E_NOTIMPL;
+    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    IMFMediaTypeHandler *type_handler = NULL;
+    struct transform transforms[2] = {};
+    IMFMediaType *stream_type = NULL;
+    struct stream *stream;
+    HRESULT hr;
+
+    TRACE("%p, %lu, %p, %p.\n", iface, index, type, parameters);
+
+    if (!type)
+        return E_INVALIDARG;
+
+    EnterCriticalSection(&writer->cs);
+
+    if (!(stream = sink_writer_get_stream(writer, index)))
+    {
+        LeaveCriticalSection(&writer->cs);
+        return MF_E_INVALIDSTREAMNUMBER;
+    }
+
+    /* Get stream type from stream sink. */
+    if (SUCCEEDED(hr = IMFStreamSink_GetMediaTypeHandler(stream->stream_sink, &type_handler))
+            && SUCCEEDED((hr = IMFMediaTypeHandler_GetCurrentMediaType(type_handler, &stream_type))))
+    {
+        /* Create transforms for encoding.
+         * Try converter first, then try again with encoder. */
+        if (SUCCEEDED(hr = create_transform(type, stream_type, FALSE, transforms))
+                || SUCCEEDED(hr = create_transform(type, stream_type, TRUE, transforms)))
+        {
+            stream_release_transforms(stream);
+            stream->transforms[0] = transforms[0];
+            stream->transforms[1] = transforms[1];
+        }
+
+        IMFMediaType_Release(stream_type);
+        IMFMediaTypeHandler_Release(type_handler);
+    }
+
+    LeaveCriticalSection(&writer->cs);
+    return hr;
 }
 
 static HRESULT sink_writer_set_presentation_clock(struct sink_writer *writer)
@@ -385,12 +436,6 @@ static HRESULT WINAPI sink_writer_BeginWriting(IMFSinkWriter *iface)
     LeaveCriticalSection(&writer->cs);
 
     return hr;
-}
-
-static struct stream * sink_writer_get_stream(const struct sink_writer *writer, DWORD index)
-{
-    if (index >= writer->streams.count) return NULL;
-    return &writer->streams.items[index];
 }
 
 static HRESULT sink_writer_get_buffer_length(IMFSample *sample, LONGLONG *timestamp, DWORD *length)
