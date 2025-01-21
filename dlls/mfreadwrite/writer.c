@@ -181,10 +181,132 @@ static void stream_release_transforms(struct stream *stream)
     memset(stream->transforms, 0, sizeof(stream->transforms));
 }
 
+static HRESULT enum_transforms(IMFMediaType *input_type, IMFMediaType *output_type, BOOL use_encoder,
+        IMFActivate ***activates, UINT32 *count)
+{
+    MFT_REGISTER_TYPE_INFO input_type_info, output_type_info;
+    GUID category;
+    HRESULT hr;
+
+    /* Get type infos. */
+    if (input_type)
+    {
+        if (FAILED(hr = IMFMediaType_GetMajorType(input_type, &input_type_info.guidMajorType))
+                || FAILED(hr = IMFMediaType_GetGUID(input_type, &MF_MT_SUBTYPE, &input_type_info.guidSubtype)))
+            return hr;
+    }
+    if (FAILED(hr = IMFMediaType_GetMajorType(output_type, &output_type_info.guidMajorType))
+            || FAILED(hr = IMFMediaType_GetGUID(output_type, &MF_MT_SUBTYPE, &output_type_info.guidSubtype)))
+        return hr;
+
+    /* Set category according to major type. */
+    if (IsEqualGUID(&output_type_info.guidMajorType, &MFMediaType_Video))
+        category = use_encoder ? MFT_CATEGORY_VIDEO_ENCODER : MFT_CATEGORY_VIDEO_PROCESSOR;
+    else if (IsEqualGUID(&output_type_info.guidMajorType, &MFMediaType_Audio))
+        category = use_encoder ? MFT_CATEGORY_AUDIO_ENCODER : MFT_CATEGORY_AUDIO_EFFECT;
+    else
+        return MF_E_TOPO_CODEC_NOT_FOUND;
+
+    /* Enumerate available transforms. */
+    *count = 0;
+    if (FAILED(hr = MFTEnumEx(category, 0, (input_type ? NULL : &input_type_info), &output_type_info,
+            activates, count)))
+        return hr;
+    if (!*count)
+        return MF_E_TOPO_CODEC_NOT_FOUND;
+
+    return hr;
+}
+
+static HRESULT create_transform_from_activate(IMFActivate *activate,
+        IMFMediaType *input_type, IMFMediaType *output_type, struct transform *out)
+{
+    IMFMediaType *output_current_type = NULL;
+    struct transform transform;
+    HRESULT hr;
+
+    /* Get transform category. */
+    if (FAILED(hr = IMFActivate_GetGUID(activate, &MF_TRANSFORM_CATEGORY_Attribute, &transform.category)))
+        return hr;
+
+    /* Create transform. */
+    if (FAILED(hr = IMFActivate_ActivateObject(activate, &IID_IMFTransform, (void **)&transform.transform)))
+        return hr;
+
+    /* Set output type on transform. */
+    if (FAILED(hr = IMFTransform_SetOutputType(transform.transform, 0, output_type, 0))
+            || FAILED(hr = IMFTransform_GetOutputCurrentType(transform.transform, 0, &output_current_type)))
+    {
+        IMFTransform_Release(transform.transform);
+        return hr;
+    }
+
+    /* Set input type on transform. */
+    if (input_type)
+    {
+        if (FAILED(hr = update_media_type(input_type, output_current_type))
+                || FAILED(hr = IMFTransform_SetInputType(transform.transform, 0, input_type, 0)))
+        {
+            IMFMediaType_Release(output_current_type);
+            IMFTransform_Release(transform.transform);
+            return hr;
+        }
+    }
+
+    IMFMediaType_Release(output_current_type);
+
+    *out = transform;
+    TRACE("Created transform %p.\n", out->transform);
+
+    return S_OK;
+}
+
 static HRESULT create_transform(IMFMediaType *input_type, IMFMediaType *output_type, BOOL use_encoder,
         struct transform *out)
 {
-    return E_NOTIMPL;
+    struct transform transform = {}, converter = {};
+    IMFMediaType *encoder_input_type;
+    IMFActivate **activates;
+    UINT32 count = 0, i;
+    HRESULT hr;
+
+    if (FAILED(hr = enum_transforms(input_type, output_type, use_encoder, &activates, &count)))
+        return hr;
+
+    for (i = 0; i < count; i++)
+    {
+        if (SUCCEEDED(hr = create_transform_from_activate(activates[i], input_type, output_type, &transform)))
+        {
+            TRACE("Create %s transform %p.", use_encoder ? "encoder" : "converter", transform.transform);
+            *out = transform;
+            break;
+        }
+
+        /* Failed to use a single encoder, try using an encoder and a converter. */
+        if (use_encoder && SUCCEEDED(hr = create_transform_from_activate(activates[i], NULL, output_type, &transform)))
+        {
+            if (SUCCEEDED(hr = IMFTransform_GetInputAvailableType(transform.transform, 0, 0, &encoder_input_type)))
+            {
+                hr = create_transform(input_type, encoder_input_type, FALSE, &converter);
+                IMFMediaType_Release(encoder_input_type);
+                if (SUCCEEDED(hr))
+                {
+                    TRACE("Created converter transform %p, encoder transform %p.",
+                            converter.transform, transform.transform);
+                    out[0] = converter;
+                    out[1] = transform;
+                    break;
+                }
+            }
+            IMFTransform_Release(transform.transform);
+        }
+    }
+
+    for (i = 0; i < count; ++i)
+        IMFActivate_Release(activates[i]);
+    CoTaskMemFree(activates);
+
+    return hr;
 }
 
 static struct stream *sink_writer_get_stream(const struct sink_writer *writer, DWORD index)

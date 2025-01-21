@@ -1736,12 +1736,10 @@ static void test_sink_writer_mp4(void)
     hr = IMFSinkWriter_SetInputMediaType(writer, 0xdeadbeef, input_type, NULL);
     ok(hr == MF_E_INVALIDSTREAMNUMBER, "SetInputMediaType returned %#lx.\n", hr);
     hr = IMFSinkWriter_SetInputMediaType(writer, 0, input_type, NULL);
-    todo_wine
     ok(hr == S_OK, "SetInputMediaType returned %#lx.\n", hr);
 
     /* Get transform after SetInputMediaType. */
     hr = IMFSinkWriter_GetServiceForStream(writer, 0, &GUID_NULL, &IID_IMFTransform, (void **)&transform);
-    todo_wine
     ok(hr == S_OK, "GetServiceForStream returned %#lx.\n", hr);
     if (hr == S_OK)
         IMFTransform_Release(transform);
