@@ -1742,7 +1742,6 @@ static void test_tls_links(void)
         for (i = 0; i < count; ++i)
         {
             if (!ptr[i]) continue;
-            todo_wine
             size = HeapSize(GetProcessHeap(), 0, ((void **)ptr[i])[-1]);
             ok(size && size < 100000, "got %Iu.\n", size);
         }

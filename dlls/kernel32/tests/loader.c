@@ -2325,10 +2325,8 @@ static void test_import_resolution(void)
             {
                 SIZE_T s;
                 /* should be aligned on 1024 bytes, 10 lower bits at 0 */
-                todo_wine_if( (DWORD_PTR)str & 0x3ff )
                 ok( !((DWORD_PTR)str & 0x3ff), "wrong alignment %p\n", str );
                 s = HeapSize( GetProcessHeap(), 0, ((void **)str)[-1] );
-                todo_wine
                 ok( s != (SIZE_T)-1, "Error %Ix\n", s);
             }
             ok(ptr->tls_index_hi == 0, "TLS Index written as a short, high half: %d\n", ptr->tls_index_hi);
