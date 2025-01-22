@@ -8,5 +8,6 @@ EXTRADLLFLAGS = -Wb,--prefer-native
 SOURCES = \
 	propstore.c \
 	propsys_classes.idl \
+	propsys_desc.c \
 	propsys_main.c \
 	propvar.c
