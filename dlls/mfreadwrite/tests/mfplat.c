@@ -1690,7 +1690,6 @@ static void test_sink_writer_mp4(void)
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
     hr = IMFSinkWriter_QueryInterface(writer, &IID_IMFSinkWriterEx, (void **)&writer_ex);
-    todo_wine
     ok(hr == S_OK, "QueryInterface returned %#lx.\n", hr);
 
     /* BeginWriting fails before calling AddStream. */
@@ -1721,11 +1720,8 @@ static void test_sink_writer_mp4(void)
     ok(hr == MF_E_UNSUPPORTED_SERVICE, "GetServiceForStream returned %#lx.\n", hr);
     ok(!transform, "Unexpected pointer %p.\n", transform);
 
-    if (writer_ex)
-    {
-        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 0, &guid, &transform);
-        ok(hr == MF_E_INVALIDINDEX, "GetTransformForStream returned %#lx.\n", hr);
-    }
+    hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 0, &guid, &transform);
+    ok(hr == MF_E_INVALIDINDEX, "GetTransformForStream returned %#lx.\n", hr);
 
     /* Test SetInputMediaType. */
     init_media_type(input_type, video_input_type_desc, -1);
@@ -1741,24 +1737,20 @@ static void test_sink_writer_mp4(void)
     /* Get transform after SetInputMediaType. */
     hr = IMFSinkWriter_GetServiceForStream(writer, 0, &GUID_NULL, &IID_IMFTransform, (void **)&transform);
     ok(hr == S_OK, "GetServiceForStream returned %#lx.\n", hr);
-    if (hr == S_OK)
-        IMFTransform_Release(transform);
+    IMFTransform_Release(transform);
 
-    if (writer_ex)
-    {
-        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 0, &guid, &transform);
-        ok(hr == S_OK, "GetTransformForStream returned %#lx.\n", hr);
-        ok(IsEqualGUID(&guid, &MFT_CATEGORY_VIDEO_PROCESSOR), "Unexpected guid %s.\n", debugstr_guid(&guid));
-        IMFTransform_Release(transform);
+    hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 0, &guid, &transform);
+    ok(hr == S_OK, "GetTransformForStream returned %#lx.\n", hr);
+    ok(IsEqualGUID(&guid, &MFT_CATEGORY_VIDEO_PROCESSOR), "Unexpected guid %s.\n", debugstr_guid(&guid));
+    IMFTransform_Release(transform);
 
-        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 1, &guid, &transform);
-        ok(hr == S_OK, "GetTransformForStream returned %#lx.\n", hr);
-        ok(IsEqualGUID(&guid, &MFT_CATEGORY_VIDEO_ENCODER), "Unexpected guid %s.\n", debugstr_guid(&guid));
-        IMFTransform_Release(transform);
+    hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 1, &guid, &transform);
+    ok(hr == S_OK, "GetTransformForStream returned %#lx.\n", hr);
+    ok(IsEqualGUID(&guid, &MFT_CATEGORY_VIDEO_ENCODER), "Unexpected guid %s.\n", debugstr_guid(&guid));
+    IMFTransform_Release(transform);
 
-        hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 2, &guid, &transform);
-        ok(hr == MF_E_INVALIDINDEX, "GetTransformForStream returned %#lx.\n", hr);
-    }
+    hr = IMFSinkWriterEx_GetTransformForStream(writer_ex, 0, 2, &guid, &transform);
+    ok(hr == MF_E_INVALIDINDEX, "GetTransformForStream returned %#lx.\n", hr);
 
     /* Get media sink before BeginWriting. */
     sink = (void *)0xdeadbeef;
