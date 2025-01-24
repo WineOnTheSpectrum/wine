@@ -27,6 +27,8 @@
 #include "int_lib.h"
 #include "int_math.h"
 
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+
 // x86_64 FreeBSD prior v9.3 define fixed-width types incorrectly in
 // 32-bit mode.
 #if defined(__FreeBSD__) && defined(__i386__)

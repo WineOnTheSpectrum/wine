@@ -16,6 +16,8 @@
 #ifndef INT_LIB_H
 #define INT_LIB_H
 
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+
 /* Assumption: Signed integral is 2's complement. */
 /* Assumption: Right shift of signed negative is arithmetic shift. */
 /* Assumption: Endianness is little or big (not mixed). */
