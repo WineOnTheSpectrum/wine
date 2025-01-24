@@ -12,6 +12,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "int_lib.h"
 
 /* Returns: a / b */
@@ -27,3 +28,4 @@ __divdi3(di_int a, di_int b)
     s_a ^= s_b;                                  /*sign of quotient */
     return (__udivmoddi4(a, b, (du_int*)0) ^ s_a) - s_a;  /* negate if s_a == -1 */
 }
+#endif

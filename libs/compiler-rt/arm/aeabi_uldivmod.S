@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "../assembly.h"
 
 // struct { uint64_t quot, uint64_t rem}
@@ -43,4 +44,4 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uldivmod)
 END_COMPILERRT_FUNCTION(__aeabi_uldivmod)
 
 NO_EXEC_STACK_DIRECTIVE
-
+#endif

@@ -12,6 +12,7 @@
  *===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "int_lib.h"
 
 /* Returns: convert a to a double, rounding toward even. */
@@ -111,5 +112,6 @@ AEABI_RTABI double __aeabi_l2d(di_int a) {
 }
 #else
 AEABI_RTABI double __aeabi_l2d(di_int a) COMPILER_RT_ALIAS(__floatdidf);
+#endif
 #endif
 #endif

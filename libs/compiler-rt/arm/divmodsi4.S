@@ -13,6 +13,7 @@
  *
  *===----------------------------------------------------------------------===*/
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "../assembly.h"
 
 #define ESTABLISH_FRAME    \
@@ -68,4 +69,4 @@ LOCAL_LABEL(divzero):
 END_COMPILERRT_FUNCTION(__divmodsi4)
 
 NO_EXEC_STACK_DIRECTIVE
-
+#endif

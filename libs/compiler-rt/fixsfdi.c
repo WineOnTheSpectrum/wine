@@ -8,6 +8,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #define SINGLE_PRECISION
 #include "fp_lib.h"
 
@@ -51,5 +52,6 @@ AEABI_RTABI di_int __aeabi_f2lz(fp_t a) {
 }
 #else
 AEABI_RTABI di_int __aeabi_f2lz(fp_t a) COMPILER_RT_ALIAS(__fixsfdi);
+#endif
 #endif
 #endif

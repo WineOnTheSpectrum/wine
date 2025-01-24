@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "../assembly.h"
 
 // struct { unsigned quot, unsigned rem}
@@ -55,4 +56,4 @@ LOCAL_LABEL(case_denom_larger):
 END_COMPILERRT_FUNCTION(__aeabi_uidivmod)
 
 NO_EXEC_STACK_DIRECTIVE
-
+#endif

@@ -12,6 +12,7 @@
  *
  *===----------------------------------------------------------------------===*/
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "../assembly.h"
 
 	.syntax unified
@@ -177,4 +178,4 @@ LOCAL_LABEL(divby0):
 END_COMPILERRT_FUNCTION(__udivmodsi4)
 
 NO_EXEC_STACK_DIRECTIVE
-
+#endif

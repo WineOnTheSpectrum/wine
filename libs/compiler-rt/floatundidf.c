@@ -12,6 +12,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 /* Returns: convert a to a double, rounding toward even. */
 
 /* Assumption: double is a IEEE 64 bit floating point type
@@ -110,5 +111,6 @@ AEABI_RTABI double __aeabi_ul2d(du_int a) {
 }
 #else
 AEABI_RTABI double __aeabi_ul2d(du_int a) COMPILER_RT_ALIAS(__floatundidf);
+#endif
 #endif
 #endif

@@ -8,6 +8,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #define DOUBLE_PRECISION
 #include "fp_lib.h"
 
@@ -48,5 +49,6 @@ AEABI_RTABI du_int __aeabi_d2ulz(fp_t a) {
 }
 #else
 AEABI_RTABI du_int __aeabi_d2ulz(fp_t a) COMPILER_RT_ALIAS(__fixunsdfdi);
+#endif
 #endif
 #endif

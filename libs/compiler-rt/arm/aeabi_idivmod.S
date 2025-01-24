@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "../assembly.h"
 
 // struct { int quot, int rem} __aeabi_idivmod(int numerator, int denominator) {
@@ -48,4 +49,4 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
 END_COMPILERRT_FUNCTION(__aeabi_idivmod)
 
 NO_EXEC_STACK_DIRECTIVE
-
+#endif

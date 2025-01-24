@@ -12,6 +12,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "int_lib.h"
 
 /* Effects: if rem != 0, *rem = a % b
@@ -229,3 +230,4 @@ __udivmoddi4(du_int a, du_int b, du_int* rem)
         *rem = r.all;
     return q.all;
 }
+#endif

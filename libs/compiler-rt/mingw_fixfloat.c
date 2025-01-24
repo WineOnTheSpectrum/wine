@@ -8,6 +8,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "int_lib.h"
 
 COMPILER_RT_ABI di_int __fixdfdi(double a);
@@ -34,3 +35,4 @@ COMPILER_RT_ABI float __i64tos(di_int a) { return __floatdisf(a); }
 COMPILER_RT_ABI double __u64tod(du_int a) { return __floatundidf(a); }
 
 COMPILER_RT_ABI float __u64tos(du_int a) { return __floatundisf(a); }
+#endif

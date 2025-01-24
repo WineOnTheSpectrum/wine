@@ -12,6 +12,7 @@
  *===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 /* Returns: convert a to a float, rounding toward even. */
 
 /* Assumption: float is a IEEE 32 bit floating point type 
@@ -81,5 +82,6 @@ AEABI_RTABI float __aeabi_ul2f(du_int a) {
 }
 #else
 AEABI_RTABI float __aeabi_ul2f(du_int a) COMPILER_RT_ALIAS(__floatundisf);
+#endif
 #endif
 #endif

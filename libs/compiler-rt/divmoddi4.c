@@ -12,6 +12,7 @@
  * ===----------------------------------------------------------------------===
  */
 
+#if defined(__arm__) && defined(_MSC_VER)
 #include "int_lib.h"
 
 /* Returns: a / b, *rem = a % b  */
@@ -23,3 +24,4 @@ __divmoddi4(di_int a, di_int b, di_int* rem)
   *rem = a - (d*b);
   return d;
 }
+#endif
