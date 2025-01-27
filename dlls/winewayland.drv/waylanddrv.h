@@ -118,6 +118,11 @@ struct wayland_seat
     pthread_mutex_t mutex;
 };
 
+struct wayland_data_device
+{
+    struct wl_data_device *wl_data_device;
+};
+
 struct wayland
 {
     BOOL initialized;
@@ -132,9 +137,11 @@ struct wayland
     struct wl_subcompositor *wl_subcompositor;
     struct zwp_pointer_constraints_v1 *zwp_pointer_constraints_v1;
     struct zwp_relative_pointer_manager_v1 *zwp_relative_pointer_manager_v1;
+    struct wl_data_device_manager *wl_data_device_manager;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
+    struct wayland_data_device data_device;
     struct wl_list output_list;
     /* Protects the output_list and the wayland_output.current states. */
     pthread_mutex_t output_mutex;
@@ -339,6 +346,13 @@ void WAYLAND_ReleaseKbdTables(const KBDTABLES *);
 void wayland_pointer_init(struct wl_pointer *wl_pointer);
 void wayland_pointer_deinit(void);
 void wayland_pointer_clear_constraint(void);
+
+/**********************************************************************
+ *          Wayland data device
+ */
+
+void wayland_data_device_init(void);
+void wayland_data_device_deinit(void);
 
 /**********************************************************************
  *          OpenGL
