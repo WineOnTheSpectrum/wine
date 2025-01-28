@@ -39,10 +39,16 @@ struct data_device_format
 {
     const char *mime_type;
     UINT clipboard_format;
+    const WCHAR *register_name;
     void *(*export)(void *data, size_t size, size_t *ret_size);
 };
 
 static HWND desktop_clipboard_hwnd;
+static const WCHAR rich_text_formatW[] = {'R','i','c','h',' ','T','e','x','t',' ','F','o','r','m','a','t',0};
+static const WCHAR pngW[] = {'P','N','G',0};
+static const WCHAR jfifW[] = {'J','F','I','F',0};
+static const WCHAR gifW[] = {'G','I','F',0};
+static const WCHAR image_svg_xmlW[] = {'i','m','a','g','e','/','s','v','g','+','x','m','l',0};
 
 static HWND get_clipboard_hwnd(void)
 {
@@ -139,11 +145,26 @@ static void *export_unicode_text(void *data, size_t size, size_t *ret_size)
     return bytes;
 }
 
+static void *export_data(void *data, size_t size, size_t *ret_size)
+{
+    *ret_size = size;
+    return data;
+}
+
 /* Order is important. When selecting a mime-type for a clipboard format we
  * will choose the first entry that matches the specified clipboard format. */
 static struct data_device_format supported_formats[] =
 {
-    {"text/plain;charset=utf-8", CF_UNICODETEXT, export_unicode_text},
+    {"text/plain;charset=utf-8", CF_UNICODETEXT, NULL, export_unicode_text},
+    {"text/rtf", 0, rich_text_formatW, export_data},
+    {"image/tiff", CF_TIFF, NULL, export_data},
+    {"image/png", 0, pngW, export_data},
+    {"image/jpeg", 0, jfifW, export_data},
+    {"image/gif", 0, gifW, export_data},
+    {"image/svg+xml", 0, image_svg_xmlW, export_data},
+    {"application/x-riff", CF_RIFF, NULL, export_data},
+    {"audio/wav", CF_WAVE, NULL, export_data},
+    {"audio/x-wav", CF_WAVE, NULL, export_data},
     {NULL, 0, NULL},
 };
 
@@ -169,6 +190,13 @@ static struct data_device_format *data_device_format_for_mime_type(const char *m
     }
 
     return NULL;
+}
+
+static ATOM register_clipboard_format(const WCHAR *name)
+{
+    ATOM atom;
+    if (NtAddAtom(name, lstrlenW(name) * sizeof(WCHAR), &atom)) return 0;
+    return atom;
 }
 
 /**********************************************************************
@@ -272,12 +300,19 @@ static const struct wl_data_source_listener data_source_listener =
 void wayland_data_device_init(void)
 {
     struct wayland_data_device *data_device = &process_wayland.data_device;
+    struct data_device_format *format = supported_formats;
 
     pthread_mutex_lock(&data_device->mutex);
     data_device->wl_data_device =
         wl_data_device_manager_get_data_device(process_wayland.wl_data_device_manager,
                                                process_wayland.seat.wl_seat);
     pthread_mutex_unlock(&data_device->mutex);
+
+    for (; format->mime_type; ++format)
+    {
+        if (format->clipboard_format == 0)
+            format->clipboard_format = register_clipboard_format(format->register_name);
+    }
 }
 
 void wayland_data_device_deinit(void)
