@@ -37,6 +37,7 @@ struct wayland process_wayland =
     .seat.mutex = PTHREAD_MUTEX_INITIALIZER,
     .keyboard.mutex = PTHREAD_MUTEX_INITIALIZER,
     .pointer.mutex = PTHREAD_MUTEX_INITIALIZER,
+    .data_device.mutex = PTHREAD_MUTEX_INITIALIZER,
     .output_list = {&process_wayland.output_list, &process_wayland.output_list},
     .output_mutex = PTHREAD_MUTEX_INITIALIZER
 };

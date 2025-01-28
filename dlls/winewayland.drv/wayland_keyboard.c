@@ -754,6 +754,7 @@ static void keyboard_handle_enter(void *private, struct wl_keyboard *wl_keyboard
 
     pthread_mutex_lock(&keyboard->mutex);
     keyboard->focused_hwnd = hwnd;
+    keyboard->enter_serial = serial;
     pthread_mutex_unlock(&keyboard->mutex);
 
     NtUserPostMessage(keyboard->focused_hwnd, WM_INPUTLANGCHANGEREQUEST, 0 /*FIXME*/,
@@ -789,7 +790,10 @@ static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
 
     pthread_mutex_lock(&keyboard->mutex);
     if (keyboard->focused_hwnd == hwnd)
+    {
         keyboard->focused_hwnd = NULL;
+        keyboard->enter_serial = 0;
+    }
     pthread_mutex_unlock(&keyboard->mutex);
 
     /* The spec for the leave event tells us to treat all keys as released,

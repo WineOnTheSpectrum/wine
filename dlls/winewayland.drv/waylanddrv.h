@@ -63,6 +63,7 @@ enum wayland_window_message
     WM_WAYLAND_INIT_DISPLAY_DEVICES = WM_WINE_FIRST_DRIVER_MSG,
     WM_WAYLAND_CONFIGURE,
     WM_WAYLAND_SET_FOREGROUND,
+    WM_WAYLAND_CLIPBOARD_UPDATE,
 };
 
 enum wayland_surface_config_state
@@ -86,6 +87,7 @@ struct wayland_keyboard
     struct xkb_context *xkb_context;
     struct xkb_state *xkb_state;
     HWND focused_hwnd;
+    uint32_t enter_serial;
     pthread_mutex_t mutex;
 };
 
@@ -121,6 +123,8 @@ struct wayland_seat
 struct wayland_data_device
 {
     struct wl_data_device *wl_data_device;
+    struct wl_data_source *wl_data_source;
+    pthread_mutex_t mutex;
 };
 
 struct wayland
@@ -353,6 +357,7 @@ void wayland_pointer_clear_constraint(void);
 
 void wayland_data_device_init(void);
 void wayland_data_device_deinit(void);
+void wayland_data_device_clipboard_update(void);
 
 /**********************************************************************
  *          OpenGL
@@ -379,6 +384,17 @@ static inline LRESULT send_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lp
     return NtUserMessageCall(hwnd, msg, wparam, lparam, NULL, NtUserSendMessage, FALSE);
 }
 
+static inline LRESULT send_message_timeout(HWND hwnd, UINT msg, WPARAM wparam,
+                                           LPARAM lparam, UINT flags, UINT timeout,
+                                           PDWORD_PTR res_ptr )
+{
+    struct send_message_timeout_params params = { .flags = flags, .timeout = timeout };
+    LRESULT res = NtUserMessageCall(hwnd, msg, wparam, lparam, &params,
+                                    NtUserSendMessageTimeout, FALSE);
+    if (res_ptr) *res_ptr = params.result;
+    return res;
+}
+
 RGNDATA *get_region_data(HRGN region);
 
 /**********************************************************************
@@ -386,6 +402,7 @@ RGNDATA *get_region_data(HRGN region);
  */
 
 BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset);
+LRESULT WAYLAND_ClipboardWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 LRESULT WAYLAND_DesktopWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 void WAYLAND_DestroyWindow(HWND hwnd);
 void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor);
