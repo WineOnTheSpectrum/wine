@@ -35,6 +35,13 @@
 
 WINE_DEFAULT_DEBUG_CHANNEL(clipboard);
 
+struct data_device_format
+{
+    const char *mime_type;
+    UINT clipboard_format;
+    void *(*export)(void *data, size_t size, size_t *ret_size);
+};
+
 static HWND desktop_clipboard_hwnd;
 
 static HWND get_clipboard_hwnd(void)
@@ -132,11 +139,43 @@ static void *export_unicode_text(void *data, size_t size, size_t *ret_size)
     return bytes;
 }
 
+/* Order is important. When selecting a mime-type for a clipboard format we
+ * will choose the first entry that matches the specified clipboard format. */
+static struct data_device_format supported_formats[] =
+{
+    {"text/plain;charset=utf-8", CF_UNICODETEXT, export_unicode_text},
+    {NULL, 0, NULL},
+};
+
+static struct data_device_format *data_device_format_for_clipboard_format(UINT clipboard_format)
+{
+    struct data_device_format *format;
+
+    for (format = supported_formats; format->mime_type; ++format)
+    {
+        if (format->clipboard_format == clipboard_format) return format;
+    }
+
+    return NULL;
+}
+
+static struct data_device_format *data_device_format_for_mime_type(const char *mime)
+{
+    struct data_device_format *format;
+
+    for (format = supported_formats; format->mime_type; ++format)
+    {
+        if (!strcmp(mime, format->mime_type)) return format;
+    }
+
+    return NULL;
+}
+
 /**********************************************************************
  *          wl_data_source handling
  */
 
-static void wayland_data_source_export(int32_t fd)
+static void wayland_data_source_export(struct data_device_format *format, int fd)
 {
     struct get_clipboard_params params = { .data_only = TRUE };
     static const size_t buffer_size = 1024;
@@ -155,9 +194,9 @@ static void wayland_data_source_export(int32_t fd)
 
     params.data = buffer;
     params.size = buffer_size;
-    if (NtUserGetClipboardData(CF_UNICODETEXT, &params))
+    if (NtUserGetClipboardData(format->clipboard_format, &params))
     {
-        exported = export_unicode_text(params.data, params.size, &exported_size);
+        exported = format->export(params.data, params.size, &exported_size);
     }
     else if (params.data_size)
     {
@@ -168,15 +207,15 @@ static void wayland_data_source_export(int32_t fd)
         {
             buffer = new_buffer;
             params.data = new_buffer;
-            if (NtUserGetClipboardData(CF_UNICODETEXT, &params))
-                exported = export_unicode_text(params.data, params.size, &exported_size);
+            if (NtUserGetClipboardData(format->clipboard_format, &params))
+                exported = format->export(params.data, params.size, &exported_size);
         }
     }
 
     NtUserCloseClipboard();
     if (exported) write_all(fd, exported, exported_size);
 
-    free(exported);
+    if (exported != buffer) free(exported);
     free(buffer);
 }
 
@@ -188,8 +227,10 @@ static void data_source_target(void *data, struct wl_data_source *source,
 static void data_source_send(void *data, struct wl_data_source *source,
                              const char *mime_type, int32_t fd)
 {
-    if (!strcmp(mime_type, "text/plain;charset=utf-8"))
-        wayland_data_source_export(fd);
+    struct data_device_format *format =
+        data_device_format_for_mime_type(mime_type);
+
+    if (format) wayland_data_source_export(format, fd);
     close(fd);
 }
 
@@ -285,8 +326,9 @@ void wayland_data_device_clipboard_update(void)
 
     while ((clipboard_format = NtUserEnumClipboardFormats(clipboard_format)))
     {
-        if (clipboard_format == CF_UNICODETEXT)
-            wl_data_source_offer(source, "text/plain;charset=utf-8");
+        struct data_device_format *format =
+            data_device_format_for_clipboard_format(clipboard_format);
+        if (format) wl_data_source_offer(source, format->mime_type);
     }
 
     wl_data_source_add_listener(source, &data_source_listener, data_device);
