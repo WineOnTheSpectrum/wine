@@ -76,6 +76,35 @@ static HWND get_clipboard_hwnd(void)
     return desktop_clipboard_hwnd;
 }
 
+/* Normalize the MIME type string by skipping inconsequential characters,
+ * such as spaces and double quotes, and convert to lower case. */
+static const char *normalize_mime_type(const char *mime_type)
+{
+    char *new_mime_type;
+    const char *cur_read;
+    char *cur_write;
+    size_t new_mime_len = 0;
+
+    for (cur_read = mime_type; *cur_read != '\0'; ++cur_read)
+    {
+        if (*cur_read != ' ' && *cur_read != '"')
+            new_mime_len++;
+    }
+
+    new_mime_type = malloc(new_mime_len + 1);
+    if (!new_mime_type) return NULL;
+
+    for (cur_read = mime_type, cur_write = new_mime_type; *cur_read != '\0'; ++cur_read)
+    {
+        if (*cur_read != ' ' && *cur_read != '"')
+            *cur_write++ = tolower(*cur_read);
+    }
+
+    *cur_write = '\0';
+
+    return new_mime_type;
+}
+
 static int poll_until(int fd, int events, ULONG end_time)
 {
     struct pollfd pfd = { .fd = fd, .events = events & ~POLLHUP };
@@ -358,10 +387,14 @@ static void data_source_target(void *data, struct wl_data_source *source,
 static void data_source_send(void *data, struct wl_data_source *source,
                              const char *mime_type, int32_t fd)
 {
-    struct data_device_format *format =
-        data_device_format_for_mime_type(mime_type);
+    struct data_device_format *format;
+    const char *normalized;
 
-    if (format) wayland_data_source_export(format, fd);
+    if ((normalized = normalize_mime_type(mime_type)) &&
+        (format = data_device_format_for_mime_type(normalized)))
+    {
+        wayland_data_source_export(format, fd);
+    }
     close(fd);
 }
 
@@ -408,13 +441,13 @@ static void data_offer_offer(void *data, struct wl_data_offer *wl_data_offer,
                              const char *type)
 {
     struct wayland_data_offer *data_offer = data;
-    const char *type_copy;
+    const char *normalized;
     const char **p;
 
-    if ((type_copy = strdup(type)) &&
+    if ((normalized = normalize_mime_type(type)) &&
         (p = wl_array_add(&data_offer->types, sizeof *p)))
     {
-        *p = type_copy;
+        *p = normalized;
     }
 }
 
