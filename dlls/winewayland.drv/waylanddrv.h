@@ -64,6 +64,8 @@ enum wayland_window_message
     WM_WAYLAND_CONFIGURE,
     WM_WAYLAND_SET_FOREGROUND,
     WM_WAYLAND_CLIPBOARD_UPDATE,
+    WM_WAYLAND_RENDER_FORMAT,
+    WM_WAYLAND_DESTROY_CLIPBOARD,
 };
 
 enum wayland_surface_config_state
@@ -124,6 +126,7 @@ struct wayland_data_device
 {
     struct wl_data_device *wl_data_device;
     struct wl_data_source *wl_data_source;
+    struct wl_data_offer *clipboard_wl_data_offer;
     pthread_mutex_t mutex;
 };
 
@@ -358,6 +361,8 @@ void wayland_pointer_clear_constraint(void);
 void wayland_data_device_init(void);
 void wayland_data_device_deinit(void);
 void wayland_data_device_clipboard_update(void);
+void wayland_data_device_render_format(UINT clipboard_format);
+void wayland_data_device_destroy_clipboard(void);
 
 /**********************************************************************
  *          OpenGL
