@@ -4017,13 +4017,11 @@ void test_startup_counts(void)
     IMFAsyncResult_Release(result2);
     /* Platform lock count for AsyncResult objects does not decrease
      * unless the platform is in shutdown state. */
-    todo_wine
     check_platform_lock_count(3);
 
     hr = MFCreateAsyncResult(NULL, &callback->IMFAsyncCallback_iface, NULL, &result);
     ok(hr == S_OK, "Failed to create result, hr %#lx.\n", hr);
     /* Platform lock count tracks the maximum AsyncResult count plus one for startup. */
-    todo_wine
     check_platform_lock_count(3);
     IMFAsyncResult_Release(result);
 
@@ -4035,14 +4033,12 @@ void test_startup_counts(void)
     /* Release of an internal lock occurs in a worker thread. */
     flaky_wine
     ok(!refcount, "Unexpected refcount %ld.\n", refcount);
-    todo_wine
     check_platform_lock_count(3);
 
     hr = MFLockPlatform();
     ok(hr == S_OK, "Failed to lock, %#lx.\n", hr);
     hr = MFLockPlatform();
     ok(hr == S_OK, "Failed to lock, %#lx.\n", hr);
-    todo_wine
     check_platform_lock_count(5);
 
     hr = MFShutdown();
@@ -4104,7 +4100,6 @@ void test_startup_counts(void)
     check_platform_lock_count(2);
     /* Release an AsyncResult object after shutdown and startup */
     IMFAsyncResult_Release(result);
-    todo_wine
     check_platform_lock_count(2);
 
     hr = MFScheduleWorkItem(&callback->IMFAsyncCallback_iface, NULL, -5000, &key);
@@ -4121,12 +4116,10 @@ void test_startup_counts(void)
     ok(hr == S_OK, "Failed to cancel item, hr %#lx.\n", hr);
     hr = MFCancelWorkItem(key2);
     ok(hr == S_OK, "Failed to cancel item, hr %#lx.\n", hr);
-    todo_wine
     check_platform_lock_count(3);
 
     hr = MFScheduleWorkItem(&callback->IMFAsyncCallback_iface, NULL, -5000, &key);
     ok(hr == S_OK, "Failed to schedule item, hr %#lx.\n", hr);
-    todo_wine
     check_platform_lock_count(3);
 
     hr = MFShutdown();
