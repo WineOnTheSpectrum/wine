@@ -42,6 +42,7 @@
 #include "evr.h"
 #include "mfmediaengine.h"
 #include "codecapi.h"
+#include "rtworkq.h"
 
 #include "wine/test.h"
 
@@ -3858,6 +3859,8 @@ static void test_MFCreateAsyncResult(void)
 
 static void test_startup(void)
 {
+    struct test_callback *callback;
+    IMFAsyncResult *result;
     DWORD queue;
     HRESULT hr;
 
@@ -3907,6 +3910,60 @@ static void test_startup(void)
 
     hr = MFShutdown();
     ok(hr == S_OK, "Failed to shut down, hr %#lx.\n", hr);
+
+    /* Rtwq equivalence */
+
+    hr = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+    ok(hr == S_OK, "Failed to start up, hr %#lx.\n", hr);
+
+    hr = RtwqStartup();
+    ok(hr == S_OK, "Failed to start up, hr %#lx.\n", hr);
+    hr = RtwqShutdown();
+    ok(hr == S_OK, "Failed to shut down, hr %#lx.\n", hr);
+    check_platform_lock_count(1);
+
+    /* Matching MFStartup() with RtwqShutdown() causes shutdown. */
+    hr = RtwqShutdown();
+    ok(hr == S_OK, "Failed to shut down, hr %#lx.\n", hr);
+
+    hr = MFAllocateWorkQueue(&queue);
+    ok(hr == MF_E_SHUTDOWN, "Failed to allocate a queue, hr %#lx.\n", hr);
+
+    hr = MFShutdown();
+    ok(hr == S_OK, "Failed to shut down, hr %#lx.\n", hr);
+
+    /* RtwqStartup() enables MF functions */
+    hr = RtwqStartup();
+    ok(hr == S_OK, "Failed to start up, hr %#lx.\n", hr);
+
+    check_platform_lock_count(1);
+
+    callback = create_test_callback(NULL);
+
+    /* MF platform lock is the Rtwq lock */
+    hr = RtwqUnlockPlatform();
+    ok(hr == S_OK, "Failed to unlock platform, hr %#lx.\n", hr);
+
+    hr = MFAllocateWorkQueue(&queue);
+    ok(hr == MF_E_SHUTDOWN, "Failed to allocate a queue, hr %#lx.\n", hr);
+
+    hr = MFCreateAsyncResult(NULL, &callback->IMFAsyncCallback_iface, NULL, &result);
+    ok(hr == S_OK, "Failed to create result, hr %#lx.\n", hr);
+    check_platform_lock_count(1);
+
+    hr = RtwqLockPlatform();
+    ok(hr == S_OK, "Failed to lock platform, hr %#lx.\n", hr);
+    check_platform_lock_count(2);
+
+    IMFAsyncResult_Release(result);
+
+    hr = RtwqShutdown();
+    ok(hr == S_OK, "Failed to shut down, hr %#lx.\n", hr);
+
+    hr = MFAllocateWorkQueue(&queue);
+    ok(hr == MF_E_SHUTDOWN, "Unexpected hr %#lx.\n", hr);
+
+    IMFAsyncCallback_Release(&callback->IMFAsyncCallback_iface);
 }
 
 static void test_allocate_queue(void)
