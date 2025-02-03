@@ -6424,17 +6424,84 @@ static BOOL try_exp_membarrier( void ) { return FALSE; }
 #endif /* defined(__linux__) && defined(__NR_membarrier) */
 
 
+static BOOL try_flush_process_write_buffers_slow_fallback(void)
+{
+    HANDLE thread = NULL;
+    BOOL success = FALSE;
+
+    MemoryBarrier();  /* barrier for current thread */
+
+    for (;;)
+    {
+        CONTEXT context;
+        NTSTATUS status;
+        HANDLE next;
+
+        status = NtGetNextThread( GetCurrentProcess(), thread,
+                                  THREAD_GET_CONTEXT | THREAD_QUERY_LIMITED_INFORMATION,
+                                  0, 0, &next );
+        if (status)
+        {
+            if (status == STATUS_NO_MORE_ENTRIES)
+            {
+                success = TRUE;
+            }
+            else
+            {
+                ERR( "Failed to get handle to next thread of %p: %#x\n", thread, (int)status );
+            }
+            break;
+        }
+        if (thread) NtClose( thread );
+        thread = next;
+
+        context.ContextFlags = CONTEXT_CONTROL;
+        status = NtGetContextThread( thread, &context );
+        if (status)
+        {
+            ULONG terminated;
+            NTSTATUS qstatus;
+
+            qstatus = NtQueryInformationThread( thread, ThreadIsTerminated, &terminated, sizeof(terminated), NULL );
+            if (qstatus)
+            {
+                ERR( "Failed to get termination status of thread %p: %#x\n", thread, (int)qstatus );
+                break;
+            }
+
+            if (!terminated)
+            {
+                ERR( "Failed to execute heavy barrier on thread %p: %#x\n", thread, (int)status );
+                break;
+            }
+        }
+    }
+    if (thread) NtClose( thread );
+    return success;
+}
+
+
 /**********************************************************************
  *           NtFlushProcessWriteBuffers  (NTDLL.@)
  */
 NTSTATUS WINAPI NtFlushProcessWriteBuffers(void)
 {
-    static int once = 0;
+    static LONG volatile once;
 
     if (try_exp_membarrier()) return STATUS_SUCCESS;
     if (try_mach_tgrpvs()) return STATUS_SUCCESS;
 
-    if (!once++) FIXME( "stub\n" );
+    if (!once && !InterlockedExchange( &once, TRUE ))
+    {
+        FIXME( "Falling back to slow implementation\n" );
+    }
+
+    while (!try_flush_process_write_buffers_slow_fallback())
+    {
+        ERR( "Failed to execute slow fallback, retrying\n" );
+    }
+
+    /* NtFlushProcessWriteBuffers() cannot fail */
     return STATUS_SUCCESS;
 }
 
