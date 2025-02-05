@@ -1736,7 +1736,6 @@ static void test_tls_links(void)
         ptr = teb->ThreadLocalStoragePointer;
         count = (ULONG)(ULONG_PTR)ptr[-2];
         size = HeapSize(GetProcessHeap(), 0, ptr - 2);
-        todo_wine
         ok(size == (count + 2) * sizeof(void *), "got count %lu, size %Iu.\n", count, size);
 
         for (i = 0; i < count; ++i)

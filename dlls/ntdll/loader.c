@@ -1316,6 +1316,34 @@ static void *alloc_thread_tls_slot( const IMAGE_TLS_DIRECTORY *dir )
 }
 
 
+/* native places a control structure just below the TLS array */
+struct tls_array_control
+{
+    DWORD count;
+    void *unknown;
+};
+
+
+static void *heap_alloc_tls_array( unsigned count )
+{
+    C_ASSERT(sizeof(struct tls_array_control) == 2 * sizeof(void*));
+    struct tls_array_control *ctrl;
+
+    if ((ctrl = RtlAllocateHeap( GetProcessHeap(), HEAP_ZERO_MEMORY, (2 + count) * sizeof(void*) )))
+    {
+        ctrl->count = count;
+        ctrl = ctrl + 1;
+    }
+    return ctrl;
+}
+
+
+static void heap_free_tls_array( void *ptr )
+{
+    RtlFreeHeap( GetProcessHeap(), 0, ((struct tls_array_control *)ptr) - 1);
+}
+
+
 /*************************************************************************
  *		alloc_tls_slot
  *
@@ -1382,7 +1410,7 @@ static BOOL alloc_tls_slot( LDR_DATA_TABLE_ENTRY *mod )
         if (old_module_count < tls_module_count)
         {
             void **old = teb->ThreadLocalStoragePointer;
-            void **new = RtlAllocateHeap( GetProcessHeap(), HEAP_ZERO_MEMORY, tls_module_count * sizeof(*new));
+            void **new = heap_alloc_tls_array( tls_module_count );
 
             if (!new) return FALSE;
             if (old) memcpy( new, old, old_module_count * sizeof(*new) );
@@ -1614,8 +1642,7 @@ static NTSTATUS alloc_thread_tls(void)
     void **pointers;
     UINT i;
 
-    if (!(pointers = RtlAllocateHeap( GetProcessHeap(), HEAP_ZERO_MEMORY,
-                                      tls_module_count * sizeof(*pointers) )))
+    if (!(pointers = heap_alloc_tls_array( tls_module_count )))
         return STATUS_NO_MEMORY;
 
     for (i = 0; i < tls_module_count; i++)
@@ -1627,7 +1654,7 @@ static NTSTATUS alloc_thread_tls(void)
         if (!(pointers[i] = alloc_thread_tls_slot( dir )))
         {
             while (i) heap_free_aligned( pointers[--i] );
-            RtlFreeHeap( GetProcessHeap(), 0, pointers );
+            heap_free_tls_array( pointers );
             return STATUS_NO_MEMORY;
         }
         TRACE( "slot %u: %u/%lu bytes at %p\n", i, (UINT)(dir->EndAddressOfRawData - dir->StartAddressOfRawData), dir->SizeOfZeroFill, pointers[i] );
@@ -3928,7 +3955,7 @@ void WINAPI LdrShutdownThread(void)
             ((TEB *)NtCurrentTeb()->Instrumentation[0])->ThreadLocalStoragePointer = NULL;
 #endif
         for (i = 0; i < tls_module_count; i++) heap_free_aligned( pointers[i] );
-        RtlFreeHeap( GetProcessHeap(), 0, pointers );
+        heap_free_tls_array( pointers );
     }
     RtlProcessFlsData( NtCurrentTeb()->FlsSlots, 2 );
     NtCurrentTeb()->FlsSlots = NULL;
