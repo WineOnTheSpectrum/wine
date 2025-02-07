@@ -104,4 +104,6 @@ extern void wg_allocator_provide_sample(GstAllocator *allocator, struct wg_sampl
 extern void wg_allocator_release_sample(GstAllocator *allocator, struct wg_sample *sample,
         bool discard_data);
 
+GST_ELEMENT_REGISTER_DECLARE(winegstreamerstepper);
+
 #endif /* __WINE_WINEGSTREAMER_UNIX_PRIVATE_H */
