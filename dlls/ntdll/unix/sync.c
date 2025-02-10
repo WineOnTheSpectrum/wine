@@ -57,6 +57,9 @@
 #ifdef HAVE_KQUEUE
 # include <sys/event.h>
 #endif
+#ifdef HAVE_LINUX_NTSYNC_H
+# include <linux/ntsync.h>
+#endif
 
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
@@ -303,6 +306,114 @@ static unsigned int validate_open_object_attributes( const OBJECT_ATTRIBUTES *at
 }
 
 
+#ifdef NTSYNC_IOC_EVENT_READ
+
+static int get_linux_sync_device(void)
+{
+    static LONG device = -2;
+
+    if (device == -2)
+    {
+        HANDLE handle;
+        int fd, needs_close;
+        NTSTATUS ret;
+
+        SERVER_START_REQ( get_linux_sync_device )
+        {
+            if (!(ret = wine_server_call( req ))) handle = wine_server_ptr_handle( reply->handle );
+        }
+        SERVER_END_REQ;
+
+        if (!ret)
+        {
+            if (!server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL ))
+            {
+                if (InterlockedCompareExchange( &device, fd, -2 ) != -2)
+                {
+                    /* someone beat us to it */
+                    if (needs_close) close( fd );
+                    NtClose( handle );
+                }
+                /* otherwise don't close the device */
+            }
+            else
+            {
+                InterlockedCompareExchange( &device, -1, -2 );
+                NtClose( handle );
+            }
+        }
+        else
+        {
+            InterlockedCompareExchange( &device, -1, -2 );
+        }
+    }
+    return device;
+}
+
+static NTSTATUS inproc_release_semaphore( HANDLE handle, ULONG count, ULONG *prev_count )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_semaphore( HANDLE handle, SEMAPHORE_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_set_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_reset_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_pulse_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_event( HANDLE handle, EVENT_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_release_mutex( HANDLE handle, LONG *prev_count )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_mutex( HANDLE handle, MUTANT_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_wait( DWORD count, const HANDLE *handles, BOOLEAN wait_any,
+                             BOOLEAN alertable, const LARGE_INTEGER *timeout )
+{
+    int device;
+
+    if ((device = get_linux_sync_device()) < 0)
+        return STATUS_NOT_IMPLEMENTED;
+
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_signal_and_wait( HANDLE signal, HANDLE wait,
+                                        BOOLEAN alertable, const LARGE_INTEGER *timeout )
+{
+    int device;
+
+    if ((device = get_linux_sync_device()) < 0)
+        return STATUS_NOT_IMPLEMENTED;
+
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+#else
+
 static NTSTATUS inproc_release_semaphore( HANDLE handle, ULONG count, ULONG *prev_count )
 {
     return STATUS_NOT_IMPLEMENTED;
@@ -354,6 +465,8 @@ static NTSTATUS inproc_signal_and_wait( HANDLE signal, HANDLE wait,
 {
     return STATUS_NOT_IMPLEMENTED;
 }
+
+#endif
 
 
 /******************************************************************************
