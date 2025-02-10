@@ -5884,6 +5884,7 @@ struct set_keyboard_repeat_reply
 
 enum inproc_sync_type
 {
+    INPROC_SYNC_UNKNOWN,
     INPROC_SYNC_AUTO_EVENT,
     INPROC_SYNC_MANUAL_EVENT,
     INPROC_SYNC_SEMAPHORE,
@@ -6869,6 +6870,6 @@ union generic_reply
     struct get_inproc_alert_event_reply get_inproc_alert_event_reply;
 };
 
-#define SERVER_PROTOCOL_VERSION 865
+#define SERVER_PROTOCOL_VERSION 866
 
 #endif /* __WINE_WINE_SERVER_PROTOCOL_H */
