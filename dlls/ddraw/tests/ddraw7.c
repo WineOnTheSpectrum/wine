@@ -13652,6 +13652,214 @@ static void test_blt(void)
     DestroyWindow(window);
 }
 
+#define load_resource(filename, data, length) load_resource_(__LINE__, filename, data, length)
+static void load_resource_(unsigned int line, const WCHAR *filename, const BYTE **data, DWORD *length)
+{
+    HRSRC resource = FindResourceW(NULL, filename, (const WCHAR *)RT_RCDATA);
+    ok_(__FILE__, line)(resource != 0, "FindResourceW for %S failed, error %lu\n", filename, GetLastError());
+    *data = LockResource(LoadResource(GetModuleHandleW(NULL), resource));
+    *length = SizeofResource(GetModuleHandleW(NULL), resource);
+}
+
+static void test_yuv_to_rgb_blt(void)
+{
+    UINT32 sd_errors, hd_errors, studio_errors, tolerance;
+    const BYTE *data, *data_hd, *data_studio, *ptr;
+    IDirectDrawSurface7 *rgb_surface, *yuv_surface;
+    DDSURFACEDESC2 surface_desc, lock_desc;
+    unsigned int i, x, y;
+    DWORD flags, length;
+    IDirectDraw7 *ddraw;
+    ULONG refcount;
+    HWND window;
+    HRESULT hr;
+    BOOL hd;
+
+    static const struct
+    {
+        const char *name;
+        DWORD fourCC;
+        DWORD pitch;
+        BYTE color_planes;
+        DWORD height;
+        const WCHAR *yuv;
+        const WCHAR *sd;
+        const WCHAR *hd;
+        const WCHAR *studio;
+    }
+    tests[] =
+    {
+        {"UYVY SD", MAKEFOURCC('U', 'Y', 'V', 'Y'), 1440, 0, 576, L"src_576.uyvy", L"exp_576_sd.bgrx", NULL, L"exp_576_studio.bgrx"},
+        {"YUY2 SD", MAKEFOURCC('Y', 'U', 'Y', '2'), 1440, 0, 576, L"src_576.yuy2", L"exp_576_sd.bgrx", NULL, L"exp_576_studio.bgrx"},
+        {"NV12 SD", MAKEFOURCC('N', 'V', '1', '2'), 720, 1, 576, L"src_576.nv12", L"exp_576_sd.bgrx", NULL, L"exp_576_studio.bgrx"},
+        {"YV12 SD", MAKEFOURCC('Y', 'V', '1', '2'), 720, 2, 576, L"src_576.yv12", L"exp_576_sd.bgrx", NULL, L"exp_576_studio.bgrx"},
+
+        {"UYVY HD", MAKEFOURCC('U', 'Y', 'V', 'Y'), 1440, 0, 580, L"src_580.uyvy", L"exp_580_sd.bgrx", L"exp_580_hd.bgrx", L"exp_580_studio.bgrx"},
+        {"YUY2 HD", MAKEFOURCC('Y', 'U', 'Y', '2'), 1440, 0, 580, L"src_580.yuy2", L"exp_580_sd.bgrx", L"exp_580_hd.bgrx", L"exp_580_studio.bgrx"},
+        {"NV12 HD", MAKEFOURCC('N', 'V', '1', '2'), 720, 1, 580, L"src_580.nv12", L"exp_580_sd.bgrx", L"exp_580_hd.bgrx", L"exp_580_studio.bgrx"},
+        {"YV12 HD", MAKEFOURCC('Y', 'V', '1', '2'), 720, 2, 580, L"src_580.yv12", L"exp_580_sd.bgrx", L"exp_580_hd.bgrx", L"exp_580_studio.bgrx"},
+    };
+
+    window = create_window();
+    if (!(ddraw = create_ddraw()))
+    {
+        skip("Failed to create a 3D device, skipping test.\n");
+        DestroyWindow(window);
+        return;
+    }
+
+    hr = IDirectDraw7_SetCooperativeLevel(ddraw, window, DDSCL_NORMAL);
+    ok(hr == S_OK, "Failed to set cooperative level, hr %#lx.\n", hr);
+
+    memset(&surface_desc, 0, sizeof(surface_desc));
+    surface_desc.dwSize = sizeof(surface_desc);
+    surface_desc.dwFlags = DDSD_WIDTH | DDSD_HEIGHT | DDSD_CAPS | DDSD_PIXELFORMAT;
+    surface_desc.dwWidth = 720;
+    surface_desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
+    surface_desc.ddpfPixelFormat.dwSize = sizeof(surface_desc.ddpfPixelFormat);
+    surface_desc.ddpfPixelFormat.dwRGBBitCount = 32;
+    surface_desc.ddpfPixelFormat.dwRBitMask = 0xff0000;
+    surface_desc.ddpfPixelFormat.dwGBitMask = 0xff00;
+    surface_desc.ddpfPixelFormat.dwBBitMask = 0xff;
+    surface_desc.ddpfPixelFormat.dwRGBAlphaBitMask = 0;
+
+    flags = DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT | DDSD_WIDTH;
+
+    memset(&lock_desc, 0, sizeof(lock_desc));
+    lock_desc.dwSize = sizeof(lock_desc);
+
+    rgb_surface = NULL;
+
+    for (i = 0; i < ARRAY_SIZE(tests); ++i)
+    {
+        winetest_push_context("%s", tests[i].name);
+
+        surface_desc.dwHeight = tests[i].height;
+        surface_desc.ddpfPixelFormat.dwFlags = DDPF_FOURCC;
+        surface_desc.ddpfPixelFormat.dwFourCC = tests[i].fourCC;
+        hr = IDirectDraw7_CreateSurface(ddraw, &surface_desc, &yuv_surface, NULL);
+        if (hr != S_OK)
+        {
+            skip("Failed to create yuv surface, hr %#lx.\n", hr);
+            goto next;
+        }
+
+        surface_desc.ddpfPixelFormat.dwFlags = DDPF_RGB;
+        hr = IDirectDraw7_CreateSurface(ddraw, &surface_desc, &rgb_surface, NULL);
+        ok(hr == S_OK, "Failed to create rgb surface, hr %#lx.\n", hr);
+
+        hr = IDirectDrawSurface7_Lock(yuv_surface, NULL, &lock_desc,
+                DDLOCK_WRITEONLY | DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR, NULL);
+        ok(hr == S_OK, "Got unexpected hr %#lx, expected S_OK.\n", hr);
+        ok((lock_desc.dwFlags & flags) == flags, "Got unexpected flags %#lx, expected %#lx.\n",
+                lock_desc.dwFlags, flags);
+        ok(lock_desc.ddpfPixelFormat.dwFlags == DDPF_FOURCC,
+                "Got unexpected pixel format flags %#lx, expected DDPF_FOURCC.\n",
+                lock_desc.ddpfPixelFormat.dwFlags);
+        ok(lock_desc.ddpfPixelFormat.dwFourCC == tests[i].fourCC,
+                "Got unexpected pixel format %#lx, expected %#lx.\n",
+                lock_desc.ddpfPixelFormat.dwFourCC, tests[i].fourCC);
+        ok(lock_desc.dwWidth == 720, "Got unexpected image width %ld, expected 720\n", lock_desc.dwWidth);
+        ok(lock_desc.dwHeight == tests[i].height, "Got unexpected image height %ld, expected %ld\n",
+                lock_desc.dwHeight, tests[i].height);
+
+        load_resource(tests[i].yuv, &data, &length);
+        ok(lock_desc.lPitch >= tests[i].pitch, "surface pitch (%ld) is smaller than expected (%ld)\n",
+                lock_desc.lPitch, tests[i].pitch);
+        ok(lock_desc.dwHeight >= tests[i].height, "surface height (%ld) is smaller than expected (%ld)\n",
+                lock_desc.dwHeight, tests[i].height);
+        for (y = 0; y < lock_desc.dwHeight; y++)
+        {
+            memcpy(lock_desc.lpSurface, data, tests[i].pitch);
+            lock_desc.lpSurface = (BYTE*)lock_desc.lpSurface + lock_desc.lPitch;
+            data += tests[i].pitch;
+        }
+
+        for (x = 0; x < tests[i].color_planes; x++)
+        {
+            for (y = 0; y < lock_desc.dwHeight/2; y++)
+            {
+                memcpy(lock_desc.lpSurface, data, tests[i].pitch/tests[i].color_planes);
+                lock_desc.lpSurface = (BYTE*)lock_desc.lpSurface + lock_desc.lPitch/tests[i].color_planes;
+                data += tests[i].pitch/tests[i].color_planes;
+            }
+        }
+
+        hr = IDirectDrawSurface7_Unlock(yuv_surface, NULL);
+        ok(hr == S_OK, "Got unexpected hr %#lx, expected S_OK.\n", hr);
+
+        hr = IDirectDrawSurface7_Blt(rgb_surface, NULL, yuv_surface, NULL, DDBLT_WAIT, NULL);
+        ok(hr == S_OK || broken(TRUE), "Got unexpected hr %#lx, expected S_OK.\n", hr);
+        if (hr != S_OK)
+        {
+            skip("Failed to blt to RGB surface, skipping the rest of the tests for this texture.");
+            goto skip_test;
+        }
+
+        hr = IDirectDrawSurface7_Lock(rgb_surface, NULL, &lock_desc, DDLOCK_READONLY | DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR, NULL);
+        ok(hr == S_OK, "Got unexpected hr %#lx, expected S_OK.\n", hr);
+        ok((lock_desc.dwFlags & flags) == flags, "Got unexpected flags %#lx, expected %#lx.\n", lock_desc.dwFlags, flags);
+        ok(lock_desc.ddpfPixelFormat.dwFlags == DDPF_RGB, "Got unexpected pixel format flags %#lx, expected DDPF_RGB.\n",
+                lock_desc.ddpfPixelFormat.dwFlags);
+
+        if (tests[i].height > 576)
+            hd = TRUE;
+        else
+            hd = FALSE;
+        load_resource(tests[i].sd, &data, &length);
+        if (hd) load_resource(tests[i].hd, &data_hd, &length);
+        load_resource(tests[i].studio, &data_studio, &length);
+
+        sd_errors = hd_errors = studio_errors = 0;
+
+        ok(lock_desc.lPitch >= tests[i].pitch, "surface pitch (%ld) is smaller than expected (%ld)\n",
+                lock_desc.lPitch, tests[i].pitch);
+        ok(lock_desc.dwHeight >= tests[i].height, "surface height (%ld) is smaller than expected (%ld)\n",
+                lock_desc.dwHeight, tests[i].height);
+        for (y = 0; y < lock_desc.dwHeight; y++)
+        {
+            ptr = (BYTE*)lock_desc.lpSurface + y * lock_desc.lPitch;
+            for (x = 0; x < lock_desc.dwWidth; x++)
+            {
+                UINT32 value = *(UINT32*)ptr & 0xffffff;
+                UINT32 exp_value = *(UINT32*)data & 0xffffff;
+                UINT32 exp_value_hd = hd ? *(UINT32*)data_hd & 0xffffff : 0;
+                UINT32 exp_value_studio = *(UINT32*)data_studio & 0xffffff;
+
+                sd_errors += !compare_color(value, exp_value, 5);
+                hd_errors += !(hd && compare_color(value, exp_value_hd, 5));
+                studio_errors += !compare_color(value, exp_value_studio, 0x10);
+
+                ptr += sizeof(UINT32);
+                data += sizeof(UINT32);
+                if (hd) data_hd += sizeof(UINT32);
+                data_studio += sizeof(UINT32);
+            }
+        }
+
+        /* tolerate 4% pixel errors */
+        tolerance = lock_desc.dwWidth * lock_desc.dwHeight * 4 / 100;
+        todo_wine_if(hd)
+        ok(sd_errors < tolerance || (hd && hd_errors < tolerance) || studio_errors < tolerance,
+                "Got sd: %d, hd %d, studio %d pixel differences, expected less than %d (less than 4%%) for one of these\n",
+                sd_errors, hd_errors, studio_errors, tolerance);
+
+        hr = IDirectDrawSurface7_Unlock(rgb_surface, NULL);
+        ok(hr == S_OK, "Got unexpected hr %#lx, expected S_OK.\n", hr);
+
+skip_test:
+        IDirectDrawSurface7_Release(yuv_surface);
+        IDirectDrawSurface7_Release(rgb_surface);
+
+next:
+        winetest_pop_context();
+    }
+
+    refcount = IDirectDraw7_Release(ddraw);
+    ok(!refcount, "DirectDraw7 has %lu references left.\n", refcount);
+    DestroyWindow(window);
+}
+
 static void test_blt_z_alpha(void)
 {
     DWORD blt_flags[] =
@@ -20609,6 +20817,7 @@ START_TEST(ddraw7)
     test_offscreen_overlay();
     test_overlay_rect();
     test_blt();
+    test_yuv_to_rgb_blt();
     test_blt_z_alpha();
     test_cross_device_blt();
     test_color_clamping();
