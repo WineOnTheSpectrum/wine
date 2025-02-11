@@ -1735,6 +1735,22 @@ void window_configure_notify( struct x11drv_win_data *data, unsigned long serial
                          current, expected, prefix, received, NULL );
 }
 
+void net_active_window_notify( unsigned long serial, Window value, Time time )
+{
+    struct x11drv_thread_data *data = x11drv_thread_data();
+    Window *desired = &data->desired_net_active_window, *pending = &data->pending_net_active_window, *current = &data->current_net_active_window;
+    unsigned long *expect_serial = &data->net_active_window_serial;
+    const char *expected, *received;
+
+    received = wine_dbg_sprintf( "_NET_ACTIVE_WINDOW %lx/%lu", value, serial );
+    expected = *expect_serial ? wine_dbg_sprintf( ", expected %lx/%lu", *pending, *expect_serial ) : "";
+    if (!handle_state_change( serial, expect_serial, sizeof(value), &value, desired, pending,
+                              current, expected, "", received, NULL ))
+        return;
+
+    TRACE( "_NET_ACTIVE_WINDOW changed to %lx\n", value );
+}
+
 BOOL window_has_pending_wm_state( HWND hwnd, UINT state )
 {
     struct x11drv_win_data *data;

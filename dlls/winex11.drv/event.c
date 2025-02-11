@@ -1204,6 +1204,23 @@ static int get_window_xembed_info( Display *display, Window window )
     return ret;
 }
 
+static Window get_net_active_window( Display *display )
+{
+    unsigned long count, remaining;
+    Window window = None, *value;
+    int format;
+    Atom type;
+
+    if (!XGetWindowProperty( display, DefaultRootWindow( display ), x11drv_atom(_NET_ACTIVE_WINDOW), 0,
+                             65536 / sizeof(Window), False, XA_WINDOW, &type, &format, &count,
+                             &remaining, (unsigned char **)&value ))
+    {
+        if (type == XA_WINDOW && format == 32) window = *value;
+        XFree( value );
+    }
+
+    return window;
+}
 
 /***********************************************************************
  *           handle_wm_state_notify
@@ -1262,6 +1279,16 @@ static void handle_net_supported_notify( XPropertyEvent *event )
     if (event->state == PropertyNewValue) net_supported_init( data );
 }
 
+static void handle_net_active_window( HWND hwnd, XPropertyEvent *event )
+{
+    Window window = None;
+
+    if (event->state == PropertyNewValue) window = get_net_active_window( event->display );
+    net_active_window_notify( event->serial, window, event->time );
+
+    NtUserPostMessage( hwnd, WM_WINE_WINDOW_STATE_CHANGED, 0, 0 );
+}
+
 /***********************************************************************
  *           X11DRV_PropertyNotify
  */
@@ -1274,6 +1301,7 @@ static BOOL X11DRV_PropertyNotify( HWND hwnd, XEvent *xev )
     if (event->atom == x11drv_atom(_XEMBED_INFO)) handle_xembed_info_notify( hwnd, event );
     if (event->atom == x11drv_atom(_NET_WM_STATE)) handle_net_wm_state_notify( hwnd, event );
     if (event->atom == x11drv_atom(_NET_SUPPORTED)) handle_net_supported_notify( event );
+    if (event->atom == x11drv_atom(_NET_ACTIVE_WINDOW)) handle_net_active_window( hwnd, event );
 
     return TRUE;
 }

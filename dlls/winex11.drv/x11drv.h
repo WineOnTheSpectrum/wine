@@ -403,6 +403,11 @@ struct x11drv_thread_data
     XIValuatorClassInfo y_valuator;
     int      xinput2_pointer;      /* XInput2 master pointer device id */
 #endif /* HAVE_X11_EXTENSIONS_XINPUT2_H */
+
+    Window        desired_net_active_window;    /* active window tracking the desired / win32 state */
+    Window        pending_net_active_window;    /* active window tracking the pending / requested state */
+    Window        current_net_active_window;    /* active window tracking the current X11 state */
+    unsigned long net_active_window_serial;     /* serial of last pending _NET_ACTIVE_WINDOW request */
 };
 
 extern struct x11drv_thread_data *x11drv_init_thread_data(void);
@@ -485,6 +490,7 @@ enum x11drv_atoms
     XATOM__ICC_PROFILE,
     XATOM__KDE_NET_WM_STATE_SKIP_SWITCHER,
     XATOM__MOTIF_WM_HINTS,
+    XATOM__NET_ACTIVE_WINDOW,
     XATOM__NET_STARTUP_INFO_BEGIN,
     XATOM__NET_STARTUP_INFO,
     XATOM__NET_SUPPORTED,
@@ -666,8 +672,8 @@ extern BOOL window_has_pending_wm_state( HWND hwnd, UINT state );
 extern void window_wm_state_notify( struct x11drv_win_data *data, unsigned long serial, UINT value );
 extern void window_net_wm_state_notify( struct x11drv_win_data *data, unsigned long serial, UINT value );
 extern void window_configure_notify( struct x11drv_win_data *data, unsigned long serial, const RECT *rect );
-extern BOOL get_window_state_updates( HWND hwnd, UINT *state_cmd, UINT *config_cmd, RECT *rect );
 
+extern void net_active_window_notify( unsigned long serial, Window window, Time time );
 extern void net_supported_init( struct x11drv_thread_data *data );
 
 extern Window init_clip_window(void);
