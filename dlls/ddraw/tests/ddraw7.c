@@ -13839,7 +13839,6 @@ static void test_yuv_to_rgb_blt(void)
 
         /* tolerate 4% pixel errors */
         tolerance = lock_desc.dwWidth * lock_desc.dwHeight * 4 / 100;
-        todo_wine_if(hd)
         ok(sd_errors < tolerance || (hd && hd_errors < tolerance) || studio_errors < tolerance,
                 "Got sd: %d, hd %d, studio %d pixel differences, expected less than %d (less than 4%%) for one of these\n",
                 sd_errors, hd_errors, studio_errors, tolerance);
