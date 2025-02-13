@@ -46,6 +46,7 @@ static NTSTATUS (WINAPI *pNtMapViewOfSectionEx)(HANDLE, HANDLE, PVOID *, const L
 static NTSTATUS (WINAPI *pNtSetInformationVirtualMemory)(HANDLE, VIRTUAL_MEMORY_INFORMATION_CLASS,
                                                          ULONG_PTR, PMEMORY_RANGE_ENTRY,
                                                          PVOID, ULONG);
+static NTSTATUS (WINAPI *pNtFlushProcessWriteBuffers)(void);
 
 static const BOOL is_win64 = sizeof(void*) != sizeof(int);
 static BOOL is_wow64;
@@ -2985,6 +2986,14 @@ static void test_exec_memory_writes(void)
     RtlRemoveVectoredExceptionHandler( handler );
 }
 
+static void test_flush_write_buffers(void)
+{
+    NTSTATUS status;
+
+    status = pNtFlushProcessWriteBuffers();
+    ok( status == STATUS_SUCCESS, "NtFlushProcessWriteBuffers returned %08lx\n", status );
+}
+
 START_TEST(virtual)
 {
     HMODULE mod;
@@ -3017,6 +3026,7 @@ START_TEST(virtual)
     pNtAllocateVirtualMemoryEx = (void *)GetProcAddress(mod, "NtAllocateVirtualMemoryEx");
     pNtMapViewOfSectionEx = (void *)GetProcAddress(mod, "NtMapViewOfSectionEx");
     pNtSetInformationVirtualMemory = (void *)GetProcAddress(mod, "NtSetInformationVirtualMemory");
+    pNtFlushProcessWriteBuffers = (void *)GetProcAddress(mod, "NtFlushProcessWriteBuffers");
 
     NtQuerySystemInformation(SystemBasicInformation, &sbi, sizeof(sbi), NULL);
     trace("system page size %#lx\n", sbi.PageSize);
@@ -3036,4 +3046,5 @@ START_TEST(virtual)
     test_query_region_information();
     test_query_image_information();
     test_exec_memory_writes();
+    test_flush_write_buffers();
 }

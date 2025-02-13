@@ -39,6 +39,9 @@
 #ifdef HAVE_SYS_SYSINFO_H
 # include <sys/sysinfo.h>
 #endif
+#ifdef HAVE_SYS_SYSCALL_H
+# include <sys/syscall.h>
+#endif
 #ifdef HAVE_SYS_SYSCTL_H
 # include <sys/sysctl.h>
 #endif
@@ -62,6 +65,9 @@
 #if defined(__APPLE__)
 # include <mach/mach_init.h>
 # include <mach/mach_vm.h>
+# include <mach/task.h>
+# include <mach/thread_state.h>
+# include <mach/vm_map.h>
 #endif
 
 #include "ntstatus.h"
@@ -219,6 +225,16 @@ struct range_entry
 
 static struct range_entry *free_ranges;
 static struct range_entry *free_ranges_end;
+
+#ifdef __APPLE__
+static kern_return_t (*p_thread_get_register_pointer_values)( thread_t, uintptr_t*, size_t*, uintptr_t* );
+static pthread_once_t tgrpvs_init_once = PTHREAD_ONCE_INIT;
+#endif
+
+#if defined(__linux__) && defined(__NR_membarrier)
+static BOOL membarrier_exp_available;
+static pthread_once_t membarrier_init_once = PTHREAD_ONCE_INIT;
+#endif
 
 
 static inline BOOL is_beyond_limit( const void *addr, size_t size, const void *limit )
@@ -6317,13 +6333,175 @@ NTSTATUS WINAPI NtFlushInstructionCache( HANDLE handle, const void *addr, SIZE_T
 }
 
 
+#ifdef __APPLE__
+
+static void tgrpvs_init( void )
+{
+    p_thread_get_register_pointer_values = dlsym( RTLD_DEFAULT, "thread_get_register_pointer_values" );
+}
+
+static BOOL try_mach_tgrpvs( void )
+{
+    /* Taken from https://github.com/dotnet/runtime/blob/7be37908e5a1cbb83b1062768c1649827eeaceaa/src/coreclr/pal/src/thread/process.cpp#L2799 */
+    mach_msg_type_number_t count, i = 0;
+    thread_act_array_t threads;
+    BOOL success = TRUE;
+    kern_return_t kret;
+
+    pthread_once(&tgrpvs_init_once, tgrpvs_init);
+    if (!p_thread_get_register_pointer_values)
+        return FALSE;
+
+    /* Get references to all threads of this process */
+    kret = task_threads( mach_task_self(), &threads, &count );
+    if (kret)
+        return FALSE;
+
+    /* Iterate through the threads in the list */
+    while (i < count)
+    {
+        uintptr_t reg_values[128];
+        size_t reg_count = ARRAY_SIZE( reg_values );
+        uintptr_t sp;
+
+        /* Request the thread's register pointer values to force the thread to go through a memory barrier */
+        kret = p_thread_get_register_pointer_values( threads[i], &sp, &reg_count, reg_values );
+        /* This function always fails when querying Rosetta's exception handling thread, so we only treat
+           KERN_INSUFFICIENT_BUFFER_SIZE as an error, like .NET core does. */
+        if (kret == KERN_INSUFFICIENT_BUFFER_SIZE)
+            success = FALSE;
+
+        /* Deallocate thread reference once we're done with it */
+        mach_port_deallocate( mach_task_self(), threads[i++] );
+    }
+
+    /* Deallocate thread list */
+    vm_deallocate( mach_task_self(), (vm_address_t)threads, count * sizeof(threads[0]) );
+    return success;
+}
+
+#else /* defined(__APPLE__) */
+
+static BOOL try_mach_tgrpvs( void ) { return FALSE; }
+
+#endif /* defined(__APPLE__) */
+
+
+#if defined(__linux__) && defined(__NR_membarrier)
+
+#define MEMBARRIER_CMD_QUERY                        0x00
+#define MEMBARRIER_CMD_PRIVATE_EXPEDITED            0x08
+#define MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED   0x10
+
+static int membarrier( int cmd, unsigned int flags, int cpu_id )
+{
+    return syscall( __NR_membarrier, cmd, flags, cpu_id );
+}
+
+static void membarrier_init( void )
+{
+    static const int exp_required_cmds =
+        MEMBARRIER_CMD_PRIVATE_EXPEDITED | MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED;
+    int available_cmds = membarrier( MEMBARRIER_CMD_QUERY, 0, 0 );
+    if (available_cmds == -1)
+        return;
+    if ((available_cmds & exp_required_cmds) == exp_required_cmds)
+        membarrier_exp_available = !membarrier( MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED, 0, 0 );
+}
+
+static BOOL try_exp_membarrier( void )
+{
+    pthread_once(&membarrier_init_once, membarrier_init);
+    if (!membarrier_exp_available)
+        return FALSE;
+    return !membarrier( MEMBARRIER_CMD_PRIVATE_EXPEDITED, 0, 0 );
+}
+
+#else /* defined(__linux__) && defined(__NR_membarrier) */
+
+static BOOL try_exp_membarrier( void ) { return FALSE; }
+
+#endif /* defined(__linux__) && defined(__NR_membarrier) */
+
+
+static BOOL try_flush_process_write_buffers_slow_fallback(void)
+{
+    HANDLE thread = NULL;
+    BOOL success = FALSE;
+
+    MemoryBarrier();  /* barrier for current thread */
+
+    for (;;)
+    {
+        CONTEXT context;
+        NTSTATUS status;
+        HANDLE next;
+
+        status = NtGetNextThread( GetCurrentProcess(), thread,
+                                  THREAD_GET_CONTEXT | THREAD_QUERY_LIMITED_INFORMATION,
+                                  0, 0, &next );
+        if (status)
+        {
+            if (status == STATUS_NO_MORE_ENTRIES)
+            {
+                success = TRUE;
+            }
+            else
+            {
+                ERR( "Failed to get handle to next thread of %p: %#x\n", thread, (int)status );
+            }
+            break;
+        }
+        if (thread) NtClose( thread );
+        thread = next;
+
+        context.ContextFlags = CONTEXT_CONTROL;
+        status = NtGetContextThread( thread, &context );
+        if (status)
+        {
+            ULONG terminated;
+            NTSTATUS qstatus;
+
+            qstatus = NtQueryInformationThread( thread, ThreadIsTerminated, &terminated, sizeof(terminated), NULL );
+            if (qstatus)
+            {
+                ERR( "Failed to get termination status of thread %p: %#x\n", thread, (int)qstatus );
+                break;
+            }
+
+            if (!terminated)
+            {
+                ERR( "Failed to execute heavy barrier on thread %p: %#x\n", thread, (int)status );
+                break;
+            }
+        }
+    }
+    if (thread) NtClose( thread );
+    return success;
+}
+
+
 /**********************************************************************
  *           NtFlushProcessWriteBuffers  (NTDLL.@)
  */
 NTSTATUS WINAPI NtFlushProcessWriteBuffers(void)
 {
-    static int once = 0;
-    if (!once++) FIXME( "stub\n" );
+    static LONG volatile once;
+
+    if (try_exp_membarrier()) return STATUS_SUCCESS;
+    if (try_mach_tgrpvs()) return STATUS_SUCCESS;
+
+    if (!once && !InterlockedExchange( &once, TRUE ))
+    {
+        FIXME( "Falling back to slow implementation\n" );
+    }
+
+    while (!try_flush_process_write_buffers_slow_fallback())
+    {
+        ERR( "Failed to execute slow fallback, retrying\n" );
+    }
+
+    /* NtFlushProcessWriteBuffers() cannot fail */
     return STATUS_SUCCESS;
 }
 
