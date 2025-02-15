@@ -9,6 +9,7 @@ SOURCES = \
 	opengl.c \
 	pointer-constraints-unstable-v1.xml \
 	relative-pointer-unstable-v1.xml \
+	xdg-toplevel-icon-v1.xml \
 	version.rc \
 	viewporter.xml \
 	vulkan.c \

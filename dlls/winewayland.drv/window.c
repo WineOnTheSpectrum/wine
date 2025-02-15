@@ -432,6 +432,180 @@ BOOL WAYLAND_WindowPosChanging(HWND hwnd, UINT swp_flags, BOOL shaped, const str
 
 
 /***********************************************************************
+ *              get_bitmap_argb
+ *
+ * Return the bitmap bits in ARGB format. Helper for setting icon hints.
+ */
+static unsigned int *get_bitmap_argb( HDC hdc, HBITMAP color, HBITMAP mask, unsigned int *size )
+{
+    char buffer[FIELD_OFFSET( BITMAPINFO, bmiColors[256] )];
+    BITMAPINFO *info = (BITMAPINFO *)buffer;
+    BITMAP bm;
+    unsigned int *bits = NULL;
+    unsigned int *ptr;
+    unsigned char *mask_bits = NULL;
+    int i, j;
+    BOOL has_alpha = FALSE;
+
+    if (!NtGdiExtGetObjectW( color, sizeof(bm), &bm )) return NULL;
+    info->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info->bmiHeader.biWidth = bm.bmWidth;
+    info->bmiHeader.biHeight = -bm.bmHeight;
+    info->bmiHeader.biPlanes = 1;
+    info->bmiHeader.biBitCount = 32;
+    info->bmiHeader.biCompression = BI_RGB;
+    info->bmiHeader.biSizeImage = bm.bmWidth * bm.bmHeight * WINEWAYLAND_BYTES_PER_PIXEL;
+    info->bmiHeader.biXPelsPerMeter = 0;
+    info->bmiHeader.biYPelsPerMeter = 0;
+    info->bmiHeader.biClrUsed = 0;
+    info->bmiHeader.biClrImportant = 0;
+    *size = info->bmiHeader.biSizeImage + 2 * sizeof(*bits);
+    if (!(bits = malloc( *size ))) goto failed;
+    ptr = bits;
+    if (!NtGdiGetDIBitsInternal( hdc, color, 0, bm.bmHeight, ptr + 2, info, DIB_RGB_COLORS, 0, 0 ))
+        goto failed;
+
+    ptr[0] = bm.bmWidth;
+    ptr[1] = bm.bmHeight;
+
+    for (i = 0; i < bm.bmWidth * bm.bmHeight; i++)
+        if ((has_alpha = (ptr[i + 2] & 0xff000000) != 0)) break;
+
+    if (!has_alpha)
+    {
+        unsigned int width_bytes = (bm.bmWidth + 31) / 32 * 4;
+        /* generate alpha channel from the mask */
+        info->bmiHeader.biBitCount = 1;
+        info->bmiHeader.biSizeImage = width_bytes * bm.bmHeight;
+        if (!(mask_bits = malloc( info->bmiHeader.biSizeImage ))) goto failed;
+        if (!NtGdiGetDIBitsInternal( hdc, mask, 0, bm.bmHeight, mask_bits, info, DIB_RGB_COLORS, 0, 0 ))
+            goto failed;
+        ptr = bits + 2;
+        for (i = 0; i < bm.bmHeight; i++)
+            for (j = 0; j < bm.bmWidth; j++, ptr++)
+                if (!((mask_bits[i * width_bytes + j / 8] << (j % 8)) & 0x80)) *ptr |= 0xff000000;
+        free( mask_bits );
+    }
+
+    return bits;
+
+failed:
+    free( bits );
+    free( mask_bits );
+    return NULL;
+}
+
+static HICON get_icon_info( HICON icon, ICONINFO *ii )
+{
+    return icon && NtUserGetIconInfo( icon, ii, NULL, NULL, NULL, 0 ) ? icon : NULL;
+}
+
+static void fetch_icon_data(HWND hwnd, HICON icon_small, HICON icon_big)
+{
+    ICONINFO ii, ii_small;
+    HDC hDC;
+    unsigned int size;
+    unsigned int *bits;
+    struct wayland_win_data *data = NULL;
+    struct wayland_surface *surface = NULL;
+    struct wayland_shm_buffer *icon_big_buf = NULL, *icon_small_buf = NULL;
+
+    if (!process_wayland.xdg_toplevel_icon_manager_v1) return;
+
+    icon_big = get_icon_info( icon_big, &ii );
+    if (!icon_big)
+    {
+        icon_big = get_icon_info( (HICON)send_message( hwnd, WM_GETICON, ICON_BIG, 0 ), &ii );
+        if (!icon_big)
+            icon_big = get_icon_info( (HICON)NtUserGetClassLongPtrW( hwnd, GCLP_HICON ), &ii );
+        if (!icon_big)
+        {
+            icon_big = LoadImageW( 0, (const WCHAR *)IDI_WINLOGO, IMAGE_ICON, 0, 0,
+                                   LR_SHARED | LR_DEFAULTSIZE );
+            icon_big = get_icon_info( icon_big, &ii );
+        }
+    }
+
+    icon_small = get_icon_info( icon_small, &ii_small );
+    if (!icon_small)
+    {
+        icon_small = get_icon_info( (HICON)send_message( hwnd, WM_GETICON, ICON_SMALL, 0 ), &ii_small );
+        if (!icon_small)
+            icon_small = get_icon_info( (HICON)NtUserGetClassLongPtrW( hwnd, GCLP_HICONSM ), &ii_small );
+    }
+
+    if (!icon_big) return;
+
+    hDC = NtGdiCreateCompatibleDC(0);
+    bits = get_bitmap_argb( hDC, ii.hbmColor, ii.hbmMask, &size );
+    if (bits)
+    {
+        if (icon_small)
+        {
+            unsigned int size_small;
+            unsigned int *bits_small;
+
+            if ((bits_small = get_bitmap_argb( hDC, ii_small.hbmColor, ii_small.hbmMask, &size_small )) &&
+                (bits_small[0] != bits[0] || bits_small[1] != bits[1]))  /* size must be different */
+            {
+                icon_small_buf = wayland_shm_buffer_create(bits_small[0], bits_small[1], WL_SHM_FORMAT_ARGB8888);
+                memcpy(icon_small_buf->map_data, bits_small+2, size_small-2*sizeof(*bits_small));
+            }
+            free( bits_small );
+            NtGdiDeleteObjectApp( ii_small.hbmColor );
+            NtGdiDeleteObjectApp( ii_small.hbmMask );
+        }
+
+        icon_big_buf = wayland_shm_buffer_create(bits[0], bits[1], WL_SHM_FORMAT_ARGB8888);
+        memcpy(icon_big_buf->map_data, bits+2, size-2*sizeof(*bits));
+    }
+
+    free(bits);
+    NtGdiDeleteObjectApp( ii.hbmColor );
+    NtGdiDeleteObjectApp( ii.hbmMask );
+    NtGdiDeleteObjectApp( hDC );
+
+
+    if ((data = wayland_win_data_get(hwnd)) && (surface = data->wayland_surface) && surface->xdg_toplevel)
+    {
+        if (surface->xdg_toplevel_icon)
+        {
+            xdg_toplevel_icon_manager_v1_set_icon(process_wayland.xdg_toplevel_icon_manager_v1, surface->xdg_toplevel, NULL);
+            xdg_toplevel_icon_v1_destroy(surface->xdg_toplevel_icon);
+            if (surface->big_icon_buffer) wayland_shm_buffer_unref(surface->big_icon_buffer);
+            if (surface->small_icon_buffer) wayland_shm_buffer_unref(surface->small_icon_buffer);
+            surface->xdg_toplevel_icon = NULL;
+            surface->small_icon_buffer = NULL;
+            surface->big_icon_buffer = NULL;
+        }
+
+        if (icon_big_buf)
+        {
+            surface->xdg_toplevel_icon = xdg_toplevel_icon_manager_v1_create_icon(process_wayland.xdg_toplevel_icon_manager_v1);
+
+            /* FIXME: what to do with scale ? */
+            xdg_toplevel_icon_v1_add_buffer(surface->xdg_toplevel_icon, icon_big_buf->wl_buffer, 1);
+            surface->big_icon_buffer = icon_big_buf;
+            if (icon_small_buf)
+            {
+                xdg_toplevel_icon_v1_add_buffer(surface->xdg_toplevel_icon, icon_small_buf->wl_buffer, 1);
+                surface->small_icon_buffer = icon_small_buf;
+            }
+            xdg_toplevel_icon_v1_set_name(surface->xdg_toplevel_icon, "");
+
+            xdg_toplevel_icon_manager_v1_set_icon(process_wayland.xdg_toplevel_icon_manager_v1, surface->xdg_toplevel, surface->xdg_toplevel_icon);
+        }
+    }
+    else
+    {
+        if (icon_big_buf) wayland_shm_buffer_unref(icon_big_buf);
+        if (icon_small_buf) wayland_shm_buffer_unref(icon_small_buf);
+    }
+
+    if (data) wayland_win_data_release(data);
+}
+
+/***********************************************************************
  *           WAYLAND_WindowPosChanged
  */
 void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UINT swp_flags, BOOL fullscreen,
@@ -480,6 +654,8 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
     }
 
     wayland_win_data_release(data);
+
+    if (data->wayland_surface && !data->wayland_surface->big_icon_buffer) fetch_icon_data(hwnd, 0, 0);
 }
 
 static void wayland_configure_window(HWND hwnd)
@@ -647,6 +823,32 @@ static enum xdg_toplevel_resize_edge hittest_to_resize_edge(WPARAM hittest)
     case WMSZ_BOTTOMLEFT:  return XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_LEFT;
     case WMSZ_BOTTOMRIGHT: return XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT;
     default:               return XDG_TOPLEVEL_RESIZE_EDGE_NONE;
+    }
+}
+
+/*****************************************************************
+ *		WAYLAND_SetWindowIcon
+ */
+void WAYLAND_SetWindowIcon(HWND hwnd, UINT type, HICON icon)
+{
+    static unsigned int once;
+    struct wayland_win_data *data;
+
+    TRACE("hwnd=%p text=%u icon=%p\n", hwnd, type, icon);
+
+    if (process_wayland.xdg_toplevel_icon_manager_v1)
+    {
+        if ((data = wayland_win_data_get(hwnd)))
+        {
+            wayland_win_data_release(data);
+            if (type == ICON_BIG) fetch_icon_data(hwnd, 0, icon);
+            else fetch_icon_data(hwnd, icon, 0);
+        }
+    }
+    else if (!once)
+    {
+        FIXME("missing xdg_toplevel_icon_manager_v1, returning\n");
+        once++;
     }
 }
 

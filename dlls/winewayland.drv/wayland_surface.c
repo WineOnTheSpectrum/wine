@@ -324,6 +324,21 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
         break;
 
     case WAYLAND_SURFACE_ROLE_TOPLEVEL:
+        if (surface->xdg_toplevel_icon)
+        {
+            xdg_toplevel_icon_manager_v1_set_icon(
+                process_wayland.xdg_toplevel_icon_manager_v1,
+                surface->xdg_toplevel, NULL);
+            xdg_toplevel_icon_v1_destroy(surface->xdg_toplevel_icon);
+            if (surface->big_icon_buffer)
+                wayland_shm_buffer_unref(surface->big_icon_buffer);
+            if (surface->small_icon_buffer)
+                wayland_shm_buffer_unref(surface->small_icon_buffer);
+            surface->big_icon_buffer = NULL;
+            surface->small_icon_buffer = NULL;
+            surface->xdg_toplevel_icon = NULL;
+        }
+
         if (surface->xdg_toplevel)
         {
             xdg_toplevel_destroy(surface->xdg_toplevel);
