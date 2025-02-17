@@ -620,6 +620,18 @@ LRESULT WAYLAND_WindowMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_WAYLAND_SET_FOREGROUND:
         NtUserSetForegroundWindow(hwnd);
         return 0;
+    case WM_WAYLAND_CLIPBOARD_UPDATE:
+        if (process_wayland.data_device.wl_data_device)
+            wayland_data_device_clipboard_update();
+        return 0;
+    case WM_WAYLAND_RENDER_FORMAT:
+        if (process_wayland.data_device.wl_data_device)
+            wayland_data_device_render_format(wp);
+        return 0;
+    case WM_WAYLAND_DESTROY_CLIPBOARD:
+        if (process_wayland.data_device.wl_data_device)
+            wayland_data_device_destroy_clipboard();
+        return 0;
     default:
         FIXME("got window msg %x hwnd %p wp %lx lp %lx\n", msg, hwnd, (long)wp, lp);
         return 0;

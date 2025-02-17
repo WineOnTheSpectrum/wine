@@ -63,6 +63,9 @@ enum wayland_window_message
     WM_WAYLAND_INIT_DISPLAY_DEVICES = WM_WINE_FIRST_DRIVER_MSG,
     WM_WAYLAND_CONFIGURE,
     WM_WAYLAND_SET_FOREGROUND,
+    WM_WAYLAND_CLIPBOARD_UPDATE,
+    WM_WAYLAND_RENDER_FORMAT,
+    WM_WAYLAND_DESTROY_CLIPBOARD,
 };
 
 enum wayland_surface_config_state
@@ -86,6 +89,7 @@ struct wayland_keyboard
     struct xkb_context *xkb_context;
     struct xkb_state *xkb_state;
     HWND focused_hwnd;
+    uint32_t enter_serial;
     pthread_mutex_t mutex;
 };
 
@@ -118,6 +122,14 @@ struct wayland_seat
     pthread_mutex_t mutex;
 };
 
+struct wayland_data_device
+{
+    struct wl_data_device *wl_data_device;
+    struct wl_data_source *wl_data_source;
+    struct wl_data_offer *clipboard_wl_data_offer;
+    pthread_mutex_t mutex;
+};
+
 struct wayland
 {
     BOOL initialized;
@@ -132,9 +144,11 @@ struct wayland
     struct wl_subcompositor *wl_subcompositor;
     struct zwp_pointer_constraints_v1 *zwp_pointer_constraints_v1;
     struct zwp_relative_pointer_manager_v1 *zwp_relative_pointer_manager_v1;
+    struct wl_data_device_manager *wl_data_device_manager;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
+    struct wayland_data_device data_device;
     struct wl_list output_list;
     /* Protects the output_list and the wayland_output.current states. */
     pthread_mutex_t output_mutex;
@@ -341,6 +355,16 @@ void wayland_pointer_deinit(void);
 void wayland_pointer_clear_constraint(void);
 
 /**********************************************************************
+ *          Wayland data device
+ */
+
+void wayland_data_device_init(void);
+void wayland_data_device_deinit(void);
+void wayland_data_device_clipboard_update(void);
+void wayland_data_device_render_format(UINT clipboard_format);
+void wayland_data_device_destroy_clipboard(void);
+
+/**********************************************************************
  *          OpenGL
  */
 
@@ -365,6 +389,17 @@ static inline LRESULT send_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lp
     return NtUserMessageCall(hwnd, msg, wparam, lparam, NULL, NtUserSendMessage, FALSE);
 }
 
+static inline LRESULT send_message_timeout(HWND hwnd, UINT msg, WPARAM wparam,
+                                           LPARAM lparam, UINT flags, UINT timeout,
+                                           PDWORD_PTR res_ptr )
+{
+    struct send_message_timeout_params params = { .flags = flags, .timeout = timeout };
+    LRESULT res = NtUserMessageCall(hwnd, msg, wparam, lparam, &params,
+                                    NtUserSendMessageTimeout, FALSE);
+    if (res_ptr) *res_ptr = params.result;
+    return res;
+}
+
 RGNDATA *get_region_data(HRGN region);
 
 /**********************************************************************
@@ -372,6 +407,7 @@ RGNDATA *get_region_data(HRGN region);
  */
 
 BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset);
+LRESULT WAYLAND_ClipboardWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 LRESULT WAYLAND_DesktopWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 void WAYLAND_DestroyWindow(HWND hwnd);
 void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor);

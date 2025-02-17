@@ -37,6 +37,7 @@ struct wayland process_wayland =
     .seat.mutex = PTHREAD_MUTEX_INITIALIZER,
     .keyboard.mutex = PTHREAD_MUTEX_INITIALIZER,
     .pointer.mutex = PTHREAD_MUTEX_INITIALIZER,
+    .data_device.mutex = PTHREAD_MUTEX_INITIALIZER,
     .output_list = {&process_wayland.output_list, &process_wayland.output_list},
     .output_mutex = PTHREAD_MUTEX_INITIALIZER
 };
@@ -143,6 +144,7 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
         seat->global_id = id;
         wl_seat_add_listener(seat->wl_seat, &seat_listener, NULL);
         pthread_mutex_unlock(&seat->mutex);
+        if (process_wayland.wl_data_device_manager) wayland_data_device_init();
     }
     else if (strcmp(interface, "wp_viewporter") == 0)
     {
@@ -163,6 +165,13 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     {
         process_wayland.zwp_relative_pointer_manager_v1 =
             wl_registry_bind(registry, id, &zwp_relative_pointer_manager_v1_interface, 1);
+    }
+    else if (strcmp(interface, "wl_data_device_manager") == 0)
+    {
+        process_wayland.wl_data_device_manager =
+            wl_registry_bind(registry, id, &wl_data_device_manager_interface,
+                             version < 3 ? version : 3);
+        if (process_wayland.seat.wl_seat) wayland_data_device_init();
     }
 }
 
@@ -189,6 +198,7 @@ static void registry_handle_global_remove(void *data, struct wl_registry *regist
     {
         TRACE("removing seat\n");
         if (process_wayland.pointer.wl_pointer) wayland_pointer_deinit();
+        if (process_wayland.data_device.wl_data_device) wayland_data_device_deinit();
         pthread_mutex_lock(&seat->mutex);
         wl_seat_release(seat->wl_seat);
         seat->wl_seat = NULL;

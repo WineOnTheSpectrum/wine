@@ -201,7 +201,10 @@ void wayland_surface_destroy(struct wayland_surface *surface)
 
     pthread_mutex_lock(&process_wayland.keyboard.mutex);
     if (process_wayland.keyboard.focused_hwnd == surface->hwnd)
+    {
         process_wayland.keyboard.focused_hwnd = NULL;
+        process_wayland.keyboard.enter_serial = 0;
+    }
     pthread_mutex_unlock(&process_wayland.keyboard.mutex);
 
     wayland_surface_clear_role(surface);
