@@ -1144,8 +1144,14 @@ static HRESULT read_stream_data(nsChannelBSC *This, IStream *stream)
                 break;
             case BOM_UTF16:
                 This->nschannel->charset = strdup("utf-16");
-            case BOM_NONE:
-                /* FIXME: Get charset from HTTP headers */;
+                break;
+            case BOM_NONE: {
+                /* FIXME: Get charset from HTTP headers first */
+                INT flags = IS_TEXT_UNICODE_ASCII16 | IS_TEXT_UNICODE_CONTROLS | IS_TEXT_UNICODE_STATISTICS;
+
+                IsTextUnicode(This->nsstream->buf, This->nsstream->buf_size, &flags);
+                This->nschannel->charset = strdup(flags ? "utf-16" : "utf-8");
+            }
             }
 
             if(!This->nschannel->content_type) {
