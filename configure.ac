@@ -89,6 +89,7 @@ AC_ARG_WITH(system-dllpath,AS_HELP_STRING([--with-system-dllpath=PATH],[load ext
             AC_SUBST(system_dllpath,[$withval]))
 AC_ARG_WITH(wine-tools,AS_HELP_STRING([--with-wine-tools=DIR],[use Wine tools from directory DIR]))
 AC_ARG_WITH(wine64,    AS_HELP_STRING([--with-wine64=DIR],[use the 64-bit Wine in DIR for a Wow64 build]))
+AC_ARG_WITH(wine-wrapper,AS_HELP_STRING([--with-wine-wrapper=PATH],[path to a wrapper script for wine invocation inside a build tree]))
 
 AC_CANONICAL_HOST
 AC_SUBST(srcdir)
@@ -349,6 +350,8 @@ fi
 WINE_WARNING_WITH(gettext,[test "$MSGFMT" = false],
                   [gettext tools not found (or too old), translations won't be built.],
                   [enable_po])
+
+AC_SUBST(WINE_WRAPPER, "$with_wine_wrapper")
 
 dnl **** Check for some libraries ****
 

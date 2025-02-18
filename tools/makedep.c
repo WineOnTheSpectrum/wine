@@ -158,6 +158,7 @@ static const char *ln_s;
 static const char *sed_cmd;
 static const char *wayland_scanner;
 static const char *sarif_converter;
+static const char *wine_wrapper;
 static int so_dll_supported;
 static int unix_lib_supported;
 /* per-architecture global variables */
@@ -4350,8 +4351,9 @@ static void output_top_makefile( struct makefile *make )
 
     if (!strarray_exists( &disabled_dirs[0], "tools/wine" ))
     {
-        output( "wine: %s\n", tools_path( make, "wine" ));
-        output( "\t%srm -f $@ && %s %s $@\n", cmd_prefix( "LN" ), ln_s, tools_path( make, "wine" ));
+        output( "wine: %s %s\n", tools_path( make, "wine" ), makedep);
+        output( "\t%srm -f $@ && %s %s $@\n", cmd_prefix( "LN" ), ln_s,
+                wine_wrapper ? wine_wrapper : tools_path( make, "wine" ) );
         strarray_add( &make->all_targets[0], "wine" );
     }
 
@@ -4619,6 +4621,7 @@ int main( int argc, char *argv[] )
     ln_s               = get_expanded_make_variable( top_makefile, "LN_S" );
     wayland_scanner    = get_expanded_make_variable( top_makefile, "WAYLAND_SCANNER" );
     sarif_converter    = get_expanded_make_variable( top_makefile, "SARIF_CONVERTER" );
+    wine_wrapper       = get_expanded_make_variable( top_makefile, "WINE_WRAPPER" );
 
     if (root_src_dir && !strcmp( root_src_dir, "." )) root_src_dir = NULL;
     if (tools_dir && !strcmp( tools_dir, "." )) tools_dir = NULL;
