@@ -6672,8 +6672,12 @@ static HRESULT WINAPI source_resolver_BeginCreateObjectFromURL(IMFSourceResolver
     hr = IMFSchemeHandler_BeginCreateObject(handler, url, flags, props, cancel_cookie ? &inner_cookie : NULL,
             (IMFAsyncCallback *)&resolver->url_callback, (IUnknown *)result);
 
-    if (SUCCEEDED(hr) && inner_cookie)
-        resolver_create_cancel_object((IUnknown *)handler, OBJECT_FROM_URL, inner_cookie, cancel_cookie);
+    if (inner_cookie)
+    {
+        if (SUCCEEDED(hr))
+            resolver_create_cancel_object((IUnknown *)handler, OBJECT_FROM_URL, inner_cookie, cancel_cookie);
+        IUnknown_Release(inner_cookie);
+    }
 
     IRtwqAsyncResult_Release(result);
 
@@ -6717,9 +6721,13 @@ static HRESULT WINAPI source_resolver_BeginCreateObjectFromByteStream(IMFSourceR
     hr = IMFByteStreamHandler_BeginCreateObject(handler, stream, url, flags, props,
             cancel_cookie ? &inner_cookie : NULL, (IMFAsyncCallback *)&resolver->stream_callback, (IUnknown *)result);
 
-    /* Cancel object wraps underlying handler cancel cookie with context necessary to call CancelObjectCreate(). */
-    if (SUCCEEDED(hr) && inner_cookie)
-        resolver_create_cancel_object((IUnknown *)handler, OBJECT_FROM_BYTESTREAM, inner_cookie, cancel_cookie);
+    if (inner_cookie)
+    {
+        /* Cancel object wraps underlying handler cancel cookie with context necessary to call CancelObjectCreate(). */
+        if (SUCCEEDED(hr))
+            resolver_create_cancel_object((IUnknown *)handler, OBJECT_FROM_BYTESTREAM, inner_cookie, cancel_cookie);
+        IUnknown_Release(inner_cookie);
+    }
 
     IRtwqAsyncResult_Release(result);
 

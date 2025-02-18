@@ -66,6 +66,17 @@ static CRITICAL_SECTION_DEBUG queues_critsect_debug =
 };
 static CRITICAL_SECTION queues_section = { &queues_critsect_debug, -1, 0, 0, 0, 0 };
 
+static CRITICAL_SECTION async_result_cache_section;
+static CRITICAL_SECTION_DEBUG async_result_cache_critsect_debug =
+{
+    0, 0, &async_result_cache_section,
+    { &async_result_cache_critsect_debug.ProcessLocksList, &async_result_cache_critsect_debug.ProcessLocksList },
+      0, 0, { (DWORD_PTR)(__FILE__ ": async_result_cache_section") }
+};
+static CRITICAL_SECTION async_result_cache_section = { &async_result_cache_critsect_debug, -1, 0, 0, 0, 0 };
+struct list async_result_cache = LIST_INIT(async_result_cache);
+
+static LONG startup_count;
 static LONG platform_lock;
 static CO_MTA_USAGE_COOKIE mta_cookie;
 
@@ -354,7 +365,7 @@ static BOOL pool_queue_shutdown(struct queue *queue)
     if (!queue->pool)
         return FALSE;
 
-    CloseThreadpoolCleanupGroupMembers(queue->envs[0].CleanupGroup, TRUE, NULL);
+    CloseThreadpoolCleanupGroupMembers(queue->envs[0].CleanupGroup, FALSE, NULL);
     CloseThreadpool(queue->pool);
     queue->pool = NULL;
 
@@ -954,7 +965,7 @@ static HRESULT alloc_user_queue(const struct queue_desc *desc, DWORD *queue_id)
 
     *queue_id = RTWQ_CALLBACK_QUEUE_UNDEFINED;
 
-    if (platform_lock <= 0)
+    if (startup_count <= 0 || platform_lock <= 0)
         return RTWQ_E_SHUTDOWN;
 
     if (!(queue = calloc(1, sizeof(*queue))))
@@ -995,11 +1006,64 @@ struct async_result
     LONG refcount;
     IUnknown *object;
     IUnknown *state;
+    struct list entry;
 };
 
 static struct async_result *impl_from_IRtwqAsyncResult(IRtwqAsyncResult *iface)
 {
     return CONTAINING_RECORD(iface, struct async_result, result.AsyncResult);
+}
+
+static BOOL async_result_cache_push(struct async_result *result)
+{
+    BOOL pushed;
+
+    EnterCriticalSection(&async_result_cache_section);
+    if ((pushed = startup_count > 0))
+        list_add_head(&async_result_cache, &result->entry);
+    LeaveCriticalSection(&async_result_cache_section);
+
+    return pushed;
+}
+
+static struct async_result *async_result_cache_pop(void)
+{
+    struct async_result *result;
+    struct list *head;
+
+    if (list_empty(&async_result_cache))
+        return NULL;
+
+    EnterCriticalSection(&async_result_cache_section);
+
+    if ((head = list_head(&async_result_cache)))
+        list_remove(head);
+
+    LeaveCriticalSection(&async_result_cache_section);
+
+    if (!head)
+        return NULL;
+
+    result = LIST_ENTRY(head, struct async_result, entry);
+    memset(&result->result, 0, sizeof(result->result));
+
+    return result;
+}
+
+static void async_result_cache_clear(void)
+{
+    struct async_result *cur, *cur2;
+
+    EnterCriticalSection(&async_result_cache_section);
+
+    LIST_FOR_EACH_ENTRY_SAFE(cur, cur2, &async_result_cache, struct async_result, entry)
+    {
+        list_remove(&cur->entry);
+        free(cur);
+        RtwqUnlockPlatform();
+    }
+
+    LeaveCriticalSection(&async_result_cache_section);
 }
 
 static HRESULT WINAPI async_result_QueryInterface(IRtwqAsyncResult *iface, REFIID riid, void **obj)
@@ -1046,9 +1110,12 @@ static ULONG WINAPI async_result_Release(IRtwqAsyncResult *iface)
             IUnknown_Release(result->state);
         if (result->result.hEvent)
             CloseHandle(result->result.hEvent);
-        free(result);
 
-        RtwqUnlockPlatform();
+        if (!async_result_cache_push(result))
+        {
+            free(result);
+            RtwqUnlockPlatform();
+        }
     }
 
     return refcount;
@@ -1132,10 +1199,12 @@ static HRESULT create_async_result(IUnknown *object, IRtwqAsyncCallback *callbac
     if (!out)
         return E_INVALIDARG;
 
-    if (!(result = calloc(1, sizeof(*result))))
-        return E_OUTOFMEMORY;
-
-    RtwqLockPlatform();
+    if (!(result = async_result_cache_pop()))
+    {
+        if (!(result = calloc(1, sizeof(*result))))
+            return E_OUTOFMEMORY;
+        RtwqLockPlatform();
+    }
 
     result->result.AsyncResult.lpVtbl = &async_result_vtbl;
     result->refcount = 1;
@@ -1206,8 +1275,9 @@ static void init_system_queues(void)
 
 HRESULT WINAPI RtwqStartup(void)
 {
-    if (InterlockedIncrement(&platform_lock) == 1)
+    if (InterlockedIncrement(&startup_count) == 1)
     {
+        RtwqLockPlatform();
         init_system_queues();
     }
 
@@ -1234,12 +1304,14 @@ static void shutdown_system_queues(void)
 
 HRESULT WINAPI RtwqShutdown(void)
 {
-    if (platform_lock <= 0)
+    if (startup_count <= 0)
         return S_OK;
 
-    if (InterlockedExchangeAdd(&platform_lock, -1) == 1)
+    if (InterlockedExchangeAdd(&startup_count, -1) == 1)
     {
         shutdown_system_queues();
+        async_result_cache_clear();
+        RtwqUnlockPlatform();
     }
 
     return S_OK;
