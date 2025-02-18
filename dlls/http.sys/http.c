@@ -267,7 +267,7 @@ static void parse_header(const char *name, int *name_len, const char **value, in
     while (*p == ' ' || *p == '\t') ++p;
     *value = p;
     while (isprint(*p) || *p == '\t') ++p;
-    while (isspace(*p)) --p; /* strip trailing LWS */
+    while (p >= *value && isspace(*p)) --p; /* strip trailing LWS */
     *value_len = p - *value + 1;
 }
 
