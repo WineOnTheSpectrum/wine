@@ -2883,6 +2883,7 @@ BOOL X11DRV_WindowPosChanging( HWND hwnd, UINT swp_flags, BOOL shaped, const str
         unmap_window( hwnd );
         if (!(data = get_win_data( hwnd ))) return FALSE; /* use default surface */
         data->managed = TRUE;
+        sync_window_style( data );
     }
 
     ret = !!data->whole_window; /* use default surface if we don't have a window */
