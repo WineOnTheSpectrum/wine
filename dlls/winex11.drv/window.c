@@ -156,7 +156,7 @@ static unsigned int find_host_window_child( struct host_window *win, Window chil
     return i;
 }
 
-static int host_window_error( Display *display, XErrorEvent *event, void *arg )
+static int bad_window_error( Display *display, XErrorEvent *event, void *arg )
 {
     return (event->error_code == BadWindow);
 }
@@ -175,7 +175,7 @@ struct host_window *get_host_window( Window window, BOOL create )
     if (!create || !(win = calloc( 1, sizeof(*win) ))) return NULL;
     win->window = window;
 
-    X11DRV_expect_error( data->display, host_window_error, NULL );
+    X11DRV_expect_error( data->display, bad_window_error, NULL );
     XSelectInput( data->display, window, StructureNotifyMask );
     if (!XGetWindowAttributes( data->display, window, &attr )) memset( &attr, 0, sizeof(attr) );
     if (!XQueryTree( data->display, window, &xroot, &xparent, &xchildren, &nchildren )) xparent = root_window;
@@ -306,6 +306,28 @@ static void remove_startup_notification(Display *display, Window window)
         XSendEvent( display, DefaultRootWindow( display ), False, PropertyChangeMask, &xevent );
         xevent.xclient.message_type = x11drv_atom(_NET_STARTUP_INFO);
     }
+}
+
+HWND hwnd_from_window( Display *display, Window window )
+{
+    unsigned long count, remaining;
+    unsigned long *xhwnd;
+    HWND hwnd = (HWND)-1;
+    int format;
+    Atom type;
+
+    if (!window) return 0;
+    if (!XFindContext( display, window, winContext, (char **)&hwnd )) return hwnd;
+
+    X11DRV_expect_error( display, bad_window_error, NULL );
+    if (!XGetWindowProperty( display, window, x11drv_atom(_WINE_HWND), 0, 65536, False, XA_CARDINAL,
+                             &type, &format, &count, &remaining, (unsigned char **)&xhwnd ))
+    {
+        if (type == XA_CARDINAL && format == 32) hwnd = ULongToHandle(*xhwnd);
+        XFree( xhwnd );
+    }
+    if (X11DRV_check_error()) return (HWND)-1;
+    return hwnd;
 }
 
 static BOOL is_managed( HWND hwnd )
@@ -1748,7 +1770,7 @@ void net_active_window_notify( unsigned long serial, Window value, Time time )
                               current, expected, "", received, NULL ))
         return;
 
-    TRACE( "_NET_ACTIVE_WINDOW changed to %lx\n", value );
+    TRACE( "_NET_ACTIVE_WINDOW changed to %p/%lx\n", hwnd_from_window( data->display, value ), value );
 }
 
 BOOL window_has_pending_wm_state( HWND hwnd, UINT state )
@@ -2095,6 +2117,7 @@ Window create_client_window( HWND hwnd, const XVisualInfo *visual, Colormap colo
  */
 static void create_whole_window( struct x11drv_win_data *data )
 {
+    unsigned long xhwnd = (UINT_PTR)data->hwnd;
     int cx, cy, mask;
     XSetWindowAttributes attr;
     WCHAR text[1024];
@@ -2133,6 +2156,8 @@ static void create_whole_window( struct x11drv_win_data *data )
                                         cx, cy, 0, data->vis.depth, InputOutput,
                                         data->vis.visual, mask, &attr );
     if (!data->whole_window) goto done;
+    XChangeProperty( data->display, data->whole_window, x11drv_atom(_WINE_HWND), XA_CARDINAL, 32,
+                     PropModeReplace, (unsigned char *)&xhwnd, 1 );
     SetRect( &data->current_state.rect, pos.x, pos.y, pos.x + cx, pos.y + cy );
     data->pending_state.rect = data->current_state.rect;
     data->desired_state.rect = data->current_state.rect;
