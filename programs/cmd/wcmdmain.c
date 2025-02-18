@@ -1365,7 +1365,10 @@ static RETURN_CODE run_full_path(const WCHAR *file, WCHAR *full_cmdline, BOOL ca
     }
 
     if (!interactive || (console && !HIWORD(console)))
+    {
         WaitForSingleObject(handle, INFINITE);
+        WCMD_update_file_codepage();
+    }
     GetExitCodeProcess(handle, &exit_code);
     errorlevel = (exit_code == STILL_ACTIVE) ? NO_ERROR : exit_code;
 
@@ -3900,6 +3903,9 @@ int __cdecl wmain (int argc, WCHAR *argvW[])
   /* init for loop context */
   forloopcontext = NULL;
   WCMD_save_for_loop_context(TRUE);
+
+  /* init batch file codepage */
+  WCMD_update_file_codepage();
 
   /* Can't use argc/argv as it will have stripped quotes from parameters
    * meaning cmd.exe /C echo "quoted string" is impossible
