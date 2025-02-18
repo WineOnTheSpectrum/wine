@@ -30,6 +30,7 @@ AC_ARG_WITH(capi,      AS_HELP_STRING([--without-capi],[do not use CAPI (ISDN su
 AC_ARG_WITH(coreaudio, AS_HELP_STRING([--without-coreaudio],[do not use the CoreAudio sound support]))
 AC_ARG_WITH(cups,      AS_HELP_STRING([--without-cups],[do not use CUPS]))
 AC_ARG_WITH(dbus,      AS_HELP_STRING([--without-dbus],[do not use DBus (dynamic device support)]))
+AC_ARG_WITH(expat,     AS_HELP_STRING([--without-expat],[do not use Expat]))
 AC_ARG_WITH(ffmpeg,    AS_HELP_STRING([--without-ffmpeg],[do not use the FFmpeg library]))
 AC_ARG_WITH(fontconfig,AS_HELP_STRING([--without-fontconfig],[do not use fontconfig]))
 AC_ARG_WITH(freetype,  AS_HELP_STRING([--without-freetype],[do not use the FreeType library]))
@@ -1463,6 +1464,23 @@ case $host_os in
   darwin*) ;;
   *) WINE_NOTICE_WITH(dbus,[test "x$ac_cv_lib_soname_dbus_1" = "x"],
                       [libdbus ${notice_platform}development files not found, no dynamic device support.]) ;;
+esac
+
+dnl **** Check for expat ****
+if test "x$with_expat" != "xno"
+then
+    WINE_PACKAGE_FLAGS(EXPAT,[expat],,,,
+        [AC_CHECK_HEADER([expat.h],
+            [AC_CHECK_LIB(expat,XML_ParserCreate,
+                [AC_DEFINE(HAVE_LIBEXPAT, 1, [Define to 1 if you have the 'expat' library (-lexpat).])],
+                [EXPAT_LIBS=""],
+                [$EXPAT_LIBS])],
+            [EXPAT_LIBS=""])])
+fi
+case $host_os in
+  freebsd*) WINE_NOTICE_WITH(expat,[test "$ac_cv_lib_expat_XML_ParserCreate" != "yes"],
+                [expat ${notice_platform}development files not found, detailed CPU info on FreeBSD won't be supported.]) ;;
+  *) ;;
 esac
 
 dnl **** Check for libgnutls ****
