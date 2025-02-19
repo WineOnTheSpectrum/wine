@@ -2007,12 +2007,13 @@ static void create_dir( const char *dir )
     char *p, *path;
 
     p = path = xstrdup( dir );
-    while ((p = strchr( p, '/' )))
+    for (;;)
     {
+        while (*p == '/') p++;
+        if (!(p = strchr( p, '/' ))) break;
         *p = 0;
         if (mkdir( path, 0755 ) == -1 && errno != EEXIST) fatal_perror( "mkdir %s", path );
         *p++ = '/';
-        while (*p == '/') p++;
     }
     if (mkdir( path, 0755 ) == -1 && errno != EEXIST) fatal_perror( "mkdir %s", path );
     free( path );
