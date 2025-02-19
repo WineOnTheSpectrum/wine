@@ -957,6 +957,7 @@ SOURCES = \
 	wine/wgl_driver.h \
 	wine/winbase16.h \
 	wine/windef16.h \
+	wine/winebth.h \
 	wine/wine_common_ver.rc \
 	wine/wined3d.h \
 	wine/winedmo.h \
