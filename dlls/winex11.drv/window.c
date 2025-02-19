@@ -1655,11 +1655,12 @@ static UINT window_update_client_config( struct x11drv_win_data *data )
 /***********************************************************************
  *      GetWindowStateUpdates   (X11DRV.@)
  */
-BOOL X11DRV_GetWindowStateUpdates( HWND hwnd, UINT *state_cmd, UINT *config_cmd, RECT *rect )
+BOOL X11DRV_GetWindowStateUpdates( HWND hwnd, UINT *state_cmd, UINT *config_cmd, RECT *rect, HWND *foreground )
 {
     struct x11drv_win_data *data;
 
     *state_cmd = *config_cmd = 0;
+    *foreground = 0;
 
     if ((data = get_win_data( hwnd )))
     {
@@ -1669,9 +1670,9 @@ BOOL X11DRV_GetWindowStateUpdates( HWND hwnd, UINT *state_cmd, UINT *config_cmd,
         release_win_data( data );
     }
 
-    if (!*state_cmd && !*config_cmd) return FALSE;
-    TRACE( "hwnd %p, returning state_cmd %#x, config_cmd %#x, rect %s\n",
-           hwnd, *state_cmd, *config_cmd, wine_dbgstr_rect(rect) );
+    if (!*state_cmd && !*config_cmd && !*foreground) return FALSE;
+    TRACE( "hwnd %p, returning state_cmd %#x, config_cmd %#x, rect %s, foreground %p\n",
+           hwnd, *state_cmd, *config_cmd, wine_dbgstr_rect(rect), *foreground );
     return TRUE;
 }
 
