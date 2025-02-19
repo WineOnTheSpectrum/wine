@@ -26,7 +26,7 @@
 static HMODULE hAdvPack;
 /* function pointers */
 static HRESULT (WINAPI *pRunSetupCommand)(HWND, LPCSTR, LPCSTR, LPCSTR, LPCSTR, HANDLE*, DWORD, LPVOID);
-static HRESULT (WINAPI *pLaunchINFSection)(HWND, HINSTANCE, LPSTR, INT);
+static INT (WINAPI *pLaunchINFSection)(HWND, HINSTANCE, LPSTR, INT);
 static HRESULT (WINAPI *pLaunchINFSectionEx)(HWND, HINSTANCE, LPSTR, INT);
 
 static char CURR_DIR[MAX_PATH];
@@ -66,7 +66,15 @@ static void create_inf_file(LPCSTR filename)
         "Signature=\"$Chicago$\"\n"
         "AdvancedINF=2.5\n"
         "[DefaultInstall]\n"
-        "CheckAdminRights=1\n";
+        "CheckAdminRights=1\n"
+        "[OcxInstallBad]\n"
+        "RegisterOCXs=BadOCXsToRegister\n"
+        "[BadOCXsToRegister]\n"
+        "foobar\n"
+        "[OcxInstallAtBad]\n"
+        "RegisterOCXs=AtBadOCXsToRegister\n"
+        "[AtBadOCXsToRegister]\n"
+        "@foobar\n";
 
     WriteFile(hf, data, sizeof(data) - 1, &dwNumberOfBytesWritten, NULL);
     CloseHandle(hf);
@@ -262,6 +270,37 @@ static void test_LaunchINFSectionEx(void)
     DeleteFileA("test.inf");
 }
 
+static LRESULT CALLBACK hide_window_hook(int code, WPARAM wparam, LPARAM lparam)
+{
+    if (code == HCBT_CREATEWND)
+    {
+        /* Suppress the "Error registering the OCX" dialog */
+        return 1;
+    }
+
+    return CallNextHookEx(NULL, code, wparam, lparam);
+}
+
+static void test_RegisterOCXs(void)
+{
+    static char bad_section[] = "test.inf,OcxInstallBad,4,0";
+    static char at_bad_section[] = "test.inf,OcxInstallAtBad,4,0";
+    HHOOK hook;
+    INT res;
+
+    create_inf_file("test.inf");
+
+    hook = SetWindowsHookExW(WH_CBT, hide_window_hook, NULL, GetCurrentThreadId());
+    res = pLaunchINFSection(NULL, NULL, bad_section, 0);
+    ok(res == 1, "Expected 1, got %d\n", res);
+    UnhookWindowsHookEx(hook);
+
+    res = pLaunchINFSection(NULL, NULL, at_bad_section, 0);
+    ok(res == 0, "Expected 0, got %d\n", res);
+
+    DeleteFileA("test.inf");
+}
+
 START_TEST(install)
 {
     DWORD len;
@@ -289,6 +328,7 @@ START_TEST(install)
     test_RunSetupCommand();
     test_LaunchINFSection();
     test_LaunchINFSectionEx();
+    test_RegisterOCXs();
 
     FreeLibrary(hAdvPack);
     SetCurrentDirectoryA(prev_path);
