@@ -595,7 +595,17 @@ DWORD EVENT_x11_time_to_win32_time(Time time)
 static inline BOOL can_activate_window( HWND hwnd )
 {
     LONG style = NtUserGetWindowLongW( hwnd, GWL_STYLE );
+    struct x11drv_win_data *data;
     RECT rect;
+
+    if ((data = get_win_data( hwnd )))
+    {
+        style = style & ~(WS_VISIBLE | WS_MINIMIZE | WS_MAXIMIZE);
+        if (data->current_state.wm_state != WithdrawnState) style |= WS_VISIBLE;
+        if (data->current_state.wm_state == IconicState) style |= WS_MINIMIZE;
+        if (data->current_state.net_wm_state & (1 << NET_WM_STATE_MAXIMIZED)) style |= WS_MAXIMIZE;
+        release_win_data( data );
+    }
 
     if (!(style & WS_VISIBLE)) return FALSE;
     if ((style & (WS_POPUP|WS_CHILD)) == WS_CHILD) return FALSE;
@@ -747,7 +757,7 @@ static void handle_wm_protocols( HWND hwnd, XClientMessageEvent *event )
     {
         HWND last_focus = x11drv_thread_data()->last_focus, foreground = NtUserGetForegroundWindow();
 
-        if (window_has_pending_wm_state( hwnd, -1 ))
+        if (window_has_pending_wm_state( hwnd, -1 ) || !window_should_take_focus( hwnd, foreground, event_time ))
         {
             WARN( "Ignoring window %p/%lx WM_TAKE_FOCUS serial %lu, event_time %ld, foreground %p during WM_STATE change\n",
                   hwnd, event->window, event->serial, event_time, foreground );
@@ -839,10 +849,13 @@ static BOOL X11DRV_FocusIn( HWND hwnd, XEvent *xev )
 {
     HWND foreground = NtUserGetForegroundWindow();
     XFocusChangeEvent *event = &xev->xfocus;
+    struct x11drv_win_data *data;
     BOOL was_grabbed;
 
     if (event->detail == NotifyPointer) return FALSE;
-    if (!hwnd) return FALSE;
+    if (!(data = get_win_data( hwnd ))) return FALSE;
+    data->has_focus = 1;
+    release_win_data( data );
 
     if (window_has_pending_wm_state( hwnd, -1 ))
     {
@@ -924,6 +937,7 @@ static BOOL X11DRV_FocusOut( HWND hwnd, XEvent *xev )
 {
     HWND foreground = NtUserGetForegroundWindow();
     XFocusChangeEvent *event = &xev->xfocus;
+    struct x11drv_win_data *data;
 
     if (event->detail == NotifyPointer)
     {
@@ -936,7 +950,9 @@ static BOOL X11DRV_FocusOut( HWND hwnd, XEvent *xev )
         }
         return TRUE;
     }
-    if (!hwnd) return FALSE;
+    if (!(data = get_win_data( hwnd ))) return FALSE;
+    data->has_focus = 0;
+    release_win_data( data );
 
     if (window_has_pending_wm_state( hwnd, NormalState )) /* ignore FocusOut only if the window is being shown */
     {
@@ -1217,7 +1233,7 @@ static void handle_wm_state_notify( HWND hwnd, XPropertyEvent *event )
 
     if (!(data = get_win_data( hwnd ))) return;
     if (event->state == PropertyNewValue) value = get_window_wm_state( event->display, event->window );
-    window_wm_state_notify( data, event->serial, value );
+    window_wm_state_notify( data, event->serial, value, event->time );
     release_win_data( data );
 
     NtUserPostMessage( hwnd, WM_WINE_WINDOW_STATE_CHANGED, 0, 0 );
@@ -1230,7 +1246,7 @@ static void handle_xembed_info_notify( HWND hwnd, XPropertyEvent *event )
 
     if (!(data = get_win_data( hwnd ))) return;
     if (event->state == PropertyNewValue) value = get_window_xembed_info( event->display, event->window );
-    window_wm_state_notify( data, event->serial, value ? NormalState : WithdrawnState );
+    window_wm_state_notify( data, event->serial, value ? NormalState : WithdrawnState, event->time );
     release_win_data( data );
 }
 
