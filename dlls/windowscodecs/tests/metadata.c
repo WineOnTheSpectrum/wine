@@ -5160,11 +5160,8 @@ static void test_metadata_App1(void)
     ok(pos.QuadPart == 8, "Unexpected position %s.\n", wine_dbgstr_longlong(pos.QuadPart));
 
     hr = IWICComponentFactory_CreateMetadataWriterFromReader(factory, reader2, NULL, &writer);
-    todo_wine
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
-if (hr == S_OK)
-{
     hr = IWICMetadataWriter_GetMetadataFormat(writer, &format);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     ok(IsEqualGUID(&format, &GUID_MetadataFormatIfd), "Unexpected format %s.\n", wine_dbgstr_guid(&format));
@@ -5179,7 +5176,6 @@ if (hr == S_OK)
 
     IStream_Release(stream);
     IWICMetadataWriter_Release(writer);
-}
 
     IWICMetadataReader_Release(reader2);
     IStream_Release(ifd_stream);
@@ -5537,10 +5533,10 @@ if (hr == S_OK)
 
 static void test_CreateMetadataWriterFromReader(void)
 {
+    IStream *stream, *stream2, *ifd_stream, *writer_stream;
     IWICMetadataReader *reader, *ifd_reader;
     IWICComponentFactory *factory;
     IWICMetadataWriter *writer;
-    IStream *stream, *stream2;
     PROPVARIANT id, value;
     GUID format;
     HRESULT hr;
@@ -5711,11 +5707,16 @@ static void test_CreateMetadataWriterFromReader(void)
     ok(IsEqualGUID(&format, &GUID_MetadataFormatIfd), "Unexpected format %s.\n", wine_dbgstr_guid(&format));
 
     hr = IWICComponentFactory_CreateMetadataWriterFromReader(factory, ifd_reader, NULL, &writer);
-    todo_wine
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
-if (hr == S_OK)
-{
+    hr = get_persist_stream(ifd_reader, &ifd_stream);
+    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+    hr = get_persist_stream(writer, &writer_stream);
+    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+    ok(ifd_stream != writer_stream, "Unexpected stream.\n");
+    IStream_Release(ifd_stream);
+    IStream_Release(writer_stream);
+
     hr = IWICMetadataWriter_GetMetadataFormat(writer, &format);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     ok(IsEqualGUID(&format, &GUID_MetadataFormatIfd), "Unexpected format %s.\n", wine_dbgstr_guid(&format));
@@ -5723,7 +5724,7 @@ if (hr == S_OK)
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     ok(count == 4, "Unexpected count %u.\n", count);
     IWICMetadataWriter_Release(writer);
-}
+
     IWICMetadataReader_Release(ifd_reader);
     IWICMetadataReader_Release(reader);
     IStream_Release(stream);
@@ -6116,10 +6117,8 @@ static void test_CreateQueryWriterFromReader(void)
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 
     hr = IWICComponentFactory_CreateQueryWriterFromReader(factory, query_reader2, NULL, &query_writer);
-    todo_wine
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
-if (hr == S_OK)
-{
+
     hr = IWICMetadataQueryWriter_GetLocation(query_writer, ARRAY_SIZE(buff), buff, &len);
     ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
     ok(!wcscmp(buff, L"/ifd"), "Unexpected location %s.\n", wine_dbgstr_w(buff));
@@ -6149,7 +6148,6 @@ if (hr == S_OK)
     IEnumString_Release(enum_string);
 
     IWICMetadataQueryWriter_Release(query_writer);
-}
 
     IWICMetadataQueryReader_Release(query_reader);
     IWICMetadataQueryReader_Release(query_reader2);
