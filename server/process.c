@@ -908,6 +908,19 @@ struct process *get_process_from_handle( obj_handle_t handle, unsigned int acces
                                              access, &process_ops );
 }
 
+/* when process group leader terminates, remove all references to that group */
+static void remove_all_processes_from_group( process_id_t group_id )
+{
+    struct process *process;
+
+    LIST_FOR_EACH_ENTRY( process, &process_list, struct process, entry )
+    {
+        if (process->group_id == group_id)
+            process->group_id = 0;
+    }
+}
+
+
 /* terminate a process with the given exit code */
 static void terminate_process( struct process *process, struct thread *skip, int exit_code )
 {
@@ -925,6 +938,9 @@ restart:
         kill_thread( thread, 1 );
         goto restart;
     }
+    if (process->id == process->group_id)
+        remove_all_processes_from_group( process->group_id );
+
     release_object( process );
 }
 
