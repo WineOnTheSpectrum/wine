@@ -259,12 +259,15 @@ static NTSTATUS complete_irp(struct connection *conn, IRP *irp)
             offset += name_len;
             buffer[offset++] = 0;
             unk_headers[unk_header_idx].pRawValue = params.addr + offset;
-            memcpy(buffer + offset, value, value_len);
-            offset += value_len;
+            if (value_len > 0)
+            {
+                memcpy(buffer + offset, value, value_len);
+                offset += value_len;
+            }
             buffer[offset++] = 0;
             ++unk_header_idx;
         }
-        else
+        else if (value_len > 0)
         {
             req->Headers.KnownHeaders[id].RawValueLength = value_len;
             req->Headers.KnownHeaders[id].pRawValue = params.addr + offset;
