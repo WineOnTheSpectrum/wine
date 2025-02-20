@@ -761,6 +761,18 @@ HRESULT WINAPI DECLSPEC_HOTPATCH GetDiskSpaceInformationW( LPCWSTR root, DISK_SP
 }
 
 
+/***********************************************************************
+ *           GetDiskSpaceInformationA   (kernelbase.@)
+ */
+HRESULT WINAPI DECLSPEC_HOTPATCH GetDiskSpaceInformationA( LPCSTR root, DISK_SPACE_INFORMATION *info )
+{
+    WCHAR *rootW = NULL;
+
+    if (root && !(rootW = file_name_AtoW( root, FALSE ))) return FALSE;
+    return GetDiskSpaceInformationW( rootW, info );
+}
+
+
 static BOOL is_dos_path( const UNICODE_STRING *path )
 {
     static const WCHAR global_prefix[4] = {'\\','?','?','\\'};
