@@ -305,7 +305,7 @@ static RETURN_CODE WCMD_list_directory (DIRECTORY_STACK *inputparms, int level, 
 
     /* Output the results */
     if (!bare) {
-       if (level != 0 && (entry_count > 0)) WCMD_output_asis(L"\r\n");
+       if (level != 0 && (entry_count > 0)) return_code = WCMD_output_asis(L"\r\n");
        if (!recurse || ((entry_count > 0) && done_header==FALSE)) {
            WCMD_output (L"Directory of %1\n\n", real_path);
            done_header = TRUE;
@@ -427,7 +427,7 @@ static RETURN_CODE WCMD_list_directory (DIRECTORY_STACK *inputparms, int level, 
         }
       }
      }
-     if (addNewLine) WCMD_output_asis(L"\r\n");
+     if (addNewLine) return_code = WCMD_output_asis(L"\r\n");
      cur_width = 0;
 
      /* Allow command to be aborted if user presses Ctrl-C.
