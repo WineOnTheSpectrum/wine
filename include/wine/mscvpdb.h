@@ -2812,9 +2812,9 @@ typedef struct OMFSourceFile
 {
     unsigned short  cSeg;
     unsigned short  reserved;
-    unsigned int    baseSrcLn[1];
-    unsigned short  cFName;
-    char            Name;
+    unsigned int    baseSrcLn[];
+    /* unsigned short  cFName; */
+    /* char            Name; */
 } OMFSourceFile;
 
 typedef struct OMFSourceModule
