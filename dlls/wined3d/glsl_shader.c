@@ -12677,10 +12677,12 @@ static void glsl_blitter_generate_yuv_shader(struct wined3d_string_buffer *buffe
 {
     enum complex_fixup complex_fixup = get_complex_fixup(args->fixup);
 
-    shader_addline(buffer, "const vec4 yuv_coef = vec4(1.403, -0.344, -0.714, 1.770);\n");
+    shader_addline(buffer, "const vec4 yuv_coef_sd = vec4(1.596, -0.392, -0.813, 2.017);\n");
+    shader_addline(buffer, "const vec4 yuv_coef_hd = vec4(1.793, -0.213, -0.533, 2.112);\n");
     shader_addline(buffer, "float luminance;\n");
     shader_addline(buffer, "vec2 texcoord;\n");
     shader_addline(buffer, "vec2 chroma;\n");
+    shader_addline(buffer, "vec4 yuv_coef;\n");
     shader_addline(buffer, "uniform vec2 size;\n");
 
     shader_addline(buffer, "\nvoid main()\n{\n");
@@ -12715,11 +12717,20 @@ static void glsl_blitter_generate_yuv_shader(struct wined3d_string_buffer *buffe
             return;
     }
 
-    /* Calculate the final result. Formula is taken from
-     * http://www.fourcc.org/fccyvrgb.php. Note that the chroma
-     * ranges from -0.5 to 0.5. */
-    shader_addline(buffer, "\n    chroma.xy -= 0.5;\n");
-
+    /* Calculate the final result. Formula is taken from:
+     * https://learn.microsoft.com/en-us/windows/win32/medfound/recommended-8-bit-yuv-formats-for-video-rendering#converting-8-bit-yuv-to-rgb888.
+     * SD and HD textures use different coefficients. SD is anything with both width and height smaller or equal to 720x576.
+     * Input values are clamped. Luminance is clamped to [16,235] ([0.063, 0.922] when normalized).
+     * Chroma is clamped to [16,240] ([0.063, 0.941] when normalized). */
+    shader_addline(buffer, "\n    if (size.x <= 720 && size.y <= 576)\n    {\n");
+    shader_addline(buffer, "        yuv_coef = yuv_coef_sd;\n");
+    shader_addline(buffer, "    }\n    else\n    {\n");
+    shader_addline(buffer, "        yuv_coef = yuv_coef_hd;\n");
+    shader_addline(buffer, "    }\n");
+    shader_addline(buffer, "    luminance = clamp(luminance, 0.063, 0.922);\n");
+    shader_addline(buffer, "    chroma.xy = clamp(chroma.xy, 0.063, 0.941);\n");
+    shader_addline(buffer, "    luminance = (luminance - 0.063) * 1.164;\n");
+    shader_addline(buffer, "    chroma.xy = chroma.xy - 0.5;\n");
     shader_addline(buffer, "    %s.x = luminance + chroma.x * yuv_coef.x;\n", output);
     shader_addline(buffer, "    %s.y = luminance + chroma.y * yuv_coef.y + chroma.x * yuv_coef.z;\n", output);
     shader_addline(buffer, "    %s.z = luminance + chroma.y * yuv_coef.w;\n", output);

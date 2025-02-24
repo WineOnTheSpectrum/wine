@@ -1,0 +1,137 @@
+/*
+ * Resources for ddraw test suite.
+ *
+ * Copyright 2025 Brendan McGrath for CodeWeavers
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ */
+
+#include "windef.h"
+
+
+/* Generated with:
+ *  gst-launch-1.0 videotestsrc num-buffers=1 ! \
+ *  video/x-raw,format=BGRx,width=720,height=576,framerate=30/1 ! \
+ *  videoconvert ! filesink location=dlls/ddraw/tests/exp_576_sd.bgrx
+ */
+/* @makedep: exp_576_sd.bgrx */
+exp_576_sd.bgrx RCDATA exp_576_sd.bgrx
+
+/* Generated with:
+ *  gst-launch-1.0 videotestsrc num-buffers=1 ! \
+ *  video/x-raw,format=BGRx,width=720,height=580,framerate=30/1 ! \
+ *  videoconvert ! filesink location=dlls/ddraw/tests/exp_580_hd.bgrx
+ */
+/* @makedep: exp_580_hd.bgrx */
+exp_580_hd.bgrx RCDATA exp_580_hd.bgrx
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_576_sd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=576,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=UYVY ! \
+ *  filesink location=dlls/ddraw/tests/src_576.uyvy
+ */
+/* @makedep: src_576.uyvy */
+src_576.uyvy RCDATA src_576.uyvy
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_580_hd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=580,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=UYVY ! \
+ *  filesink location=dlls/ddraw/tests/src_580.uyvy
+ */
+/* @makedep: src_580.uyvy */
+src_580.uyvy RCDATA src_580.uyvy
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_576_sd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=576,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=YUY2 ! \
+ *  filesink location=dlls/ddraw/tests/src_576.yuy2
+ */
+/* @makedep: src_576.yuy2 */
+src_576.yuy2 RCDATA src_576.yuy2
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_580_hd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=580,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=YUY2 ! \
+ *  filesink location=dlls/ddraw/tests/src_580.yuy2
+ */
+/* @makedep: src_580.yuy2 */
+src_580.yuy2 RCDATA src_580.yuy2
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_576_sd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=576,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=NV12 ! \
+ *  filesink location=dlls/ddraw/tests/src_576.nv12
+ */
+/* @makedep: src_576.nv12 */
+src_576.nv12 RCDATA src_576.nv12
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_580_hd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=580,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=NV12 ! \
+ *  filesink location=dlls/ddraw/tests/src_580.nv12
+ */
+/* @makedep: src_580.nv12 */
+src_580.nv12 RCDATA src_580.nv12
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_576_sd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=576,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=YV12 ! \
+ *  filesink location=dlls/ddraw/tests/src_576.yv12
+ */
+/* @makedep: src_576.yv12 */
+src_576.yv12 RCDATA src_576.yv12
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/exp_580_hd.bgrx num-buffers=1 \
+ *  caps=video/x-raw,format=BGRx,width=720,height=580,framerate=30/1 ! \
+ *  videoconvert ! video/x-raw,format=YV12 ! \
+ *  filesink location=dlls/ddraw/tests/src_580.yv12
+ */
+/* @makedep: src_580.yv12 */
+src_580.yv12 RCDATA src_580.yv12
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/src_580.nv12 num-buffers=1 \
+ *  caps=video/x-raw,format=NV12,width=720,height=580,framerate=30/1,colorimetry=bt601 ! \
+ *  videoconvert ! video/x-raw,format=BGRx ! \
+ *  filesink location=dlls/ddraw/tests/exp_580_sd.bgrx
+ */
+/* @makedep: exp_580_sd.bgrx */
+exp_580_sd.bgrx RCDATA exp_580_sd.bgrx
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/src_576.nv12 num-buffers=1 \
+ *  caps=video/x-raw,format=NV12,width=720,height=576,framerate=30/1,colorimetry=1:4:16:4 ! \
+ *  videoconvert ! video/x-raw,format=BGRx ! \
+ *  filesink location=dlls/ddraw/tests/exp_576_studio.bgrx
+ */
+/* @makedep: exp_576_studio.bgrx */
+exp_576_studio.bgrx RCDATA exp_576_studio.bgrx
+
+/* Generated with:
+ *  gst-launch-1.0 multifilesrc location=dlls/ddraw/tests/src_580.nv12 num-buffers=1 \
+ *  caps=video/x-raw,format=NV12,width=720,height=580,framerate=30/1,colorimetry=1:3:5:1 ! \
+ *  videoconvert ! video/x-raw,format=BGRx ! \
+ *  filesink location=dlls/ddraw/tests/exp_580_studio.bgrx
+ */
+/* @makedep: exp_580_studio.bgrx */
+exp_580_studio.bgrx RCDATA exp_580_studio.bgrx

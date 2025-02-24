@@ -10,4 +10,5 @@ SOURCES = \
 	ddrawmodes.c \
 	dsurface.c \
 	refcount.c \
+	resource.rc \
 	visual.c
