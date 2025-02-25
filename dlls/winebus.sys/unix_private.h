@@ -255,7 +255,7 @@ extern BOOL hid_device_add_axes(struct unix_device *iface, BYTE count, USAGE usa
                                 const USAGE *usages, BOOL rel, LONG min, LONG max);
 
 extern BOOL hid_device_add_haptics(struct unix_device *iface);
-extern BOOL hid_device_add_physical(struct unix_device *iface, USAGE *usages, USHORT count);
+extern BOOL hid_device_add_physical(struct unix_device *iface, USAGE *usages, USHORT count, USHORT num_axes);
 
 extern BOOL hid_device_set_abs_axis(struct unix_device *iface, ULONG index, LONG value);
 extern BOOL hid_device_set_rel_axis(struct unix_device *iface, ULONG index, LONG value);
