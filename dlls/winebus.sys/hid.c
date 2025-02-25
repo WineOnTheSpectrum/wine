@@ -503,7 +503,7 @@ struct pid_effect_update
     BYTE gain_percent;
     BYTE trigger_button;
     BYTE enable_bits;
-    UINT16 direction[2];
+    UINT16 direction[PID_AXES_MAX];
 };
 
 struct pid_set_periodic
