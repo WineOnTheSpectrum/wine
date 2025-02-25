@@ -184,6 +184,8 @@ struct hid_physical
     BYTE set_ramp_force_report;
 
     struct hid_effect_state effect_state;
+
+    USHORT num_axes;
 };
 
 struct hid_device_state

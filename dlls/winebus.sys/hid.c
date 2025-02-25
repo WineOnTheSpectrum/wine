@@ -1076,6 +1076,7 @@ BOOL hid_device_add_physical(struct unix_device *iface, USAGE *usages, USHORT co
     iface->hid_physical.device_gain_report = device_gain_report;
     iface->hid_physical.effect_control_report = effect_control_report;
     iface->hid_physical.effect_update_report = effect_update_report;
+    iface->hid_physical.num_axes = 2;
 
     effect_state->id = effect_state_report;
     effect_state->report_len = sizeof(struct pid_effect_state) + 1;
