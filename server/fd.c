@@ -319,6 +319,24 @@ static file_pos_t max_unix_offset = OFF_T_MAX;
         fprintf( stderr, "%lx", (unsigned long)(val) ); \
   } while (0)
 
+struct cached_stat
+{
+    struct stat st;
+    int init;
+};
+
+/* Caches fstat (must use on same fd), set 'init' to 0 before use */
+static inline int cached_fstat(int fd, struct cached_stat *cached_stat)
+{
+    int ret;
+
+    if (cached_stat->init)
+        return 0;
+    if (!(ret = fstat( fd, &cached_stat->st )))
+        cached_stat->init = 1;
+    return ret;
+}
+
 
 
 /****************************************************************/
@@ -2638,10 +2656,13 @@ ret:
 static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, data_size_t len,
                          struct unicode_str nt_name, int create_link, unsigned int flags )
 {
+    struct cached_stat cached_st;
     struct inode *inode;
-    struct stat st, st2;
+    struct stat st;
     char *name;
     const unsigned int replace = flags & FILE_RENAME_REPLACE_IF_EXISTS;
+
+    cached_st.init = 0;
 
     if (!fd->inode || !fd->unix_name)
     {
@@ -2681,7 +2702,7 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
     }
 
     /* when creating a hard link, source cannot be a dir */
-    if (create_link && !fstat( fd->unix_fd, &st ) && S_ISDIR( st.st_mode ))
+    if (create_link && !cached_fstat( fd->unix_fd, &cached_st ) && S_ISDIR( cached_st.st.st_mode ))
     {
         set_error( STATUS_FILE_IS_A_DIRECTORY );
         goto failed;
@@ -2689,7 +2710,7 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
 
     if (!stat( name, &st ))
     {
-        if (!fstat( fd->unix_fd, &st2 ) && st.st_ino == st2.st_ino && st.st_dev == st2.st_dev)
+        if (!cached_fstat( fd->unix_fd, &cached_st ) && st.st_ino == cached_st.st.st_ino && st.st_dev == cached_st.st.st_dev)
         {
             if (!create_link) rename_same_file( fd->unix_name, name, S_ISDIR( st.st_mode ) );
             else if (!replace) set_error( STATUS_OBJECT_NAME_COLLISION );
@@ -2732,7 +2753,7 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
 
         /* link() expects that the target doesn't exist */
         /* rename() cannot replace files with directories */
-        if (create_link || S_ISDIR( st2.st_mode ))
+        if (create_link || S_ISDIR( cached_st.st.st_mode ))
         {
             if (unlink( name ))
             {
@@ -2756,14 +2777,14 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
         goto failed;
     }
 
-    if (is_file_executable( fd->unix_name ) != is_file_executable( name ) && !fstat( fd->unix_fd, &st ))
+    if (is_file_executable( fd->unix_name ) != is_file_executable( name ) && !cached_fstat( fd->unix_fd, &cached_st ))
     {
         if (is_file_executable( name ))
             /* set executable bit where read bit is set */
-            st.st_mode |= (st.st_mode & 0444) >> 2;
+            cached_st.st.st_mode |= (cached_st.st.st_mode & 0444) >> 2;
         else
-            st.st_mode &= ~0111;
-        fchmod( fd->unix_fd, st.st_mode );
+            cached_st.st.st_mode &= ~0111;
+        fchmod( fd->unix_fd, cached_st.st.st_mode );
     }
 
     free( fd->nt_name );
