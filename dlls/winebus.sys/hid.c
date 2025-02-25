@@ -1187,9 +1187,13 @@ static void hid_device_set_output_report(struct unix_device *iface, HID_XFER_PAC
     {
         struct pid_effect_update *report = (struct pid_effect_update *)(packet->reportBuffer + 1);
         struct effect_params *params = iface->hid_physical.effect_params + report->index;
+        ULONG missing_direction_size, i;
         USAGE effect_type;
 
-        io->Information = sizeof(*report) + 1;
+        /* Compute the actual size of the effect_update report */
+        missing_direction_size = sizeof(report->direction[0]) * (PID_AXES_MAX - physical->num_axes);
+        io->Information = sizeof(*report) - missing_direction_size + 1;
+
         if (packet->reportBufferLen < io->Information)
             io->Status = STATUS_BUFFER_TOO_SMALL;
         else if (report->type_index >= ARRAY_SIZE(iface->hid_physical.effect_types))
@@ -1205,11 +1209,17 @@ static void hid_device_set_output_report(struct unix_device *iface, HID_XFER_PAC
             params->start_delay = report->start_delay;
             params->gain_percent = report->gain_percent;
             params->trigger_button = report->trigger_button == 0xff ? 0 : report->trigger_button;
-            params->axis_enabled[0] = (report->enable_bits & 1) != 0;
-            params->axis_enabled[1] = (report->enable_bits & 2) != 0;
-            params->direction_enabled = (report->enable_bits & 4) != 0;
-            params->direction[0] = report->direction[0];
-            params->direction[1] = report->direction[1];
+
+            /* Axes Enable */
+            for (i = 0; i < physical->num_axes; ++i)
+                params->axis_enabled[i] = (report->enable_bits & (1 << i)) != 0;
+
+            /* Direction Enable */
+            params->direction_enabled = (report->enable_bits & (1 << i)) != 0;
+
+            /* Direction */
+            for (i = 0; i < physical->num_axes; ++i)
+                params->direction[i] = report->direction[i];
 
             io->Status = iface->hid_vtbl->physical_effect_update(iface, report->index, params);
         }
