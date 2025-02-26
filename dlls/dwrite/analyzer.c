@@ -292,6 +292,11 @@ system_fallback_config[] =
     { "1C00-1C4F",              L"Noto Sans Lepcha" },
     { "1C50-1C7F",              L"Noto Sans Ol Chiki" },
 
+    /* General Punctuation      - 2000-206F
+       Supplemental Punctuation - 2E00-2E7F */
+
+    { "2000-206F, 2E00-2E7F",   L"Noto Sans" },
+
     { "2C80-2CFF",              L"Noto Sans Coptic" },
     { "2D30-2D7F",              L"Noto Sans Tifinagh" },
 
