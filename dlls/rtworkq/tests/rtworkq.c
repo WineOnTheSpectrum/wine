@@ -271,16 +271,22 @@ static void test_undefined_queue_id(void)
     ok(callback_result == result, "Expected result %p, got %p.\n", result, callback_result);
 
     hr = RtwqPutWorkItem(RTWQ_CALLBACK_QUEUE_PRIVATE_MASK, 0, result);
-    ok(hr == S_OK, "got %#lx\n", hr);
+    todo_wine
+    ok(hr == RTWQ_E_INVALID_WORKQUEUE, "got %#lx\n", hr);
     res = wait_async_callback_result(&test_callback->IRtwqAsyncCallback_iface, 100, &callback_result);
-    ok(res == 0, "got %#lx\n", res);
-    ok(callback_result == result, "Expected result %p, got %p.\n", result, callback_result);
+    todo_wine
+    ok(res == WAIT_TIMEOUT, "got %#lx\n", res);
+    todo_wine
+    ok(callback_result == NULL, "Expected result %p, got %p.\n", NULL, callback_result);
 
     hr = RtwqPutWorkItem(RTWQ_CALLBACK_QUEUE_PRIVATE_MASK & (RTWQ_CALLBACK_QUEUE_PRIVATE_MASK - 1), 0, result);
-    ok(hr == S_OK, "got %#lx\n", hr);
+    todo_wine
+    ok(hr == RTWQ_E_INVALID_WORKQUEUE, "got %#lx\n", hr);
     res = wait_async_callback_result(&test_callback->IRtwqAsyncCallback_iface, 100, &callback_result);
-    ok(res == 0, "got %#lx\n", res);
-    ok(callback_result == result, "Expected result %p, got %p.\n", result, callback_result);
+    todo_wine
+    ok(res == WAIT_TIMEOUT, "got %#lx\n", res);
+    todo_wine
+    ok(callback_result == NULL, "Expected result %p, got %p.\n", NULL, callback_result);
 
     IRtwqAsyncResult_Release(result);
 
