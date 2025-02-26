@@ -60,6 +60,59 @@ static inline struct mp3_decoder *impl_from_IUnknown(IUnknown *iface)
     return CONTAINING_RECORD(iface, struct mp3_decoder, IUnknown_inner);
 }
 
+static HRESULT decoder_set_output_type(struct mp3_decoder *decoder, DWORD index, const DMO_MEDIA_TYPE *type, DWORD flags, BOOL allow_float)
+{
+    WAVEFORMATEX *format;
+    long enc;
+    int err;
+
+    if (index)
+        return DMO_E_INVALIDSTREAMINDEX;
+
+    if (!decoder->intype_set)
+        return DMO_E_TYPE_NOT_SET;
+
+    if (flags & DMO_SET_TYPEF_CLEAR)
+    {
+        MoFreeMediaType(&decoder->outtype);
+        decoder->outtype_set = FALSE;
+        return S_OK;
+    }
+
+    if (!IsEqualGUID(&type->formattype, &WMFORMAT_WaveFormatEx))
+        return DMO_E_TYPE_NOT_ACCEPTED;
+
+    format = (WAVEFORMATEX *)type->pbFormat;
+
+    if (format->wBitsPerSample == 8)
+        enc = MPG123_ENC_UNSIGNED_8;
+    else if (format->wBitsPerSample == 16)
+        enc = MPG123_ENC_SIGNED_16;
+    else if (allow_float && format->wBitsPerSample == 32)
+        enc = MPG123_ENC_FLOAT_32;
+    else
+    {
+        ERR("Cannot decode to bit depth %u.\n", format->wBitsPerSample);
+        return DMO_E_TYPE_NOT_ACCEPTED;
+    }
+
+    if (!(flags & DMO_SET_TYPEF_TEST_ONLY))
+    {
+        err = mpg123_format(decoder->mh, format->nSamplesPerSec, format->nChannels, enc);
+        if (err != MPG123_OK)
+        {
+            ERR("Failed to set format: %u channels, %lu samples/sec, %u bits/sample.\n",
+                format->nChannels, format->nSamplesPerSec, format->wBitsPerSample);
+            return DMO_E_TYPE_NOT_ACCEPTED;
+        }
+        if (decoder->outtype_set)
+            MoFreeMediaType(&decoder->outtype);
+        MoCopyMediaType(&decoder->outtype, type);
+        decoder->outtype_set = TRUE;
+    }
+
+    return S_OK;
+}
 static HRESULT WINAPI Unknown_QueryInterface(IUnknown *iface, REFIID iid, void **obj)
 {
     struct mp3_decoder *This = impl_from_IUnknown(iface);
@@ -261,56 +314,10 @@ static HRESULT WINAPI MediaObject_SetInputType(IMediaObject *iface, DWORD index,
 static HRESULT WINAPI MediaObject_SetOutputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *type, DWORD flags)
 {
     struct mp3_decoder *This = impl_from_IMediaObject(iface);
-    WAVEFORMATEX *format;
-    long enc;
-    int err;
 
     TRACE("(%p)->(%ld, %p, %#lx)\n", iface, index, type, flags);
 
-    if (index)
-        return DMO_E_INVALIDSTREAMINDEX;
-
-    if (!This->intype_set)
-        return DMO_E_TYPE_NOT_SET;
-
-    if (flags & DMO_SET_TYPEF_CLEAR)
-    {
-        MoFreeMediaType(&This->outtype);
-        This->outtype_set = FALSE;
-        return S_OK;
-    }
-
-    if (!IsEqualGUID(&type->formattype, &WMFORMAT_WaveFormatEx))
-        return DMO_E_TYPE_NOT_ACCEPTED;
-
-    format = (WAVEFORMATEX *)type->pbFormat;
-
-    if (format->wBitsPerSample == 8)
-        enc = MPG123_ENC_UNSIGNED_8;
-    else if (format->wBitsPerSample == 16)
-        enc = MPG123_ENC_SIGNED_16;
-    else
-    {
-        ERR("Cannot decode to bit depth %u.\n", format->wBitsPerSample);
-        return DMO_E_TYPE_NOT_ACCEPTED;
-    }
-
-    if (!(flags & DMO_SET_TYPEF_TEST_ONLY))
-    {
-        err = mpg123_format(This->mh, format->nSamplesPerSec, format->nChannels, enc);
-        if (err != MPG123_OK)
-        {
-            ERR("Failed to set format: %u channels, %lu samples/sec, %u bits/sample.\n",
-                format->nChannels, format->nSamplesPerSec, format->wBitsPerSample);
-            return DMO_E_TYPE_NOT_ACCEPTED;
-        }
-        if (This->outtype_set)
-            MoFreeMediaType(&This->outtype);
-        MoCopyMediaType(&This->outtype, type);
-        This->outtype_set = TRUE;
-    }
-
-    return S_OK;
+    return decoder_set_output_type(This, index, type, flags, FALSE);
 }
 
 static HRESULT WINAPI MediaObject_GetInputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *type)
