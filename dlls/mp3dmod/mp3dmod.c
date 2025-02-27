@@ -62,7 +62,7 @@ static inline struct mp3_decoder *impl_from_IUnknown(IUnknown *iface)
 
 static HRESULT decoder_set_output_type(struct mp3_decoder *decoder, DWORD index, const DMO_MEDIA_TYPE *type, DWORD flags, BOOL allow_float)
 {
-    WAVEFORMATEX *format;
+    WAVEFORMATEX *format, *in_format;
     long enc;
     int err;
 
@@ -99,6 +99,16 @@ static HRESULT decoder_set_output_type(struct mp3_decoder *decoder, DWORD index,
     if (format->nChannels * format->wBitsPerSample/8 != format->nBlockAlign
             || format->nSamplesPerSec * format->nBlockAlign != format->nAvgBytesPerSec)
         return E_INVALIDARG;
+
+    in_format = (WAVEFORMATEX *)decoder->intype.pbFormat;
+
+    if (format->nSamplesPerSec != in_format->nSamplesPerSec &&
+            format->nSamplesPerSec*2 != in_format->nSamplesPerSec &&
+            format->nSamplesPerSec*4 != in_format->nSamplesPerSec)
+    {
+        ERR("Cannot decode to %lu samples per second (input %lu).\n", format->nSamplesPerSec, in_format->nSamplesPerSec);
+        return DMO_E_TYPE_NOT_ACCEPTED;
+    }
 
     if (!(flags & DMO_SET_TYPEF_TEST_ONLY))
     {
