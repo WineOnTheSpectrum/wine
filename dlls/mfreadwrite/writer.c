@@ -46,6 +46,12 @@ struct marker_context
     void *user_context;
 };
 
+struct transform
+{
+    IMFTransform *transform;
+    GUID category;
+};
+
 struct pending_item
 {
     struct list entry;
@@ -58,14 +64,14 @@ struct pending_item
 struct stream
 {
     IMFStreamSink *stream_sink;
-    IMFTransform *encoder;
+    struct transform transforms[2];
     MF_SINK_WRITER_STATISTICS stats;
-    struct list queue;
+    struct list queue; /* struct pending_item */
 };
 
 struct sink_writer
 {
-    IMFSinkWriter IMFSinkWriter_iface;
+    IMFSinkWriterEx IMFSinkWriterEx_iface;
     IMFAsyncCallback events_callback;
     LONG refcount;
 
@@ -88,9 +94,9 @@ struct sink_writer
     CRITICAL_SECTION cs;
 };
 
-static struct sink_writer *impl_from_IMFSinkWriter(IMFSinkWriter *iface)
+static struct sink_writer *impl_from_IMFSinkWriterEx(IMFSinkWriterEx *iface)
 {
-    return CONTAINING_RECORD(iface, struct sink_writer, IMFSinkWriter_iface);
+    return CONTAINING_RECORD(iface, struct sink_writer, IMFSinkWriterEx_iface);
 }
 
 static struct sink_writer *impl_from_events_callback_IMFAsyncCallback(IMFAsyncCallback *iface)
@@ -166,6 +172,150 @@ static HRESULT create_marker_context(unsigned int marker_type, void *user_contex
     return S_OK;
 }
 
+static void stream_release_transforms(struct stream *stream)
+{
+    if (stream->transforms[0].transform)
+        IMFTransform_Release(stream->transforms[0].transform);
+    if (stream->transforms[1].transform)
+        IMFTransform_Release(stream->transforms[1].transform);
+    memset(stream->transforms, 0, sizeof(stream->transforms));
+}
+
+static HRESULT enum_transforms(IMFMediaType *input_type, IMFMediaType *output_type, BOOL use_encoder,
+        IMFActivate ***activates, UINT32 *count)
+{
+    MFT_REGISTER_TYPE_INFO input_type_info, output_type_info;
+    GUID category;
+    HRESULT hr;
+
+    /* Get type infos. */
+    if (input_type)
+    {
+        if (FAILED(hr = IMFMediaType_GetMajorType(input_type, &input_type_info.guidMajorType))
+                || FAILED(hr = IMFMediaType_GetGUID(input_type, &MF_MT_SUBTYPE, &input_type_info.guidSubtype)))
+            return hr;
+    }
+    if (FAILED(hr = IMFMediaType_GetMajorType(output_type, &output_type_info.guidMajorType))
+            || FAILED(hr = IMFMediaType_GetGUID(output_type, &MF_MT_SUBTYPE, &output_type_info.guidSubtype)))
+        return hr;
+
+    /* Set category according to major type. */
+    if (IsEqualGUID(&output_type_info.guidMajorType, &MFMediaType_Video))
+        category = use_encoder ? MFT_CATEGORY_VIDEO_ENCODER : MFT_CATEGORY_VIDEO_PROCESSOR;
+    else if (IsEqualGUID(&output_type_info.guidMajorType, &MFMediaType_Audio))
+        category = use_encoder ? MFT_CATEGORY_AUDIO_ENCODER : MFT_CATEGORY_AUDIO_EFFECT;
+    else
+        return MF_E_TOPO_CODEC_NOT_FOUND;
+
+    /* Enumerate available transforms. */
+    *count = 0;
+    if (FAILED(hr = MFTEnumEx(category, 0, (input_type ? NULL : &input_type_info), &output_type_info,
+            activates, count)))
+        return hr;
+    if (!*count)
+        return MF_E_TOPO_CODEC_NOT_FOUND;
+
+    return hr;
+}
+
+static HRESULT create_transform_from_activate(IMFActivate *activate,
+        IMFMediaType *input_type, IMFMediaType *output_type, struct transform *out)
+{
+    IMFMediaType *output_current_type = NULL;
+    struct transform transform;
+    HRESULT hr;
+
+    /* Get transform category. */
+    if (FAILED(hr = IMFActivate_GetGUID(activate, &MF_TRANSFORM_CATEGORY_Attribute, &transform.category)))
+        return hr;
+
+    /* Create transform. */
+    if (FAILED(hr = IMFActivate_ActivateObject(activate, &IID_IMFTransform, (void **)&transform.transform)))
+        return hr;
+
+    /* Set output type on transform. */
+    if (FAILED(hr = IMFTransform_SetOutputType(transform.transform, 0, output_type, 0))
+            || FAILED(hr = IMFTransform_GetOutputCurrentType(transform.transform, 0, &output_current_type)))
+    {
+        IMFTransform_Release(transform.transform);
+        return hr;
+    }
+
+    /* Set input type on transform. */
+    if (input_type)
+    {
+        if (FAILED(hr = update_media_type(input_type, output_current_type))
+                || FAILED(hr = IMFTransform_SetInputType(transform.transform, 0, input_type, 0)))
+        {
+            IMFMediaType_Release(output_current_type);
+            IMFTransform_Release(transform.transform);
+            return hr;
+        }
+    }
+
+    IMFMediaType_Release(output_current_type);
+
+    *out = transform;
+    TRACE("Created transform %p.\n", out->transform);
+
+    return S_OK;
+}
+
+static HRESULT create_transform(IMFMediaType *input_type, IMFMediaType *output_type, BOOL use_encoder,
+        struct transform *out)
+{
+    struct transform transform = {}, converter = {};
+    IMFMediaType *encoder_input_type;
+    IMFActivate **activates;
+    UINT32 count = 0, i;
+    HRESULT hr;
+
+    if (FAILED(hr = enum_transforms(input_type, output_type, use_encoder, &activates, &count)))
+        return hr;
+
+    for (i = 0; i < count; i++)
+    {
+        if (SUCCEEDED(hr = create_transform_from_activate(activates[i], input_type, output_type, &transform)))
+        {
+            TRACE("Create %s transform %p.", use_encoder ? "encoder" : "converter", transform.transform);
+            *out = transform;
+            break;
+        }
+
+        /* Failed to use a single encoder, try using an encoder and a converter. */
+        if (use_encoder && SUCCEEDED(hr = create_transform_from_activate(activates[i], NULL, output_type, &transform)))
+        {
+            if (SUCCEEDED(hr = IMFTransform_GetInputAvailableType(transform.transform, 0, 0, &encoder_input_type)))
+            {
+                hr = create_transform(input_type, encoder_input_type, FALSE, &converter);
+                IMFMediaType_Release(encoder_input_type);
+                if (SUCCEEDED(hr))
+                {
+                    TRACE("Created converter transform %p, encoder transform %p.",
+                            converter.transform, transform.transform);
+                    out[0] = converter;
+                    out[1] = transform;
+                    break;
+                }
+            }
+            IMFTransform_Release(transform.transform);
+        }
+    }
+
+    for (i = 0; i < count; ++i)
+        IMFActivate_Release(activates[i]);
+    CoTaskMemFree(activates);
+
+    return hr;
+}
+
+static struct stream *sink_writer_get_stream(const struct sink_writer *writer, DWORD index)
+{
+    if (index >= writer->streams.count)
+        return NULL;
+    return &writer->streams.items[index];
+}
+
 static void sink_writer_release_pending_item(struct pending_item *item)
 {
     list_remove(&item->entry);
@@ -174,15 +324,16 @@ static void sink_writer_release_pending_item(struct pending_item *item)
     free(item);
 }
 
-static HRESULT WINAPI sink_writer_QueryInterface(IMFSinkWriter *iface, REFIID riid, void **out)
+static HRESULT WINAPI sink_writer_QueryInterface(IMFSinkWriterEx *iface, REFIID riid, void **out)
 {
     TRACE("%p, %s, %p.\n", iface, debugstr_guid(riid), out);
 
-    if (IsEqualIID(riid, &IID_IMFSinkWriter) ||
-            IsEqualIID(riid, &IID_IUnknown))
+    if (IsEqualIID(riid, &IID_IMFSinkWriterEx)
+            || IsEqualIID(riid, &IID_IMFSinkWriter)
+            || IsEqualIID(riid, &IID_IUnknown))
     {
         *out = iface;
-        IMFSinkWriter_AddRef(iface);
+        IMFSinkWriterEx_AddRef(iface);
         return S_OK;
     }
 
@@ -191,9 +342,9 @@ static HRESULT WINAPI sink_writer_QueryInterface(IMFSinkWriter *iface, REFIID ri
     return E_NOINTERFACE;
 }
 
-static ULONG WINAPI sink_writer_AddRef(IMFSinkWriter *iface)
+static ULONG WINAPI sink_writer_AddRef(IMFSinkWriterEx *iface)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     ULONG refcount = InterlockedIncrement(&writer->refcount);
 
     TRACE("%p, %lu.\n", iface, refcount);
@@ -211,9 +362,9 @@ static void sink_writer_drop_pending_items(struct stream *stream)
     }
 }
 
-static ULONG WINAPI sink_writer_Release(IMFSinkWriter *iface)
+static ULONG WINAPI sink_writer_Release(IMFSinkWriterEx *iface)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     ULONG refcount = InterlockedDecrement(&writer->refcount);
     unsigned int i;
 
@@ -233,8 +384,7 @@ static ULONG WINAPI sink_writer_Release(IMFSinkWriter *iface)
 
             if (stream->stream_sink)
                 IMFStreamSink_Release(stream->stream_sink);
-            if (stream->encoder)
-                IMFTransform_Release(stream->encoder);
+            stream_release_transforms(stream);
             sink_writer_drop_pending_items(stream);
         }
         DeleteCriticalSection(&writer->cs);
@@ -272,9 +422,9 @@ static HRESULT sink_writer_add_stream(struct sink_writer *writer, IMFStreamSink 
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_AddStream(IMFSinkWriter *iface, IMFMediaType *media_type, DWORD *index)
+static HRESULT WINAPI sink_writer_AddStream(IMFSinkWriterEx *iface, IMFMediaType *media_type, DWORD *index)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     HRESULT hr = MF_E_INVALIDREQUEST;
     IMFStreamSink *stream_sink;
     DWORD id;
@@ -304,12 +454,49 @@ static HRESULT WINAPI sink_writer_AddStream(IMFSinkWriter *iface, IMFMediaType *
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_SetInputMediaType(IMFSinkWriter *iface, DWORD index, IMFMediaType *type,
+static HRESULT WINAPI sink_writer_SetInputMediaType(IMFSinkWriterEx *iface, DWORD index, IMFMediaType *type,
         IMFAttributes *parameters)
 {
-    FIXME("%p, %lu, %p, %p.\n", iface, index, type, parameters);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
+    IMFMediaTypeHandler *type_handler = NULL;
+    struct transform transforms[2] = {};
+    IMFMediaType *stream_type = NULL;
+    struct stream *stream;
+    HRESULT hr;
 
-    return E_NOTIMPL;
+    TRACE("%p, %lu, %p, %p.\n", iface, index, type, parameters);
+
+    if (!type)
+        return E_INVALIDARG;
+
+    EnterCriticalSection(&writer->cs);
+
+    if (!(stream = sink_writer_get_stream(writer, index)))
+    {
+        LeaveCriticalSection(&writer->cs);
+        return MF_E_INVALIDSTREAMNUMBER;
+    }
+
+    /* Get stream type from stream sink. */
+    if (SUCCEEDED(hr = IMFStreamSink_GetMediaTypeHandler(stream->stream_sink, &type_handler))
+            && SUCCEEDED((hr = IMFMediaTypeHandler_GetCurrentMediaType(type_handler, &stream_type))))
+    {
+        /* Create transforms for encoding.
+         * Try converter first, then try again with encoder. */
+        if (SUCCEEDED(hr = create_transform(type, stream_type, FALSE, transforms))
+                || SUCCEEDED(hr = create_transform(type, stream_type, TRUE, transforms)))
+        {
+            stream_release_transforms(stream);
+            stream->transforms[0] = transforms[0];
+            stream->transforms[1] = transforms[1];
+        }
+
+        IMFMediaType_Release(stream_type);
+        IMFMediaTypeHandler_Release(type_handler);
+    }
+
+    LeaveCriticalSection(&writer->cs);
+    return hr;
 }
 
 static HRESULT sink_writer_set_presentation_clock(struct sink_writer *writer)
@@ -331,9 +518,9 @@ static HRESULT sink_writer_set_presentation_clock(struct sink_writer *writer)
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_BeginWriting(IMFSinkWriter *iface)
+static HRESULT WINAPI sink_writer_BeginWriting(IMFSinkWriterEx *iface)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     HRESULT hr = S_OK;
     unsigned int i;
 
@@ -357,8 +544,10 @@ static HRESULT WINAPI sink_writer_BeginWriting(IMFSinkWriter *iface)
                 WARN("Failed to subscribe to events for steam %u, hr %#lx.\n", i, hr);
             }
 
-            if (stream->encoder)
-                IMFTransform_ProcessMessage(stream->encoder, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
+            if (stream->transforms[0].transform)
+                IMFTransform_ProcessMessage(stream->transforms[0].transform, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
+            if (stream->transforms[1].transform)
+                IMFTransform_ProcessMessage(stream->transforms[1].transform, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
         }
 
         if (SUCCEEDED(hr))
@@ -370,12 +559,6 @@ static HRESULT WINAPI sink_writer_BeginWriting(IMFSinkWriter *iface)
     LeaveCriticalSection(&writer->cs);
 
     return hr;
-}
-
-static struct stream * sink_writer_get_stream(const struct sink_writer *writer, DWORD index)
-{
-    if (index >= writer->streams.count) return NULL;
-    return &writer->streams.items[index];
 }
 
 static HRESULT sink_writer_get_buffer_length(IMFSample *sample, LONGLONG *timestamp, DWORD *length)
@@ -466,8 +649,10 @@ static HRESULT sink_writer_flush(struct sink_writer *writer, unsigned int index)
 
     IMFStreamSink_Flush(stream->stream_sink);
 
-    if (stream->encoder)
-        IMFTransform_ProcessMessage(stream->encoder, MFT_MESSAGE_COMMAND_FLUSH, 0);
+    if (stream->transforms[0].transform)
+        IMFTransform_ProcessMessage(stream->transforms[0].transform, MFT_MESSAGE_COMMAND_FLUSH, 0);
+    if (stream->transforms[1].transform)
+        IMFTransform_ProcessMessage(stream->transforms[1].transform, MFT_MESSAGE_COMMAND_FLUSH, 0);
 
     return sink_writer_place_marker(writer, stream, MFSTREAMSINK_MARKER_ENDOFSEGMENT, 0, NULL);
 }
@@ -553,9 +738,9 @@ static HRESULT sink_writer_write_sample(struct sink_writer *writer, struct strea
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_WriteSample(IMFSinkWriter *iface, DWORD index, IMFSample *sample)
+static HRESULT WINAPI sink_writer_WriteSample(IMFSinkWriterEx *iface, DWORD index, IMFSample *sample)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     struct stream *stream;
     LONGLONG timestamp;
     DWORD length;
@@ -592,9 +777,9 @@ static HRESULT WINAPI sink_writer_WriteSample(IMFSinkWriter *iface, DWORD index,
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_SendStreamTick(IMFSinkWriter *iface, DWORD index, LONGLONG timestamp)
+static HRESULT WINAPI sink_writer_SendStreamTick(IMFSinkWriterEx *iface, DWORD index, LONGLONG timestamp)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     HRESULT hr;
 
     TRACE("%p, %lu, %s.\n", iface, index, wine_dbgstr_longlong(timestamp));
@@ -611,9 +796,9 @@ static HRESULT WINAPI sink_writer_SendStreamTick(IMFSinkWriter *iface, DWORD ind
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_PlaceMarker(IMFSinkWriter *iface, DWORD index, void *user_context)
+static HRESULT WINAPI sink_writer_PlaceMarker(IMFSinkWriterEx *iface, DWORD index, void *user_context)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     struct stream *stream;
     HRESULT hr;
 
@@ -635,9 +820,9 @@ static HRESULT WINAPI sink_writer_PlaceMarker(IMFSinkWriter *iface, DWORD index,
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_NotifyEndOfSegment(IMFSinkWriter *iface, DWORD index)
+static HRESULT WINAPI sink_writer_NotifyEndOfSegment(IMFSinkWriterEx *iface, DWORD index)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     HRESULT hr = S_OK;
     unsigned int i;
 
@@ -666,9 +851,9 @@ static HRESULT WINAPI sink_writer_NotifyEndOfSegment(IMFSinkWriter *iface, DWORD
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_Flush(IMFSinkWriter *iface, DWORD index)
+static HRESULT WINAPI sink_writer_Flush(IMFSinkWriterEx *iface, DWORD index)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     HRESULT hr = S_OK;
     unsigned int i;
 
@@ -697,7 +882,7 @@ static HRESULT WINAPI sink_writer_Flush(IMFSinkWriter *iface, DWORD index)
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_Finalize(IMFSinkWriter *iface)
+static HRESULT WINAPI sink_writer_Finalize(IMFSinkWriterEx *iface)
 {
     FIXME("%p.\n", iface);
 
@@ -723,10 +908,10 @@ static HRESULT sink_writer_get_service(void *object, REFGUID service, REFIID rii
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_GetServiceForStream(IMFSinkWriter *iface, DWORD index, REFGUID service,
+static HRESULT WINAPI sink_writer_GetServiceForStream(IMFSinkWriterEx *iface, DWORD index, REFGUID service,
         REFIID riid, void **object)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     HRESULT hr = E_UNEXPECTED;
     struct stream *stream;
 
@@ -738,8 +923,11 @@ static HRESULT WINAPI sink_writer_GetServiceForStream(IMFSinkWriter *iface, DWOR
         hr = sink_writer_get_service(writer->sink, service, riid, object);
     else if ((stream = sink_writer_get_stream(writer, index)))
     {
-        if (stream->encoder)
-            hr = sink_writer_get_service(stream->encoder, service, riid, object);
+        if (stream->transforms[1].transform)
+            hr = sink_writer_get_service(stream->transforms[1].transform, service, riid, object);
+        else if (stream->transforms[0].transform)
+            hr = sink_writer_get_service(stream->transforms[0].transform, service, riid, object);
+
         if (FAILED(hr))
             hr = sink_writer_get_service(stream->stream_sink, service, riid, object);
     }
@@ -751,9 +939,9 @@ static HRESULT WINAPI sink_writer_GetServiceForStream(IMFSinkWriter *iface, DWOR
     return hr;
 }
 
-static HRESULT WINAPI sink_writer_GetStatistics(IMFSinkWriter *iface, DWORD index, MF_SINK_WRITER_STATISTICS *stats)
+static HRESULT WINAPI sink_writer_GetStatistics(IMFSinkWriterEx *iface, DWORD index, MF_SINK_WRITER_STATISTICS *stats)
 {
-    struct sink_writer *writer = impl_from_IMFSinkWriter(iface);
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
     struct stream *stream;
     HRESULT hr = S_OK;
 
@@ -781,7 +969,43 @@ static HRESULT WINAPI sink_writer_GetStatistics(IMFSinkWriter *iface, DWORD inde
     return hr;
 }
 
-static const IMFSinkWriterVtbl sink_writer_vtbl =
+static HRESULT WINAPI sink_writer_GetTransformForStream(IMFSinkWriterEx *iface, DWORD stream_index, DWORD transform_index,
+        GUID *category, IMFTransform **transform)
+{
+    struct sink_writer *writer = impl_from_IMFSinkWriterEx(iface);
+    struct transform *entry;
+    struct stream *stream;
+
+    TRACE("%p, %#lx, %#lx, %p, %p.\n", iface, stream_index, transform_index, category, transform);
+
+    if (!transform)
+        return E_POINTER;
+
+    EnterCriticalSection(&writer->cs);
+
+    if (!(stream = sink_writer_get_stream(writer, stream_index)))
+    {
+        LeaveCriticalSection(&writer->cs);
+        return MF_E_INVALIDSTREAMNUMBER;
+    }
+
+    if (transform_index > 1 || !stream->transforms[transform_index].transform)
+    {
+        LeaveCriticalSection(&writer->cs);
+        return MF_E_INVALIDINDEX;
+    }
+
+    entry = &stream->transforms[transform_index];
+    IMFTransform_AddRef((*transform = entry->transform));
+    if (category)
+        *category = entry->category;
+
+    LeaveCriticalSection(&writer->cs);
+
+    return S_OK;
+}
+
+static const IMFSinkWriterExVtbl sink_writer_vtbl =
 {
     sink_writer_QueryInterface,
     sink_writer_AddRef,
@@ -797,6 +1021,7 @@ static const IMFSinkWriterVtbl sink_writer_vtbl =
     sink_writer_Finalize,
     sink_writer_GetServiceForStream,
     sink_writer_GetStatistics,
+    sink_writer_GetTransformForStream,
 };
 
 static HRESULT WINAPI sink_writer_callback_QueryInterface(IMFAsyncCallback *iface,
@@ -818,13 +1043,13 @@ static HRESULT WINAPI sink_writer_callback_QueryInterface(IMFAsyncCallback *ifac
 static ULONG WINAPI sink_writer_events_callback_AddRef(IMFAsyncCallback *iface)
 {
     struct sink_writer *writer = impl_from_events_callback_IMFAsyncCallback(iface);
-    return IMFSinkWriter_AddRef(&writer->IMFSinkWriter_iface);
+    return IMFSinkWriterEx_AddRef(&writer->IMFSinkWriterEx_iface);
 }
 
 static ULONG WINAPI sink_writer_events_callback_Release(IMFAsyncCallback *iface)
 {
     struct sink_writer *writer = impl_from_events_callback_IMFAsyncCallback(iface);
-    return IMFSinkWriter_Release(&writer->IMFSinkWriter_iface);
+    return IMFSinkWriterEx_Release(&writer->IMFSinkWriterEx_iface);
 }
 
 static HRESULT WINAPI sink_writer_callback_GetParameters(IMFAsyncCallback *iface,
@@ -968,7 +1193,7 @@ HRESULT create_sink_writer_from_sink(IMFMediaSink *sink, IMFAttributes *attribut
     if (!(object = calloc(1, sizeof(*object))))
         return E_OUTOFMEMORY;
 
-    object->IMFSinkWriter_iface.lpVtbl = &sink_writer_vtbl;
+    object->IMFSinkWriterEx_iface.lpVtbl = &sink_writer_vtbl;
     object->events_callback.lpVtbl = &sink_writer_events_callback_vtbl;
     object->refcount = 1;
     object->sink = sink;
@@ -984,12 +1209,12 @@ HRESULT create_sink_writer_from_sink(IMFMediaSink *sink, IMFAttributes *attribut
 
     if (FAILED(hr = sink_writer_initialize_existing_streams(object, sink)))
     {
-        IMFSinkWriter_Release(&object->IMFSinkWriter_iface);
+        IMFSinkWriterEx_Release(&object->IMFSinkWriterEx_iface);
         return hr;
     }
 
-    hr = IMFSinkWriter_QueryInterface(&object->IMFSinkWriter_iface, riid, out);
-    IMFSinkWriter_Release(&object->IMFSinkWriter_iface);
+    hr = IMFSinkWriterEx_QueryInterface(&object->IMFSinkWriterEx_iface, riid, out);
+    IMFSinkWriterEx_Release(&object->IMFSinkWriterEx_iface);
     return hr;
 }
 

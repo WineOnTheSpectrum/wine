@@ -714,39 +714,39 @@ static void media_type_try_copy_attr(IMFMediaType *dst, IMFMediaType *src, const
     PropVariantClear(&value);
 }
 
-/* update a media type with additional attributes reported by upstream element */
-/* also present in mf/topology_loader.c pipeline */
-static HRESULT update_media_type_from_upstream(IMFMediaType *media_type, IMFMediaType *upstream_type)
+/* Update a media type with additional attributes reported by another media type, */
+/* also present as update_media_type_from_upstream in mf/topology_loader.c pipeline. */
+HRESULT update_media_type(IMFMediaType *dst_type, IMFMediaType *src_type)
 {
     HRESULT hr = S_OK;
 
     /* propagate common video attributes */
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_FRAME_SIZE, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_FRAME_RATE, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_DEFAULT_STRIDE, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_VIDEO_ROTATION, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_FIXED_SIZE_SAMPLES, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_PIXEL_ASPECT_RATIO, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_ALL_SAMPLES_INDEPENDENT, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_MINIMUM_DISPLAY_APERTURE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_FRAME_SIZE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_FRAME_RATE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_DEFAULT_STRIDE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_VIDEO_ROTATION, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_FIXED_SIZE_SAMPLES, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_PIXEL_ASPECT_RATIO, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_ALL_SAMPLES_INDEPENDENT, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_MINIMUM_DISPLAY_APERTURE, &hr);
 
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_VIDEO_CHROMA_SITING, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_INTERLACE_MODE, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_TRANSFER_FUNCTION, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_VIDEO_PRIMARIES, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_YUV_MATRIX, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_VIDEO_LIGHTING, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_VIDEO_NOMINAL_RANGE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_VIDEO_CHROMA_SITING, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_INTERLACE_MODE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_TRANSFER_FUNCTION, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_VIDEO_PRIMARIES, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_YUV_MATRIX, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_VIDEO_LIGHTING, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_VIDEO_NOMINAL_RANGE, &hr);
 
     /* propagate common audio attributes */
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_NUM_CHANNELS, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_BLOCK_ALIGNMENT, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_AVG_BYTES_PER_SECOND, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_CHANNEL_MASK, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_SAMPLES_PER_BLOCK, &hr);
-    media_type_try_copy_attr(media_type, upstream_type, &MF_MT_AUDIO_VALID_BITS_PER_SAMPLE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_NUM_CHANNELS, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_BLOCK_ALIGNMENT, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_AVG_BYTES_PER_SECOND, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_CHANNEL_MASK, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_SAMPLES_PER_BLOCK, &hr);
+    media_type_try_copy_attr(dst_type, src_type, &MF_MT_AUDIO_VALID_BITS_PER_SAMPLE, &hr);
 
     return hr;
 }
@@ -2120,7 +2120,7 @@ static HRESULT source_reader_create_transform(struct source_reader *reader, BOOL
             if (SUCCEEDED(hr = IMFTransform_SetInputType(transform, 0, input_type, 0))
                     && SUCCEEDED(hr = IMFTransform_GetInputCurrentType(transform, 0, &media_type)))
             {
-                if (SUCCEEDED(hr = update_media_type_from_upstream(output_type, media_type))
+                if (SUCCEEDED(hr = update_media_type(output_type, media_type))
                         && FAILED(hr = IMFTransform_SetOutputType(transform, 0, output_type, 0))
                         && FAILED(hr = set_matching_transform_output_type(transform, output_type)) && allow_processor
                         && SUCCEEDED(hr = IMFTransform_GetOutputAvailableType(transform, 0, 0, &media_type)))
@@ -2128,7 +2128,7 @@ static HRESULT source_reader_create_transform(struct source_reader *reader, BOOL
                     struct transform_entry *converter;
 
                     if (SUCCEEDED(hr = IMFTransform_SetOutputType(transform, 0, media_type, 0))
-                            && SUCCEEDED(hr = update_media_type_from_upstream(output_type, media_type))
+                            && SUCCEEDED(hr = update_media_type(output_type, media_type))
                             && SUCCEEDED(hr = source_reader_create_transform(reader, FALSE, FALSE, media_type, output_type, &converter)))
                         list_add_tail(&entry->entry, &converter->entry);
 
