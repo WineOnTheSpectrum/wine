@@ -520,7 +520,7 @@ static void session_set_topo_status(struct media_session *session, HRESULT statu
     IMFMediaEvent *event;
     PROPVARIANT param;
 
-    if (topo_status == MF_TOPOSTATUS_INVALID)
+    if (topo_status == MF_TOPOSTATUS_INVALID || status == MF_E_SHUTDOWN)
         return;
 
     if (list_empty(&session->topologies))
@@ -2007,7 +2007,8 @@ static HRESULT session_set_current_topology(struct media_session *session, IMFTo
 
     session->source_shutdown_handled = FALSE;
 
-    session_collect_nodes(session);
+    if (FAILED(hr = session_collect_nodes(session)))
+        return hr;
 
     LIST_FOR_EACH_ENTRY(node, &session->presentation.nodes, struct topo_node, entry)
     {
