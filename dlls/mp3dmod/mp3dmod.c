@@ -96,6 +96,10 @@ static HRESULT decoder_set_output_type(struct mp3_decoder *decoder, DWORD index,
         return DMO_E_TYPE_NOT_ACCEPTED;
     }
 
+    if (format->nChannels * format->wBitsPerSample/8 != format->nBlockAlign
+            || format->nSamplesPerSec * format->nBlockAlign != format->nAvgBytesPerSec)
+        return E_INVALIDARG;
+
     if (!(flags & DMO_SET_TYPEF_TEST_ONLY))
     {
         err = mpg123_format(decoder->mh, format->nSamplesPerSec, format->nChannels, enc);
