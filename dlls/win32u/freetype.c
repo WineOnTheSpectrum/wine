@@ -1499,6 +1499,9 @@ static UINT parse_aa_pattern( FcPattern *pattern )
     if (pFcPatternGetBool( pattern, FC_ANTIALIAS, 0, &antialias ) == FcResultMatch)
         aa_flags = antialias ? GGO_GRAY4_BITMAP : GGO_BITMAP;
 
+    if (is_subpixel_rendering_enabled())
+        aa_flags = WINE_GGO_HRGB_BITMAP;
+
     if (pFcPatternGetInteger( pattern, FC_RGBA, 0, &rgba ) == FcResultMatch)
     {
         switch (rgba)
