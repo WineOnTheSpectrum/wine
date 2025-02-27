@@ -701,6 +701,33 @@ dispex_prop_type_t get_dispid_type(DISPID id)
     return DISPEXPROP_BUILTIN;
 }
 
+BOOL is_custom_attribute(DispatchEx *dispex, const WCHAR *name)
+{
+    compat_mode_t compat_mode = dispex->info->compat_mode;
+    const dispex_data_t *info = dispex->info;
+    func_info_t **funcs = info->name_table;
+    DWORD a, b, i;
+    int c;
+
+    assert(compat_mode >= COMPAT_MODE_IE9);
+
+    for(;;) {
+        info = object_descriptors[info->desc->prototype_id]->prototype_info[compat_mode - COMPAT_MODE_IE9];
+        funcs = info->name_table;
+
+        for(a = 0, b = info->name_cnt; a < b;) {
+            i = (a + b) / 2;
+            c = wcsicmp(funcs[i]->name, name);
+            if(!c)
+                return (funcs[i]->func_disp_idx >= 0);
+            if(c > 0) b = i;
+            else      a = i + 1;
+        }
+        if(!info->desc->prototype_id)
+            return DISP_E_UNKNOWNNAME;
+    }
+}
+
 static HRESULT variant_copy(VARIANT *dest, VARIANT *src)
 {
     if(V_VT(src) == VT_BSTR && !V_BSTR(src)) {
@@ -1787,6 +1814,67 @@ HRESULT dispex_call_builtin(DispatchEx *dispex, DISPID id, DISPPARAMS *dp,
         return hres;
 
     return call_builtin_function(dispex, func, dp, res, ei, caller);
+}
+
+BOOL dispex_is_builtin_attribute(DispatchEx *dispex, DISPID id)
+{
+    func_info_t *func;
+
+    if(id == DISPID_VALUE)
+        return TRUE;
+
+    if(get_dispid_type(id) != DISPEXPROP_BUILTIN)
+        return FALSE;
+
+    if(FAILED(get_builtin_func(dispex->info, id, &func)))
+        return FALSE;
+
+    return func->func_disp_idx < 0;
+}
+
+BOOL dispex_is_builtin_method(DispatchEx *dispex, DISPID id)
+{
+    func_info_t *func;
+
+    if(get_dispid_type(id) != DISPEXPROP_BUILTIN)
+        return FALSE;
+
+    if(FAILED(get_builtin_func(dispex->info, id, &func)) || func->func_disp_idx < 0)
+        return FALSE;
+
+    if(dispex->dynamic_data && dispex->dynamic_data->func_disps) {
+        func_obj_entry_t *entry = dispex->dynamic_data->func_disps + func->func_disp_idx;
+
+        if(entry->func_obj && (V_VT(&entry->val) != VT_DISPATCH ||
+           V_DISPATCH(&entry->val) != (IDispatch*)&entry->func_obj->dispex.IWineJSDispatchHost_iface))
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+BOOL dispex_is_builtin_value(DispatchEx *dispex, DISPID id)
+{
+    func_info_t *func;
+
+    if(get_dispid_type(id) != DISPEXPROP_BUILTIN)
+        return FALSE;
+
+    if(FAILED(get_builtin_func(dispex->info, id, &func)))
+        return FALSE;
+
+    if(func->func_disp_idx < 0)
+        return TRUE;
+
+    if(dispex->dynamic_data && dispex->dynamic_data->func_disps) {
+        func_obj_entry_t *entry = dispex->dynamic_data->func_disps + func->func_disp_idx;
+
+        if(entry->func_obj && (V_VT(&entry->val) != VT_DISPATCH ||
+           V_DISPATCH(&entry->val) != (IDispatch*)&entry->func_obj->dispex.IWineJSDispatchHost_iface))
+            return FALSE;
+    }
+
+    return TRUE;
 }
 
 static VARIANT_BOOL reset_builtin_func(DispatchEx *dispex, func_info_t *func)
