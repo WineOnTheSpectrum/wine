@@ -319,6 +319,24 @@ static file_pos_t max_unix_offset = OFF_T_MAX;
         fprintf( stderr, "%lx", (unsigned long)(val) ); \
   } while (0)
 
+struct cached_stat
+{
+    struct stat st;
+    int init;
+};
+
+/* Caches fstat (must use on same fd), set 'init' to 0 before use */
+static inline int cached_fstat(int fd, struct cached_stat *cached_stat)
+{
+    int ret;
+
+    if (cached_stat->init)
+        return 0;
+    if (!(ret = fstat( fd, &cached_stat->st )))
+        cached_stat->init = 1;
+    return ret;
+}
+
 
 
 /****************************************************************/
@@ -2531,14 +2549,120 @@ static void set_fd_disposition( struct fd *fd, unsigned int flags )
         ((fd->options & FILE_DELETE_ON_CLOSE) ? FILE_DISPOSITION_DELETE : 0);
 }
 
+/* rename the same file, dealing with casefolding and possibly different hardlinks to it */
+static void rename_same_file( const char *src, const char *dst, int is_dir )
+{
+    static const char tmpname_fmt[] = ".wine-rename-tmp-%08x";
+    static unsigned tmp_value;
+
+    char *dirname, tmpname[sizeof(tmpname_fmt) + 4 /* remaining of %08x */];
+    const char *srcname, *dstname = strrchr( dst, '/' ) + 1;
+    struct stat st, st2;
+    int dirfd, res = 0;
+    unsigned i;
+
+    /* first, if not a dir, check the directories they reside in */
+    if (!is_dir)
+    {
+        if (!(dirname = memdup( dst, dstname - dst )))
+            return;
+        dirname[dstname - dst - 1] = '\0';
+        if ((res = stat( dirname, &st )))
+            file_set_error();
+        free( dirname );
+        if (res)
+            return;
+    }
+
+    srcname = strrchr( src, '/' ) + 1;
+    if (!(dirname = memdup( src, srcname - src )))
+        return;
+    dirname[srcname - src - 1] = '\0';
+    if ((dirfd = open( dirname, O_RDONLY | O_NONBLOCK )) == -1)
+        file_set_error();
+    free( dirname );
+    if (dirfd == -1)
+        return;
+
+    if (!is_dir)
+    {
+        if (fstat( dirfd, &st2 ))
+        {
+            file_set_error();
+            goto ret;
+        }
+
+        /* if different directories, it must be a hardlink, so simply remove the source */
+        if (st.st_dev != st2.st_dev || st.st_ino != st2.st_ino)
+        {
+            if (unlinkat( dirfd, srcname, 0 ))
+                file_set_error();
+            goto ret;
+        }
+    }
+
+    /* same dentry means a no-op */
+    if (!strcmp( srcname, dstname )) goto ret;
+
+    /* This is more complicated now, because in case of a casefold (+F) directory, the destination may very well be the same dentry,
+     * even if the name doesn't match (if it differs just by case), in which case unlinking it is wrong and can be dangerous. Instead,
+     * we first rename the source to a temporary filename in the same directory. If this is a casefold dir, this will also remove the
+     * destination, otherwise the destination still exists. We then create a hardlink from the destination to our temporary name, and
+     * finally, unlink the temporary. This still works if the directory is case sensitive, so it's not a problem in either case. */
+    tmp_value += (current_time >> 16) + current_time;
+    for (i = 0; i < 0x8000; i++, tmp_value += 7777)
+    {
+        sprintf( tmpname, tmpname_fmt, tmp_value );
+        if (fstatat( dirfd, tmpname, &st, 0 ))  /* tmpname doesn't exist */
+            break;
+    }
+    if (i < 0x8000)
+    {
+        if (renameat( dirfd, srcname, dirfd, tmpname ))
+        {
+            file_set_error();
+            goto ret;
+        }
+
+        if (!is_dir)
+        {
+            if (linkat( dirfd, tmpname, dirfd, dstname, 0 ) && errno != EEXIST)
+            {
+                file_set_error();
+                /* Revert the temporary rename */
+                renameat( dirfd, tmpname, dirfd, srcname );
+                goto ret;
+            }
+
+            if (unlinkat( dirfd, tmpname, 0 ))
+                file_set_error();
+        }
+        else
+        {
+            /* directories can't have hardlinks, so just rename it to the destination */
+            if (renameat( dirfd, tmpname, dirfd, dstname ))
+            {
+                file_set_error();
+                goto ret;
+            }
+        }
+    }
+
+ret:
+    close( dirfd );
+}
+
 /* set new name for the fd */
 static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, data_size_t len,
                          struct unicode_str nt_name, int create_link, unsigned int flags )
 {
+    struct cached_stat cached_st;
     struct inode *inode;
-    struct stat st, st2;
+    struct stat st;
     char *name;
     const unsigned int replace = flags & FILE_RENAME_REPLACE_IF_EXISTS;
+
+    cached_st.init = 0;
 
     if (!fd->inode || !fd->unix_name)
     {
@@ -2556,6 +2680,11 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
         set_error( STATUS_OBJECT_PATH_SYNTAX_BAD );
         return;
     }
+
+    /* strip trailing slashes */
+    while (nameptr[len - 1] == '/')
+        len--;
+
     if (!(name = mem_alloc( len + 1 ))) return;
     memcpy( name, nameptr, len );
     name[len] = 0;
@@ -2573,7 +2702,7 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
     }
 
     /* when creating a hard link, source cannot be a dir */
-    if (create_link && !fstat( fd->unix_fd, &st ) && S_ISDIR( st.st_mode ))
+    if (create_link && !cached_fstat( fd->unix_fd, &cached_st ) && S_ISDIR( cached_st.st.st_mode ))
     {
         set_error( STATUS_FILE_IS_A_DIRECTORY );
         goto failed;
@@ -2581,9 +2710,10 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
 
     if (!stat( name, &st ))
     {
-        if (!fstat( fd->unix_fd, &st2 ) && st.st_ino == st2.st_ino && st.st_dev == st2.st_dev)
+        if (!cached_fstat( fd->unix_fd, &cached_st ) && st.st_ino == cached_st.st.st_ino && st.st_dev == cached_st.st.st_dev)
         {
-            if (create_link && !replace) set_error( STATUS_OBJECT_NAME_COLLISION );
+            if (!create_link) rename_same_file( fd->unix_name, name, S_ISDIR( st.st_mode ) );
+            else if (!replace) set_error( STATUS_OBJECT_NAME_COLLISION );
             free( name );
             return;
         }
@@ -2623,7 +2753,7 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
 
         /* link() expects that the target doesn't exist */
         /* rename() cannot replace files with directories */
-        if (create_link || S_ISDIR( st2.st_mode ))
+        if (create_link || S_ISDIR( cached_st.st.st_mode ))
         {
             if (unlink( name ))
             {
@@ -2647,14 +2777,14 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr, da
         goto failed;
     }
 
-    if (is_file_executable( fd->unix_name ) != is_file_executable( name ) && !fstat( fd->unix_fd, &st ))
+    if (is_file_executable( fd->unix_name ) != is_file_executable( name ) && !cached_fstat( fd->unix_fd, &cached_st ))
     {
         if (is_file_executable( name ))
             /* set executable bit where read bit is set */
-            st.st_mode |= (st.st_mode & 0444) >> 2;
+            cached_st.st.st_mode |= (cached_st.st.st_mode & 0444) >> 2;
         else
-            st.st_mode &= ~0111;
-        fchmod( fd->unix_fd, st.st_mode );
+            cached_st.st.st_mode &= ~0111;
+        fchmod( fd->unix_fd, cached_st.st.st_mode );
     }
 
     free( fd->nt_name );
