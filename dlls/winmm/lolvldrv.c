@@ -538,6 +538,7 @@ static void MMDRV_Init(void)
     free(drvA);
     PropVariantClear(&pv);
 
+    MMDRV_Install("swmidi", "wineswmidi.dll", FALSE);
     MMDRV_Install("wavemapper", "msacm32.drv", TRUE);
     MMDRV_Install("midimapper", "midimap.dll", TRUE);
 
