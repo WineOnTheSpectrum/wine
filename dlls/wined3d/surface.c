@@ -616,6 +616,7 @@ static HRESULT surface_cpu_blt(struct wined3d_texture *dst_texture, unsigned int
     const BYTE *sbase;
     const BYTE *sbuf;
     BYTE *dbuf;
+    BYTE *tmp_buffer = NULL;
 
     TRACE("dst_texture %p, dst_sub_resource_idx %u, dst_box %s, src_texture %p, "
             "src_sub_resource_idx %u, src_box %s, flags %#x, fx %p, filter %s.\n",
@@ -808,18 +809,45 @@ static HRESULT surface_cpu_blt(struct wined3d_texture *dst_texture, unsigned int
             else
             {
                 /* Stretching in y direction only. */
+
+                if (same_sub_resource)
+                {
+                    /* Use a temporary buffer if blitting surface to itself */
+                    tmp_buffer = malloc(src_height * src_map.row_pitch);
+                    if (tmp_buffer != NULL)
+                    {
+                        memcpy(tmp_buffer, sbase, src_height * src_map.row_pitch);
+                        sbase = tmp_buffer;
+                    }
+                }
+
                 for (y = sy = 0; y < dst_height; ++y, sy += yinc)
                 {
                     sbuf = sbase + (sy >> 16) * src_map.row_pitch;
                     memcpy(dbuf, sbuf, row_byte_count);
                     dbuf += dst_map.row_pitch;
                 }
+
+                if(same_sub_resource && tmp_buffer != NULL)
+                    free(tmp_buffer);
             }
         }
         else
         {
             /* Stretching in X direction. */
             unsigned int last_sy = ~0u;
+
+            if (same_sub_resource)
+            {
+                /* Use a temporary buffer if blitting surface to itself */
+                tmp_buffer = malloc(src_height * src_map.row_pitch);
+                if (tmp_buffer != NULL)
+                {
+                    memcpy(tmp_buffer, sbase, src_height * src_map.row_pitch);
+                    sbase = tmp_buffer;
+                }
+            }
+
             for (y = sy = 0; y < dst_height; ++y, sy += yinc)
             {
                 sbuf = sbase + (sy >> 16) * src_map.row_pitch;
@@ -878,6 +906,9 @@ do { \
                 dbuf += dst_map.row_pitch;
                 last_sy = sy;
             }
+
+            if(same_sub_resource && tmp_buffer != NULL)
+                free(tmp_buffer);
         }
     }
     else
