@@ -124,6 +124,17 @@ static NTSTATUS demuxer_create_streams( struct demuxer *demuxer )
                 continue;
             }
         }
+        else if (par->codec_id == AV_CODEC_ID_MP3)
+        {
+            int channels;
+#if LIBAVUTIL_VERSION_MAJOR >= 58
+            channels = demuxer->ctx->streams[i]->codecpar->ch_layout.nb_channels;
+#else
+            channels = demuxer->ctx->streams[i]->codecpar->channels;
+#endif
+            if (!channels)
+                avformat_find_stream_info(demuxer->ctx, NULL);
+        }
 
         av_bsf_get_null_filter( &stream->filter );
         avcodec_parameters_copy( stream->filter->par_in, demuxer->ctx->streams[i]->codecpar );
