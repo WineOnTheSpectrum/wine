@@ -5747,6 +5747,19 @@ static void test_ddrawstream_set_format(void)
     ok(((VIDEOINFO *)source.source.pin.mt.pbFormat)->bmiHeader.biHeight == -555,
             "Got height %ld.\n", ((VIDEOINFO *)source.source.pin.mt.pbFormat)->bmiHeader.biHeight);
 
+    hr = IAMMultiMediaStream_SetState(mmstream, STREAMSTATE_RUN);
+    ok(hr == S_OK, "Expected S_OK %#lx\n", hr);
+
+    format = rgb555_format;
+    format.dwFlags |= DDSD_WIDTH | DDSD_HEIGHT;
+    format.dwWidth = 222;
+    format.dwHeight = -555;
+    hr = IDirectDrawMediaStream_SetFormat(ddraw_stream, &format, NULL);
+    ok(hr == DDERR_INVALIDSURFACETYPE, "Got hr %#lx.\n", hr);
+
+    hr = IAMMultiMediaStream_SetState(mmstream, STREAMSTATE_STOP);
+    ok(hr == S_OK, "Expected S_OK %#lx\n", hr);
+
     hr = IGraphBuilder_Disconnect(graph, &source.source.pin.IPin_iface);
     ok(hr == S_OK, "Got hr %#lx.\n", hr);
     hr = IGraphBuilder_Disconnect(graph, pin);
@@ -7973,7 +7986,7 @@ static void get_ddrawstream_create_sample_desc_(int line, const DDSURFACEDESC *f
     ok_(__FILE__, line)(!ref, "Got outstanding refcount %ld.\n", ref);
 }
 
-static void test_ddrawstream_create_sample(void)
+static void test_ddrawstream_create_sample(const WCHAR *test_avi_path)
 {
     IAMMultiMediaStream *mmstream = create_ammultimediastream();
     DDSURFACEDESC desc2 = { sizeof(desc2) };
@@ -8139,6 +8152,56 @@ static void test_ddrawstream_create_sample(void)
 
     hr = IDirectDrawMediaStream_CreateSample(ddraw_stream, surface, NULL, 0, &sample);
     ok(hr == DDERR_INVALIDSURFACETYPE, "Got hr %#lx.\n", hr);
+
+    IDirectDrawMediaStream_Release(ddraw_stream);
+    ref = IDirectDrawSurface_Release(surface);
+    ok(!ref, "Got outstanding refcount %ld.\n", ref);
+    ref = IAMMultiMediaStream_Release(mmstream);
+    ok(!ref, "Got outstanding refcount %ld.\n", ref);
+    ref = IMediaStream_Release(stream);
+    ok(!ref, "Got outstanding refcount %ld.\n", ref);
+    ref = IDirectDraw_Release(ddraw);
+    ok(!ref, "Got outstanding refcount %ld.\n", ref);
+
+
+    /* Test creating a sample with a non-compatible ddraw surface while the stream is running. */
+    mmstream = create_ammultimediastream();
+
+    hr = DirectDrawCreate(NULL, &ddraw, NULL);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    hr = IDirectDraw_SetCooperativeLevel(ddraw, NULL, DDSCL_NORMAL);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    hr = IAMMultiMediaStream_Initialize(mmstream, STREAMTYPE_READ, 0, NULL);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    hr = IAMMultiMediaStream_AddMediaStream(mmstream, (IUnknown *)ddraw, &MSPID_PrimaryVideo, 0, &stream);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    hr = IMediaStream_QueryInterface(stream, &IID_IDirectDrawMediaStream, (void **)&ddraw_stream);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    hr = IAMMultiMediaStream_OpenFile(mmstream, test_avi_path, AMMSF_RENDERTOEXISTING);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    hr = IAMMultiMediaStream_SetState(mmstream, STREAMSTATE_RUN);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    memset(&desc, 0, sizeof(desc));
+    desc.dwSize = sizeof(desc);
+    desc.dwFlags = DDSD_WIDTH | DDSD_HEIGHT;
+    desc.dwWidth = 32;
+    desc.dwHeight = 23; /* The original height for test.avi is 24. */
+    hr = IDirectDraw_CreateSurface(ddraw, &desc, &surface, NULL);
+    ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    sample = NULL;
+    hr = IDirectDrawMediaStream_CreateSample(ddraw_stream, surface, NULL, 0, &sample);
+    todo_wine ok(hr == S_OK, "Got hr %#lx.\n", hr);
+
+    if (sample)
+        IDirectDrawStreamSample_Release(sample);
 
     IDirectDrawMediaStream_Release(ddraw_stream);
     ref = IDirectDrawSurface_Release(surface);
@@ -9777,8 +9840,6 @@ START_TEST(amstream)
     test_openfile(test_avi_path);
     test_mmstream_get_duration(test_avi_path);
 
-    unload_resource(test_avi_path);
-
     test_audiodata_query_interface();
     test_audiodata_get_info();
     test_audiodata_set_buffer();
@@ -9803,7 +9864,7 @@ START_TEST(amstream)
     test_ddrawstream_initialize();
     test_ddrawstream_getsetdirectdraw();
     test_ddrawstream_receive_connection();
-    test_ddrawstream_create_sample();
+    test_ddrawstream_create_sample(test_avi_path);
     test_ddrawstream_get_format();
     test_ddrawstream_set_format();
     test_ddrawstream_receive();
@@ -9811,6 +9872,7 @@ START_TEST(amstream)
     test_ddrawstream_new_segment();
     test_ddrawstream_get_time_per_frame();
     test_ddrawstream_qc();
+    unload_resource(test_avi_path);
 
     test_ddrawstreamsample_get_media_stream();
     test_ddrawstreamsample_update();
