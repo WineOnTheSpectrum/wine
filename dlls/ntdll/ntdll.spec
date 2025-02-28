@@ -152,12 +152,14 @@
 @ stdcall -syscall NtAllocateVirtualMemoryEx(long ptr ptr long long ptr long)
 @ stdcall -syscall NtAreMappedFilesTheSame(ptr ptr)
 @ stdcall -syscall NtAssignProcessToJobObject(long long)
+@ stdcall -syscall NtAssociateWaitCompletionPacket(ptr ptr ptr ptr ptr long ptr ptr)
 @ stdcall -syscall NtCallbackReturn(ptr long long)
 # @ stub NtCancelDeviceWakeupRequest
 @ stdcall -syscall NtCancelIoFile(long ptr)
 @ stdcall -syscall NtCancelIoFileEx(long ptr ptr)
 @ stdcall -syscall NtCancelSynchronousIoFile(long ptr ptr)
 @ stdcall -syscall NtCancelTimer(long ptr)
+@ stdcall -syscall NtCancelWaitCompletionPacket(ptr long)
 @ stdcall -syscall NtClearEvent(long)
 @ stdcall -syscall NtClose(long)
 # @ stub NtCloseObjectAuditAlarm
@@ -200,6 +202,7 @@
 @ stdcall -syscall NtCreateToken(ptr long ptr long ptr ptr ptr ptr ptr ptr ptr ptr ptr)
 @ stdcall -syscall NtCreateTransaction(ptr long ptr ptr long long long long ptr ptr)
 @ stdcall -syscall NtCreateUserProcess(ptr ptr long long ptr ptr long long ptr ptr ptr)
+@ stdcall -syscall NtCreateWaitCompletionPacket(ptr long ptr)
 # @ stub NtCreateWaitablePort
 @ stdcall -arch=i386 NtCurrentTeb()
 @ stdcall -syscall NtDebugActiveProcess(long long)

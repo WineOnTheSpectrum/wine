@@ -1248,11 +1248,43 @@ static int select_on( const union select_op *select_op, data_size_t op_size, cli
     return 0;
 }
 
+int is_obj_signaled( struct object *obj )
+{
+    struct wait_queue_entry wait_entry;
+    struct thread_wait wait = {0};
+
+    if (!obj->ops->signaled)
+        return 0;
+
+    wait.thread = current;
+    list_init( &wait_entry.entry );
+    wait_entry.obj = obj;
+    wait_entry.wait = &wait;
+    return obj->ops->signaled( obj, &wait_entry );
+}
+
 /* attempt to wake threads sleeping on the object wait queue */
 void wake_up( struct object *obj, int max )
 {
     struct list *ptr;
     int ret;
+
+    if (is_obj_signaled( obj ))
+    {
+        struct wait_completion_packet *packet;
+
+        LIST_FOR_EACH_ENTRY( packet, &obj->wait_completion_packet_queue, struct wait_completion_packet, entry )
+        {
+            list_remove( &packet->entry );
+            release_object( packet->target );
+            packet->in_object_packet_queue = 0;
+            packet->target = NULL;
+
+            add_completion( packet->completion, packet->ckey, packet->cvalue, packet->status,
+                            packet->information, packet );
+            packet->in_completion_queue = 1;
+        }
+    }
 
     LIST_FOR_EACH( ptr, &obj->wait_queue )
     {

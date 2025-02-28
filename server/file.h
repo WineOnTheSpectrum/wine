@@ -48,6 +48,21 @@ struct async_queue
     struct list queue;          /* queue of async objects */
 };
 
+struct wait_completion_packet
+{
+    struct object      obj;                       /* object header */
+    struct list        entry;                     /* list entry in the target object packet list */
+    struct object     *target;                    /* target object */
+    struct completion *completion;                /* completion object */
+    apc_param_t        ckey;                      /* key context */
+    apc_param_t        cvalue;                    /* apc context */
+    apc_param_t        information;               /* IO_STATUS_BLOCK information */
+    unsigned int       status;                    /* completion status */
+    unsigned int       in_object_packet_queue: 1; /* whether the packet is in the target object queue */
+    unsigned int       in_completion_queue: 1;    /* whether the packet is in the completion queue */
+    unsigned int       pad: 30;                   /* padding */
+};
+
 /* operations valid on file descriptor objects */
 struct fd_ops
 {
@@ -239,7 +254,7 @@ extern struct dir *get_dir_obj( struct process *process, obj_handle_t handle, un
 extern struct completion *get_completion_obj( struct process *process, obj_handle_t handle, unsigned int access );
 extern struct reserve *get_completion_reserve_obj( struct process *process, obj_handle_t handle, unsigned int access );
 extern void add_completion( struct completion *completion, apc_param_t ckey, apc_param_t cvalue,
-                            unsigned int status, apc_param_t information );
+                            unsigned int status, apc_param_t information, struct wait_completion_packet *packet );
 extern void cleanup_thread_completion( struct thread *thread );
 
 /* serial port functions */

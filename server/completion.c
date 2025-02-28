@@ -36,6 +36,129 @@
 #include "handle.h"
 #include "request.h"
 
+struct comp_msg
+{
+    struct wait_completion_packet *packet; /* if this is from a wait completion packet, store its pointer here */
+    struct list queue_entry;
+    apc_param_t ckey;
+    apc_param_t cvalue;
+    apc_param_t information;
+    unsigned int status;
+};
+
+struct completion
+{
+    struct object obj;
+    struct list queue;
+    struct list wait_queue;
+    unsigned int depth;
+    int closed;
+};
+
+static const WCHAR wait_completion_packet_name[] = {'W','a','i','t','C','o','m','p','l','e','t','i','o','n','P','a','c','k','e','t'};
+
+struct type_descr wait_completion_packet_type =
+{
+    { wait_completion_packet_name, sizeof(wait_completion_packet_name) }, /* name */
+    WAIT_COMPLETION_PACKET_ALL_ACCESS,                                    /* valid_access */
+    {                                                                     /* mapping */
+         WAIT_COMPLETION_PACKET_GENERIC_READ,
+         WAIT_COMPLETION_PACKET_GENERIC_WRITE,
+         WAIT_COMPLETION_PACKET_GENERIC_EXECUTE,
+         WAIT_COMPLETION_PACKET_ALL_ACCESS
+    },
+};
+
+static void wait_completion_packet_dump( struct object *, int );
+static void wait_completion_packet_destroy( struct object * );
+
+static const struct object_ops wait_completion_packet_ops =
+{
+    sizeof(struct wait_completion_packet),  /* size */
+    &wait_completion_packet_type,           /* type */
+    wait_completion_packet_dump,            /* dump */
+    no_add_queue,                           /* add_queue */
+    NULL,                                   /* remove_queue */
+    NULL,                                   /* signaled */
+    NULL,                                   /* satisfied */
+    no_signal,                              /* signal */
+    no_get_fd,                              /* get_fd */
+    default_map_access,                     /* map_access */
+    default_get_sd,                         /* get_sd */
+    default_set_sd,                         /* set_sd */
+    default_get_full_name,                  /* get_full_name */
+    no_lookup_name,                         /* lookup_name */
+    directory_link_name,                    /* link_name */
+    default_unlink_name,                    /* unlink_name */
+    no_open_file,                           /* open_file */
+    no_kernel_obj_list,                     /* get_kernel_obj_list */
+    no_close_handle,                        /* close_handle */
+    wait_completion_packet_destroy          /* destroy */
+};
+
+static void wait_completion_packet_dump( struct object *obj, int verbose )
+{
+    struct wait_completion_packet *packet = (struct wait_completion_packet *)obj;
+
+    assert( obj->ops == &wait_completion_packet_ops );
+    fprintf( stderr, "WaitCompletionPacket target=%p completion=%p ckey=%llx cvalue=%llx "
+             "information=%llx status=%#x in_object_packet_queue=%d in_completion_queue=%d\n",
+             packet->target, packet->completion, (long long unsigned int)packet->ckey,
+             (long long unsigned int)packet->cvalue, (long long unsigned int)packet->information,
+             packet->status, packet->in_object_packet_queue, packet->in_completion_queue );
+}
+
+struct wait_completion_packet *get_wait_completion_packet_obj( struct process *process, obj_handle_t handle, unsigned int access )
+{
+    return (struct wait_completion_packet *)get_handle_obj( process, handle, access, &wait_completion_packet_ops );
+}
+
+static struct wait_completion_packet *create_wait_completion_packet( struct object *root,
+                                                                     const struct unicode_str *name,
+                                                                     unsigned int attr,
+                                                                     const struct security_descriptor *sd )
+{
+    struct wait_completion_packet *packet;
+
+    if ((packet = create_named_object( root, &wait_completion_packet_ops, name, attr, sd ))
+        && get_error() != STATUS_OBJECT_NAME_EXISTS)
+    {
+        packet->target = NULL;
+        packet->completion = NULL;
+        packet->ckey = 0;
+        packet->cvalue = 0;
+        packet->information = 0;
+        packet->status = 0;
+        packet->in_object_packet_queue = 0;
+        packet->in_completion_queue = 0;
+    }
+    return packet;
+}
+
+static void wait_completion_packet_destroy( struct object *obj )
+{
+    struct wait_completion_packet *packet = (struct wait_completion_packet *)obj;
+    struct comp_msg *comp_msg;
+
+    if (packet->in_object_packet_queue) list_remove( &packet->entry );
+
+    if (packet->in_completion_queue)
+    {
+        LIST_FOR_EACH_ENTRY( comp_msg, &packet->completion->queue, struct comp_msg, queue_entry )
+        {
+            if (comp_msg->packet == packet)
+            {
+                list_remove( &comp_msg->queue_entry );
+                free( comp_msg );
+                packet->completion->depth--;
+                break;
+            }
+        }
+    }
+
+    if (packet->target) release_object( packet->target );
+    if (packet->completion) release_object( packet->completion );
+}
 
 static const WCHAR completion_name[] = {'I','o','C','o','m','p','l','e','t','i','o','n'};
 
@@ -51,15 +174,6 @@ struct type_descr completion_type =
     },
 };
 
-struct comp_msg
-{
-    struct   list queue_entry;
-    apc_param_t   ckey;
-    apc_param_t   cvalue;
-    apc_param_t   information;
-    unsigned int  status;
-};
-
 struct completion_wait
 {
     struct object      obj;
@@ -68,15 +182,6 @@ struct completion_wait
     struct thread     *thread;
     struct comp_msg   *msg;
     struct list        wait_queue_entry;
-};
-
-struct completion
-{
-    struct object  obj;
-    struct list    queue;
-    struct list    wait_queue;
-    unsigned int   depth;
-    int            closed;
 };
 
 static void completion_wait_dump( struct object*, int );
@@ -287,7 +392,7 @@ struct completion *get_completion_obj( struct process *process, obj_handle_t han
 }
 
 void add_completion( struct completion *completion, apc_param_t ckey, apc_param_t cvalue,
-                     unsigned int status, apc_param_t information )
+                     unsigned int status, apc_param_t information, struct wait_completion_packet *packet )
 {
     struct comp_msg *msg = mem_alloc( sizeof( *msg ) );
     struct completion_wait *wait;
@@ -295,6 +400,7 @@ void add_completion( struct completion *completion, apc_param_t ckey, apc_param_
     if (!msg)
         return;
 
+    msg->packet = packet;
     msg->ckey = ckey;
     msg->cvalue = cvalue;
     msg->status = status;
@@ -308,6 +414,147 @@ void add_completion( struct completion *completion, apc_param_t ckey, apc_param_
         if (list_empty( &completion->queue )) return;
     }
     if (!list_empty( &completion->queue )) wake_up( &completion->obj, 0 );
+}
+
+/* create a wait completion packet */
+DECL_HANDLER(create_wait_completion_packet)
+{
+    struct wait_completion_packet *packet;
+    struct unicode_str name;
+    struct object *root;
+    const struct security_descriptor *sd;
+    const struct object_attributes *objattr = get_req_object_attributes( &sd, &name, &root );
+
+    if (!objattr) return;
+    if ((packet = create_wait_completion_packet( root, &name, objattr->attributes, sd ))
+        && get_error() != STATUS_OBJECT_NAME_EXISTS)
+    {
+        reply->handle = alloc_handle( current->process, packet, req->access, objattr->attributes );
+        release_object( packet );
+    }
+
+    if (root) release_object( root );
+}
+
+/* associate a wait completion packet */
+DECL_HANDLER(associate_wait_completion_packet)
+{
+    struct wait_completion_packet *packet;
+    struct completion *completion;
+    struct object *target;
+
+    packet = get_wait_completion_packet_obj( current->process, req->packet, WAIT_COMPLETION_PACKET_QUERY_STATE );
+    if (!packet)
+        return;
+
+    if (packet->in_object_packet_queue || packet->in_completion_queue)
+    {
+        release_object( packet );
+        set_error( STATUS_INVALID_PARAMETER_1 );
+        return;
+    }
+
+    completion = get_completion_obj( current->process, req->completion, IO_COMPLETION_MODIFY_STATE );
+    if (!completion)
+    {
+        release_object( packet );
+        return;
+    }
+
+    target = get_handle_obj( current->process, req->target, 0, NULL );
+    if (!target)
+    {
+        release_object( completion );
+        release_object( packet );
+        return;
+    }
+
+    packet->completion = (struct completion *)grab_object( completion );
+    packet->ckey = req->ckey;
+    packet->cvalue = req->cvalue;
+    packet->information = req->information;
+    packet->status = req->status;
+
+    if (is_obj_signaled( target ))
+    {
+        add_completion( packet->completion, packet->ckey, packet->cvalue, packet->status,
+                        packet->information, packet );
+        packet->in_completion_queue = 1;
+        reply->signaled = 1;
+    }
+    else
+    {
+        packet->target = grab_object( target );
+        list_add_tail( &target->wait_completion_packet_queue, &packet->entry );
+        packet->in_object_packet_queue = 1;
+        reply->signaled = 0;
+    }
+
+    release_object( packet );
+    release_object( target );
+    release_object( completion );
+}
+
+/* cancel a wait completion packet */
+DECL_HANDLER(cancel_wait_completion_packet)
+{
+    struct wait_completion_packet *packet;
+
+    packet = get_wait_completion_packet_obj( current->process, req->packet, WAIT_COMPLETION_PACKET_QUERY_STATE );
+    if (!packet)
+        return;
+
+    if (!packet->in_object_packet_queue && !packet->in_completion_queue)
+    {
+        set_error( STATUS_CANCELLED );
+        release_object( packet );
+        return;
+    }
+
+    if (packet->in_completion_queue && !req->remove_signaled)
+    {
+        set_error( STATUS_PENDING );
+        release_object( packet );
+        return;
+    }
+
+    if (packet->in_object_packet_queue)
+    {
+        list_remove( &packet->entry );
+        packet->in_object_packet_queue = 0;
+    }
+
+    if (packet->in_completion_queue)
+    {
+        struct comp_msg *comp_msg;
+
+        LIST_FOR_EACH_ENTRY( comp_msg, &packet->completion->queue, struct comp_msg, queue_entry )
+        {
+            if (comp_msg->packet == packet)
+            {
+                list_remove( &comp_msg->queue_entry );
+                free( comp_msg );
+                packet->completion->depth--;
+                break;
+            }
+        }
+
+        packet->in_completion_queue = 0;
+    }
+
+    if (packet->target)
+    {
+        release_object( packet->target );
+        packet->target = NULL;
+    }
+
+    if (packet->completion)
+    {
+        release_object( packet->completion );
+        packet->completion = NULL;
+    }
+
+    release_object( packet );
 }
 
 /* create a completion */
@@ -358,7 +605,7 @@ DECL_HANDLER(add_completion)
         return;
     }
 
-    add_completion( completion, req->ckey, req->cvalue, req->status, req->information );
+    add_completion( completion, req->ckey, req->cvalue, req->status, req->information, NULL );
 
     if (reserve) release_object( reserve );
     release_object( completion );
@@ -406,6 +653,12 @@ DECL_HANDLER(remove_completion)
         reply->cvalue = msg->cvalue;
         reply->status = msg->status;
         reply->information = msg->information;
+        if (msg->packet)
+        {
+            release_object( msg->packet->completion );
+            msg->packet->completion = NULL;
+            msg->packet->in_completion_queue = 0;
+        }
         free( msg );
         reply->wait_handle = 0;
     }
