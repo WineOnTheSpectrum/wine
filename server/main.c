@@ -230,6 +230,7 @@ int main( int argc, char *argv[] )
     open_master_socket();
 
     if (debug_level) fprintf( stderr, "wineserver: starting (pid=%ld)\n", (long) getpid() );
+    init_monotonic_counter();
     set_current_time();
     init_signals();
     init_memory();

@@ -77,8 +77,7 @@ static const char *debugstr_timeout( const LARGE_INTEGER *timeout )
     return wine_dbgstr_longlong( timeout->QuadPart );
 }
 
-/* return a monotonic time counter, in Win32 ticks */
-static inline ULONGLONG monotonic_counter(void)
+static inline ULONGLONG absoulute_monotonic_counter(void)
 {
     struct timeval now;
 #ifdef __APPLE__
@@ -97,6 +96,13 @@ static inline ULONGLONG monotonic_counter(void)
 #endif
     gettimeofday( &now, 0 );
     return ticks_from_time_t( now.tv_sec ) + now.tv_usec * 10 - server_start_time;
+}
+
+/* return a monotonic time counter, in Win32 ticks */
+static inline ULONGLONG monotonic_counter(void)
+{
+    timeout_t time_offset = 5LL * 60 * TICKSPERSEC;
+    return absoulute_monotonic_counter() - monotonic_start_time + time_offset;
 }
 
 #ifdef __linux__

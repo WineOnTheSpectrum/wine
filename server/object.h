@@ -312,6 +312,8 @@ extern const char *server_argv0;
 
   /* server start time used for GetTickCount() */
 extern timeout_t server_start_time;
+  /* server start time used for monotonic_counter() */
+extern timeout_t monotonic_start_time;
 
 /* object types */
 extern struct type_descr no_type;

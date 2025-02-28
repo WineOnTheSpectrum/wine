@@ -98,6 +98,7 @@ USHORT native_machine = 0;
 BOOL process_exiting = FALSE;
 
 timeout_t server_start_time = 0;  /* time of server startup */
+timeout_t monotonic_start_time = 0; /* monotonic time of server startup */
 
 sigset_t server_block_set;  /* signals to block during server calls */
 static int fd_socket = -1;  /* socket to exchange file descriptors with the server */
@@ -1624,6 +1625,7 @@ size_t server_init_process(void)
         peb->SessionId    = reply->session_id;
         info_size         = reply->info_size;
         server_start_time = reply->server_start;
+        monotonic_start_time = reply->monotonic_start;
         supported_machines_count = wine_server_reply_size( reply ) / sizeof(*supported_machines);
     }
     SERVER_END_REQ;

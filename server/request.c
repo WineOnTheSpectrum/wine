@@ -120,6 +120,7 @@ static const struct fd_ops master_socket_fd_ops =
 struct thread *current = NULL;  /* thread handling the current request */
 unsigned int global_error = 0;  /* global error code for when no thread is current */
 timeout_t server_start_time = 0;  /* server startup time */
+timeout_t monotonic_start_time = 0; /* server monotonic startup time */
 char *server_dir = NULL;   /* server directory */
 int server_dir_fd = -1;    /* file descriptor for the server dir */
 int config_dir_fd = -1;    /* file descriptor for the config dir */
@@ -504,8 +505,7 @@ int send_client_fd( struct process *process, int fd, obj_handle_t handle )
     return -1;
 }
 
-/* return a monotonic time counter */
-timeout_t monotonic_counter(void)
+static timeout_t absolute_monotonic_counter(void)
 {
 #ifdef __APPLE__
     static mach_timebase_info_data_t timebase;
@@ -522,6 +522,18 @@ timeout_t monotonic_counter(void)
         return (timeout_t)ts.tv_sec * TICKS_PER_SEC + ts.tv_nsec / 100;
 #endif
     return current_time - server_start_time;
+}
+
+void init_monotonic_counter(void)
+{
+    monotonic_start_time = absolute_monotonic_counter();
+}
+
+/* return a monotonic time counter */
+timeout_t monotonic_counter(void)
+{
+    timeout_t time_offset = 5LL * 60 * TICKS_PER_SEC;
+    return absolute_monotonic_counter() - monotonic_start_time + time_offset;
 }
 
 static void master_socket_dump( struct object *obj, int verbose )

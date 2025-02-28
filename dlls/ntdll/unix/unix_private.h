@@ -181,6 +181,7 @@ extern USHORT supported_machines[8];
 extern BOOL process_exiting;
 extern HANDLE keyed_event;
 extern timeout_t server_start_time;
+extern timeout_t monotonic_start_time;
 extern sigset_t server_block_set;
 extern struct _KUSER_SHARED_DATA *user_shared_data;
 extern SYSTEM_CPU_INFORMATION cpu_info;

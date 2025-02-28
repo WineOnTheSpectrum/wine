@@ -1620,6 +1620,7 @@ DECL_HANDLER(init_first_thread)
     reply->session_id   = process->session_id;
     reply->info_size    = get_process_startup_info_size( process );
     reply->server_start = server_start_time;
+    reply->monotonic_start = monotonic_start_time;
     set_reply_data( supported_machines,
                     min( supported_machines_count * sizeof(unsigned short), get_reply_max_size() ));
 }
