@@ -758,9 +758,12 @@ static void wayland_pointer_update_constraint(struct wl_surface *wl_surface,
         return;
     }
 
-    needs_lock = wl_surface && (confine_rect || covers_vscreen) &&
-                 !pointer->cursor.wl_surface;
-    needs_confine = wl_surface && confine_rect && pointer->cursor.wl_surface;
+    needs_lock = wl_surface && (((confine_rect || covers_vscreen) &&
+                 !pointer->cursor.wl_surface) || pointer->pending_warp);
+    needs_confine = wl_surface && confine_rect && pointer->cursor.wl_surface &&
+                 !pointer->pending_warp;
+
+    pointer->pending_warp = FALSE;
 
     if (!needs_confine && pointer->zwp_confined_pointer_v1)
     {
@@ -880,6 +883,22 @@ void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor)
 }
 
 /***********************************************************************
+ *           WAYLAND_SetCursorPos
+ */
+BOOL WAYLAND_SetCursorPos(INT x, INT y)
+{
+    struct wayland_pointer *pointer = &process_wayland.pointer;
+    TRACE("warping to %d,%d\n", x, y);
+
+    pthread_mutex_lock(&pointer->mutex);
+    pointer->pending_warp = TRUE;
+    pthread_mutex_unlock(&pointer->mutex);
+
+    reapply_cursor_clipping();
+    return TRUE;
+}
+
+/***********************************************************************
  *	     WAYLAND_ClipCursor
  */
 BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset)
@@ -913,6 +932,16 @@ BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset)
     wayland_win_data_release(data);
 
     pthread_mutex_lock(&pointer->mutex);
+    if (wl_surface && pointer->pending_warp)
+    {
+        /* If a warp is pending, ensure the pointer is locked at least
+         * temporarily before updating the position hint. It'll be unlocked
+         * after setting the position hint if it wasn't locked previously. */
+        wayland_pointer_update_constraint(wl_surface,
+                                          clip ? &confine_rect : NULL,
+                                          covers_vscreen);
+    }
+
     if (wl_surface && hwnd == pointer->constraint_hwnd && pointer->zwp_locked_pointer_v1)
     {
         zwp_locked_pointer_v1_set_cursor_position_hint(
