@@ -62,8 +62,9 @@ struct gamepad
     IGameControllerInputSink IGameControllerInputSink_iface;
     IGamepad IGamepad_iface;
     IGamepad2 IGamepad2_iface;
-    IGameController *IGameController_outer;
-    LONG ref;
+    IInspectable *outer;
+    const WCHAR *class_name;
+    LONG refcount;
 
     IGameControllerProvider *provider;
     IWineGameControllerProvider *wine_provider;
@@ -72,102 +73,29 @@ struct gamepad
     BOOL state_changed;
 };
 
-static inline struct gamepad *impl_from_IGameControllerImpl( IGameControllerImpl *iface )
+static void gamepad_destroy( struct gamepad *impl )
 {
-    return CONTAINING_RECORD( iface, struct gamepad, IGameControllerImpl_iface );
+    if (impl->wine_provider) IWineGameControllerProvider_Release( impl->wine_provider );
+    IGameControllerProvider_Release( impl->provider );
+    free( impl );
 }
 
-static HRESULT WINAPI controller_QueryInterface( IGameControllerImpl *iface, REFIID iid, void **out )
-{
-    struct gamepad *impl = impl_from_IGameControllerImpl( iface );
-
-    TRACE( "iface %p, iid %s, out %p.\n", iface, debugstr_guid( iid ), out );
-
-    if (IsEqualGUID( iid, &IID_IUnknown ) ||
-        IsEqualGUID( iid, &IID_IInspectable ) ||
-        IsEqualGUID( iid, &IID_IGameControllerImpl ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGameControllerImpl_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IGameControllerInputSink ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGameControllerInputSink_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IGamepad ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGamepad_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IGamepad2 ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGamepad2_iface) );
-        return S_OK;
-    }
-
-    FIXME( "%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid( iid ) );
-    *out = NULL;
-    return E_NOINTERFACE;
-}
-
-static ULONG WINAPI controller_AddRef( IGameControllerImpl *iface )
-{
-    struct gamepad *impl = impl_from_IGameControllerImpl( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static ULONG WINAPI controller_Release( IGameControllerImpl *iface )
-{
-    struct gamepad *impl = impl_from_IGameControllerImpl( iface );
-    ULONG ref = InterlockedDecrement( &impl->ref );
-
-    TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
-
-    if (!ref)
-    {
-        if (impl->wine_provider)
-            IWineGameControllerProvider_Release( impl->wine_provider );
-        IGameControllerProvider_Release( impl->provider );
-        free( impl );
-    }
-
-    return ref;
-}
-
-static HRESULT WINAPI controller_GetIids( IGameControllerImpl *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI controller_GetRuntimeClassName( IGameControllerImpl *iface, HSTRING *class_name )
-{
-    return WindowsCreateString( RuntimeClass_Windows_Gaming_Input_Gamepad,
-                                ARRAY_SIZE(RuntimeClass_Windows_Gaming_Input_Gamepad),
-                                class_name );
-}
-
-static HRESULT WINAPI controller_GetTrustLevel( IGameControllerImpl *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_outer_IGameControllerImpl( gamepad, controller,
+    IGameControllerInputSink, input_sink,
+    IGamepad, gamepad,
+    IGamepad2, gamepad2,
+    END, FIXME
+);
 
 static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameController *outer,
                                              IGameControllerProvider *provider )
 {
-    struct gamepad *impl = impl_from_IGameControllerImpl( iface );
+    struct gamepad *impl = gamepad_from_IGameControllerImpl( iface );
     HRESULT hr;
 
     TRACE( "iface %p, outer %p, provider %p.\n", iface, outer, provider );
 
-    impl->IGameController_outer = outer;
+    impl->outer = (IInspectable *)outer;
     IGameControllerProvider_AddRef( (impl->provider = provider) );
 
     hr = IGameControllerProvider_QueryInterface( provider, &IID_IWineGameControllerProvider,
@@ -186,20 +114,7 @@ static HRESULT WINAPI controller_Initialize( IGameControllerImpl *iface, IGameCo
     return hr;
 }
 
-static const struct IGameControllerImplVtbl controller_vtbl =
-{
-    controller_QueryInterface,
-    controller_AddRef,
-    controller_Release,
-    /* IInspectable methods */
-    controller_GetIids,
-    controller_GetRuntimeClassName,
-    controller_GetTrustLevel,
-    /* IGameControllerImpl methods */
-    controller_Initialize,
-};
-
-DEFINE_IINSPECTABLE_OUTER( input_sink, IGameControllerInputSink, struct gamepad, IGameController_outer )
+WIDL_impl_IGameControllerImplVtbl( gamepad, controller );
 
 static HRESULT WINAPI input_sink_OnInputResumed( IGameControllerInputSink *iface, UINT64 timestamp )
 {
@@ -213,25 +128,11 @@ static HRESULT WINAPI input_sink_OnInputSuspended( IGameControllerInputSink *ifa
     return E_NOTIMPL;
 }
 
-static const struct IGameControllerInputSinkVtbl input_sink_vtbl =
-{
-    input_sink_QueryInterface,
-    input_sink_AddRef,
-    input_sink_Release,
-    /* IInspectable methods */
-    input_sink_GetIids,
-    input_sink_GetRuntimeClassName,
-    input_sink_GetTrustLevel,
-    /* IGameControllerInputSink methods */
-    input_sink_OnInputResumed,
-    input_sink_OnInputSuspended,
-};
-
-DEFINE_IINSPECTABLE_OUTER( gamepad, IGamepad, struct gamepad, IGameController_outer )
+WIDL_impl_IGameControllerInputSinkVtbl( gamepad, input_sink );
 
 static HRESULT WINAPI gamepad_get_Vibration( IGamepad *iface, struct GamepadVibration *value )
 {
-    struct gamepad *impl = impl_from_IGamepad( iface );
+    struct gamepad *impl = gamepad_from_IGamepad( iface );
     struct WineGameControllerVibration vibration;
     HRESULT hr;
 
@@ -249,7 +150,7 @@ static HRESULT WINAPI gamepad_get_Vibration( IGamepad *iface, struct GamepadVibr
 
 static HRESULT WINAPI gamepad_put_Vibration( IGamepad *iface, struct GamepadVibration value )
 {
-    struct gamepad *impl = impl_from_IGamepad( iface );
+    struct gamepad *impl = gamepad_from_IGamepad( iface );
     struct WineGameControllerVibration vibration =
     {
         .rumble = value.LeftMotor * 65535.,
@@ -265,7 +166,7 @@ static HRESULT WINAPI gamepad_put_Vibration( IGamepad *iface, struct GamepadVibr
 
 static HRESULT WINAPI gamepad_GetCurrentReading( IGamepad *iface, struct GamepadReading *value )
 {
-    struct gamepad *impl = impl_from_IGamepad( iface );
+    struct gamepad *impl = gamepad_from_IGamepad( iface );
     struct WineGameControllerState state;
     HRESULT hr;
 
@@ -334,22 +235,7 @@ static HRESULT WINAPI gamepad_GetCurrentReading( IGamepad *iface, struct Gamepad
     return hr;
 }
 
-static const struct IGamepadVtbl gamepad_vtbl =
-{
-    gamepad_QueryInterface,
-    gamepad_AddRef,
-    gamepad_Release,
-    /* IInspectable methods */
-    gamepad_GetIids,
-    gamepad_GetRuntimeClassName,
-    gamepad_GetTrustLevel,
-    /* IGamepad methods */
-    gamepad_get_Vibration,
-    gamepad_put_Vibration,
-    gamepad_GetCurrentReading,
-};
-
-DEFINE_IINSPECTABLE_OUTER( gamepad2, IGamepad2, struct gamepad, IGameController_outer )
+WIDL_impl_IGamepadVtbl( gamepad, gamepad );
 
 static HRESULT WINAPI gamepad2_GetButtonLabel( IGamepad2 *iface, GamepadButtons button, GameControllerButtonLabel *value )
 {
@@ -358,18 +244,7 @@ static HRESULT WINAPI gamepad2_GetButtonLabel( IGamepad2 *iface, GamepadButtons 
     return S_OK;
 }
 
-static const struct IGamepad2Vtbl gamepad2_vtbl =
-{
-    gamepad2_QueryInterface,
-    gamepad2_AddRef,
-    gamepad2_Release,
-    /* IInspectable methods */
-    gamepad2_GetIids,
-    gamepad2_GetRuntimeClassName,
-    gamepad2_GetTrustLevel,
-    /* IGamepad2 methods */
-    gamepad2_GetButtonLabel,
-};
+WIDL_impl_IGamepad2Vtbl( gamepad, gamepad2 );
 
 struct gamepad_statics
 {
@@ -377,85 +252,17 @@ struct gamepad_statics
     IGamepadStatics IGamepadStatics_iface;
     IGamepadStatics2 IGamepadStatics2_iface;
     ICustomGameControllerFactory ICustomGameControllerFactory_iface;
-    LONG ref;
+    IAgileObject IAgileObject_iface;
+    const WCHAR *class_name;
 };
 
-static inline struct gamepad_statics *impl_from_IActivationFactory( IActivationFactory *iface )
-{
-    return CONTAINING_RECORD( iface, struct gamepad_statics, IActivationFactory_iface );
-}
-
-static HRESULT WINAPI factory_QueryInterface( IActivationFactory *iface, REFIID iid, void **out )
-{
-    struct gamepad_statics *impl = impl_from_IActivationFactory( iface );
-
-    TRACE( "iface %p, iid %s, out %p.\n", iface, debugstr_guid( iid ), out );
-
-    if (IsEqualGUID( iid, &IID_IUnknown ) ||
-        IsEqualGUID( iid, &IID_IInspectable ) ||
-        IsEqualGUID( iid, &IID_IAgileObject ) ||
-        IsEqualGUID( iid, &IID_IActivationFactory ))
-    {
-        IInspectable_AddRef( (*out = &impl->IActivationFactory_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IGamepadStatics ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGamepadStatics_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_IGamepadStatics2 ))
-    {
-        IInspectable_AddRef( (*out = &impl->IGamepadStatics2_iface) );
-        return S_OK;
-    }
-
-    if (IsEqualGUID( iid, &IID_ICustomGameControllerFactory ))
-    {
-        IInspectable_AddRef( (*out = &impl->ICustomGameControllerFactory_iface) );
-        return S_OK;
-    }
-
-    FIXME( "%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid( iid ) );
-    *out = NULL;
-    return E_NOINTERFACE;
-}
-
-static ULONG WINAPI factory_AddRef( IActivationFactory *iface )
-{
-    struct gamepad_statics *impl = impl_from_IActivationFactory( iface );
-    ULONG ref = InterlockedIncrement( &impl->ref );
-    TRACE( "iface %p increasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static ULONG WINAPI factory_Release( IActivationFactory *iface )
-{
-    struct gamepad_statics *impl = impl_from_IActivationFactory( iface );
-    ULONG ref = InterlockedDecrement( &impl->ref );
-    TRACE( "iface %p decreasing refcount to %lu.\n", iface, ref );
-    return ref;
-}
-
-static HRESULT WINAPI factory_GetIids( IActivationFactory *iface, ULONG *iid_count, IID **iids )
-{
-    FIXME( "iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI factory_GetRuntimeClassName( IActivationFactory *iface, HSTRING *class_name )
-{
-    FIXME( "iface %p, class_name %p stub!\n", iface, class_name );
-    return E_NOTIMPL;
-}
-
-static HRESULT WINAPI factory_GetTrustLevel( IActivationFactory *iface, TrustLevel *trust_level )
-{
-    FIXME( "iface %p, trust_level %p stub!\n", iface, trust_level );
-    return E_NOTIMPL;
-}
+WIDL_impl_static_IActivationFactory( gamepad_statics, factory,
+    IGamepadStatics, statics,
+    IGamepadStatics2, statics2,
+    ICustomGameControllerFactory, controller_factory,
+    IAgileObject, gamepad_statics_agile,
+    END, FIXME
+);
 
 static HRESULT WINAPI factory_ActivateInstance( IActivationFactory *iface, IInspectable **instance )
 {
@@ -463,20 +270,7 @@ static HRESULT WINAPI factory_ActivateInstance( IActivationFactory *iface, IInsp
     return E_NOTIMPL;
 }
 
-static const struct IActivationFactoryVtbl factory_vtbl =
-{
-    factory_QueryInterface,
-    factory_AddRef,
-    factory_Release,
-    /* IInspectable methods */
-    factory_GetIids,
-    factory_GetRuntimeClassName,
-    factory_GetTrustLevel,
-    /* IActivationFactory methods */
-    factory_ActivateInstance,
-};
-
-DEFINE_IINSPECTABLE( statics, IGamepadStatics, struct gamepad_statics, IActivationFactory_iface )
+WIDL_impl_IActivationFactoryVtbl( gamepad_statics, factory );
 
 static HRESULT WINAPI statics_add_GamepadAdded( IGamepadStatics *iface, IEventHandler_Gamepad *handler,
                                                 EventRegistrationToken *token )
@@ -520,28 +314,11 @@ static HRESULT WINAPI statics_get_Gamepads( IGamepadStatics *iface, IVectorView_
     return hr;
 }
 
-static const struct IGamepadStaticsVtbl statics_vtbl =
-{
-    statics_QueryInterface,
-    statics_AddRef,
-    statics_Release,
-    /* IInspectable methods */
-    statics_GetIids,
-    statics_GetRuntimeClassName,
-    statics_GetTrustLevel,
-    /* IGamepadStatics methods */
-    statics_add_GamepadAdded,
-    statics_remove_GamepadAdded,
-    statics_add_GamepadRemoved,
-    statics_remove_GamepadRemoved,
-    statics_get_Gamepads,
-};
-
-DEFINE_IINSPECTABLE( statics2, IGamepadStatics2, struct gamepad_statics, IActivationFactory_iface )
+WIDL_impl_IGamepadStaticsVtbl( gamepad_statics, statics );
 
 static HRESULT WINAPI statics2_FromGameController( IGamepadStatics2 *iface, IGameController *game_controller, IGamepad **value )
 {
-    struct gamepad_statics *impl = impl_from_IGamepadStatics2( iface );
+    struct gamepad_statics *impl = gamepad_statics_from_IGamepadStatics2( iface );
     IGameController *controller;
     HRESULT hr;
 
@@ -557,20 +334,7 @@ static HRESULT WINAPI statics2_FromGameController( IGamepadStatics2 *iface, IGam
     return hr;
 }
 
-static const struct IGamepadStatics2Vtbl statics2_vtbl =
-{
-    statics2_QueryInterface,
-    statics2_AddRef,
-    statics2_Release,
-    /* IInspectable methods */
-    statics2_GetIids,
-    statics2_GetRuntimeClassName,
-    statics2_GetTrustLevel,
-    /* IGamepadStatics2 methods */
-    statics2_FromGameController,
-};
-
-DEFINE_IINSPECTABLE( controller_factory, ICustomGameControllerFactory, struct gamepad_statics, IActivationFactory_iface )
+WIDL_impl_IGamepadStatics2Vtbl( gamepad_statics, statics2 );
 
 static HRESULT WINAPI controller_factory_CreateGameController( ICustomGameControllerFactory *iface, IGameControllerProvider *provider,
                                                                IInspectable **value )
@@ -584,7 +348,8 @@ static HRESULT WINAPI controller_factory_CreateGameController( ICustomGameContro
     impl->IGameControllerInputSink_iface.lpVtbl = &input_sink_vtbl;
     impl->IGamepad_iface.lpVtbl = &gamepad_vtbl;
     impl->IGamepad2_iface.lpVtbl = &gamepad2_vtbl;
-    impl->ref = 1;
+    impl->class_name = RuntimeClass_Windows_Gaming_Input_Gamepad;
+    impl->refcount = 1;
 
     TRACE( "created Gamepad %p\n", impl );
 
@@ -641,20 +406,8 @@ static HRESULT WINAPI controller_factory_OnGameControllerRemoved( ICustomGameCon
     return S_OK;
 }
 
-static const struct ICustomGameControllerFactoryVtbl controller_factory_vtbl =
-{
-    controller_factory_QueryInterface,
-    controller_factory_AddRef,
-    controller_factory_Release,
-    /* IInspectable methods */
-    controller_factory_GetIids,
-    controller_factory_GetRuntimeClassName,
-    controller_factory_GetTrustLevel,
-    /* ICustomGameControllerFactory methods */
-    controller_factory_CreateGameController,
-    controller_factory_OnGameControllerAdded,
-    controller_factory_OnGameControllerRemoved,
-};
+WIDL_impl_ICustomGameControllerFactoryVtbl( gamepad_statics, controller_factory );
+WIDL_impl_IAgileObjectVtbl( gamepad_statics, gamepad_statics_agile );
 
 static struct gamepad_statics gamepad_statics =
 {
@@ -662,7 +415,8 @@ static struct gamepad_statics gamepad_statics =
     {&statics_vtbl},
     {&statics2_vtbl},
     {&controller_factory_vtbl},
-    1,
+    {&gamepad_statics_agile_vtbl},
+    RuntimeClass_Windows_Gaming_Input_Gamepad,
 };
 
 ICustomGameControllerFactory *gamepad_factory = &gamepad_statics.ICustomGameControllerFactory_iface;
