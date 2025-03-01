@@ -164,6 +164,23 @@ static void append_debug_utils_object(const VkDebugUtilsObjectNameInfoEXT *objec
     dst->object_name_len = append_string(object->pObjectName, strings, strings_len);
 }
 
+static void set_transient_client_handle(struct wine_instance *instance, uint64_t client_handle)
+{
+    uint64_t *handle = pthread_getspecific(instance->transient_object_handle);
+    if (!handle)
+    {
+        handle = malloc(sizeof(uint64_t));
+        pthread_setspecific(instance->transient_object_handle, handle);
+    }
+    *handle = client_handle;
+}
+
+static uint64_t get_transient_handle(struct wine_instance *instance)
+{
+    uint64_t *handle = pthread_getspecific(instance->transient_object_handle);
+    return handle && *handle;
+}
+
 static VkBool32 debug_utils_callback_conversion(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT message_types,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
@@ -174,6 +191,8 @@ static VkBool32 debug_utils_callback_conversion(VkDebugUtilsMessageSeverityFlagB
     struct wine_debug_utils_messenger *object;
     struct debug_utils_object dummy_object, *objects;
     struct debug_utils_label dummy_label, *labels;
+    VkInstance instance;
+    struct wine_instance *wine_instance;
     UINT size, strings_len;
     char *ptr, *strings;
     ULONG ret_len;
@@ -183,12 +202,15 @@ static VkBool32 debug_utils_callback_conversion(VkDebugUtilsMessageSeverityFlagB
     TRACE("%i, %u, %p, %p\n", severity, message_types, callback_data, user_data);
 
     object = user_data;
+    instance = object->instance->host.instance;
 
-    if (!object->instance->host.instance)
+    if (!instance)
     {
         /* instance wasn't yet created, this is a message from the host loader */
         return VK_FALSE;
     }
+
+    wine_instance = CONTAINING_RECORD(object->instance, struct wine_instance, obj);
 
     if ((address = callback_data->pNext))
     {
@@ -246,6 +268,8 @@ static VkBool32 debug_utils_callback_conversion(VkDebugUtilsMessageSeverityFlagB
         if (wine_vk_is_type_wrapped(objects[i].object_type))
         {
             objects[i].object_handle = client_handle_from_host(object->instance, objects[i].object_handle);
+            if (!objects[i].object_handle)
+                objects[i].object_handle = get_transient_handle(wine_instance);
             if (!objects[i].object_handle)
             {
                 WARN("handle conversion failed 0x%s\n", wine_dbgstr_longlong(callback_data->pObjects[i].objectHandle));
@@ -1004,6 +1028,8 @@ VkResult wine_vkCreateInstance(const VkInstanceCreateInfo *create_info,
             instance->quirks |= WINEVULKAN_QUIRK_GET_DEVICE_PROC_ADDR;
     }
 
+    pthread_key_create(&instance->transient_object_handle, free);
+
     TRACE("Created instance %p, host_instance %p.\n", instance, instance->obj.host.instance);
 
     for (i = 0; i < instance->phys_dev_count; i++)
@@ -1053,6 +1079,8 @@ void wine_vkDestroyInstance(VkInstance client_instance, const VkAllocationCallba
         wine_phys_dev_cleanup(&instance->phys_devs[i]);
     }
     vulkan_instance_remove_object(&instance->obj, &instance->obj.obj);
+
+    pthread_key_delete(instance->transient_object_handle);
 
     if (instance->objects.compare) pthread_rwlock_destroy(&instance->objects_lock);
     free(instance->utils_messengers);
@@ -1645,6 +1673,7 @@ VkResult wine_vkAllocateMemory(VkDevice client_device, const VkMemoryAllocateInf
     struct vulkan_device *device = vulkan_device_from_handle(client_device);
     struct wine_phys_dev *physical_device = CONTAINING_RECORD(device->physical_device, struct wine_phys_dev, obj);
     struct vulkan_instance *instance = device->physical_device->instance;
+    struct wine_instance *wine_instance = CONTAINING_RECORD(instance, struct wine_instance, obj);
     struct wine_device_memory *memory;
     VkMemoryAllocateInfo info = *alloc_info;
     VkImportMemoryHostPointerInfoEXT host_pointer_info;
@@ -1724,6 +1753,7 @@ VkResult wine_vkAllocateMemory(VkDevice client_device, const VkMemoryAllocateInf
     if (!(memory = malloc(sizeof(*memory))))
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+    set_transient_client_handle(wine_instance, (uintptr_t)memory);
     result = device->p_vkAllocateMemory(device->host.device, &info, NULL, &host_device_memory);
     if (result != VK_SUCCESS)
     {
