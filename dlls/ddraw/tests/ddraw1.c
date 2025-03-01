@@ -25,6 +25,7 @@
 #include <math.h>
 #include "ddrawi.h"
 #include "d3dhal.h"
+#include "shellscalingapi.h"
 
 static BOOL is_ddraw64 = sizeof(DWORD) != sizeof(DWORD *);
 static DEVMODEW registry_mode;
@@ -15941,6 +15942,8 @@ START_TEST(ddraw1)
     DEVMODEW current_mode;
     IDirectDraw *ddraw;
     HMODULE dwmapi;
+
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
     if (!(ddraw = create_ddraw()))
     {
