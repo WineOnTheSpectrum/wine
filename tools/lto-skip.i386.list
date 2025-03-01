@@ -1,0 +1,11 @@
+dlls/dinput/dinput.c
+dlls/msvcrt/exception_ptr.c
+dlls/msvcrt/file.c
+dlls/msvcrt/misc.c
+dlls/msvcrt/string.c
+dlls/ntdll/large_int.c
+dlls/ntdll/loader.c
+dlls/ntdll/math.c
+dlls/ntdll/resource.c
+dlls/ntdll/rtl.c
+dlls/ntdll/unix/loader.c

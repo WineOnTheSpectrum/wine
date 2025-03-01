@@ -56,3 +56,7 @@ SOURCES = \
 	vulkan.c \
 	window.c \
 	winstation.c
+
+LTO_SKIP_SRC = main.c
+i386_LTO_SKIP_SRC = dibdrv/primitives.c winstation.c
+x86_64_LTO_SKIP_SRC = dibdrv/primitives.c winstation.c

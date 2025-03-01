@@ -5,3 +5,5 @@ IMPORTS   = ntoskrnl
 SOURCES = \
 	hal.c \
 	version.rc
+
+i386_LTO_SKIP = yes

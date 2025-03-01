@@ -5,3 +5,5 @@ EXTRADLLFLAGS = -Wl,--subsystem,native
 SOURCES = \
 	main.c \
 	winexinput.rc
+
+i386_LTO_SKIP = yes

@@ -1,0 +1,17 @@
+dlls/msvcrt/except_arm.c
+dlls/msvcrt/except_arm64.c
+dlls/msvcrt/except_arm64ec.c
+dlls/msvcrt/except_i386.c
+dlls/msvcrt/except_x86_64.c
+dlls/msvcrt/math.c
+dlls/ntdll/relay.c
+dlls/ntdll/signal_arm.c
+dlls/ntdll/signal_arm64.c
+dlls/ntdll/signal_arm64ec.c
+dlls/ntdll/signal_i386.c
+dlls/ntdll/signal_x86_64.c
+dlls/ntdll/unix/signal_arm.c
+dlls/ntdll/unix/signal_arm64.c
+dlls/ntdll/unix/signal_i386.c
+dlls/ntdll/unix/signal_x86_64.c
+dlls/ntdll/unix/system.c

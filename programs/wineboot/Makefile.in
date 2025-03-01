@@ -9,3 +9,6 @@ SOURCES = \
 	wineboot.c \
 	wineboot.man.in \
 	wineboot.rc
+
+i386_LTO_SKIP_SRC = wineboot.c
+x86_64_LTO_SKIP_SRC = wineboot.c

@@ -49,3 +49,5 @@ SOURCES = \
 	upgrade.c \
 	where.c \
 	winemsi.idl
+
+i386_LTO_SKIP_SRC = custom.c

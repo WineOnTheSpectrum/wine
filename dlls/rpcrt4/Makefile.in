@@ -28,3 +28,5 @@ SOURCES = \
 	rpcrt4_main.c \
 	thunks.c \
 	version.rc
+
+LTO_SKIP_SRC = ndr_stubless.c thunks.c

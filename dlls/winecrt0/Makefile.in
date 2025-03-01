@@ -21,3 +21,8 @@ SOURCES = \
 	setjmp.c \
 	stub.c \
 	unix_lib.c
+
+LTO_SKIP_SRC = setjmp.c
+i386_LTO_SKIP_SRC = exception.c
+x86_64_LTO_SKIP_SRC = exception.c
+arm64ec_LTO_SKIP_SRC = arm64ec.c unix_lib.c

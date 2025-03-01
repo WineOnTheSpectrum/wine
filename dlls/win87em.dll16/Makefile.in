@@ -3,3 +3,5 @@ EXTRADLLFLAGS = -m16
 
 SOURCES = \
 	win87em.c
+
+LTO_SKIP = yes

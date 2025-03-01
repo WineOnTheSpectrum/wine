@@ -9,3 +9,5 @@ SOURCES = \
 	message16.c \
 	mmio16.c \
 	mmsystem.c
+
+LTO_SKIP_SRC = mmsystem.c

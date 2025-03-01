@@ -3,3 +3,5 @@ EXTRADLLFLAGS = -m16
 
 SOURCES = \
 	system.c
+
+LTO_SKIP = yes

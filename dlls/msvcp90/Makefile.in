@@ -12,3 +12,5 @@ SOURCES = \
 	misc.c \
 	msvcp_main.c \
 	string.c
+
+i386_LTO_SKIP_SRC = exception.c msvcp_main.c

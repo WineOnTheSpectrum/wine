@@ -29,3 +29,5 @@ SOURCES = \
 	xrandr.c \
 	xrender.c \
 	xvidmode.c
+
+i386_LTO_SKIP_SRC = opengl.c

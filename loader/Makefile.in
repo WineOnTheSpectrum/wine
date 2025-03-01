@@ -19,3 +19,5 @@ wine_LDFLAGS = $(WINELOADER_LDFLAGS) $(LDEXECFLAGS) $(PTHREAD_LIBS)
 wine_preloader_OBJS = preloader.o preloader_mac.o
 wine_preloader_DEPS = $(WINELOADER_DEPENDS)
 wine_preloader_LDFLAGS = $(WINEPRELOADER_LDFLAGS)
+
+LTO_SKIP_SRC = preloader.c preloader_mac.c

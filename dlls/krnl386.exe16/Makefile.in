@@ -35,3 +35,5 @@ SOURCES = \
 	version.rc \
 	vxd.c \
 	wowthunk.c
+
+LTO_SKIP_SRC = instr.c ne_module.c relay.c selector.c thunk.c wowthunk.c

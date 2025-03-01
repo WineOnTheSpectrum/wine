@@ -10,3 +10,5 @@ SOURCES = \
 	plugplay.idl \
 	pnp.c \
 	sync.c
+
+LTO_SKIP_SRC = instr.c ntoskrnl.c

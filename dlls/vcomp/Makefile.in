@@ -3,3 +3,7 @@ MODULE = vcomp.dll
 SOURCES = \
 	fork.c \
 	main.c
+
+LTO_SKIP_SRC = fork.c
+i386_LTO_SKIP = yes
+x86_64_LTO_SKIP = yes
