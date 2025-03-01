@@ -2864,7 +2864,7 @@ static void test_limits(void)
      * (approximately sampler 40) causes memory corruption in Windows, so
      * there is no bounds checking. */
     IDirect3DTexture9_Release(texture);
-    refcount = IDirect3D9_Release(device);
+    refcount = IDirect3DDevice9_Release(device);
     ok(!refcount, "Device has %lu references left.\n", refcount);
 cleanup:
     IDirect3D9_Release(d3d);
@@ -2958,7 +2958,7 @@ static void test_depthstenciltest(void)
     ok(hr == S_OK, "Got hr %#lx.\n", hr);
 
     if(pDepthStencil) IDirect3DSurface9_Release(pDepthStencil);
-    IDirect3D9_Release(pDevice);
+    IDirect3DDevice9_Release(pDevice);
 
     /* Now see if autodepthstencil disable is honored. First, without a format set */
     ZeroMemory( &d3dpp, sizeof(d3dpp) );
@@ -2993,7 +2993,7 @@ static void test_depthstenciltest(void)
     ok(hr == S_OK, "Got hr %#lx.\n", hr);
     ok(state == D3DZB_FALSE, "D3DRS_ZENABLE is %s\n", state == D3DZB_FALSE ? "D3DZB_FALSE" : (state == D3DZB_TRUE ? "D3DZB_TRUE" : "D3DZB_USEW"));
 
-    IDirect3D9_Release(pDevice);
+    IDirect3DDevice9_Release(pDevice);
 
     /* Next, try EnableAutoDepthStencil FALSE with a depth stencil format set */
     ZeroMemory( &d3dpp, sizeof(d3dpp) );
@@ -3031,7 +3031,7 @@ cleanup:
     if(pDepthStencil) IDirect3DSurface9_Release(pDepthStencil);
     if (pDevice)
     {
-        ULONG refcount = IDirect3D9_Release(pDevice);
+        ULONG refcount = IDirect3DDevice9_Release(pDevice);
         ok(!refcount, "Device has %lu references left.\n", refcount);
     }
     IDirect3D9_Release(d3d);
@@ -8402,7 +8402,7 @@ static void test_surface_alignment(void)
             continue;
         }
 
-        level_count = IDirect3DBaseTexture9_GetLevelCount(texture);
+        level_count = IDirect3DTexture9_GetLevelCount(texture);
         for (j = 0; j < level_count; ++j)
         {
             IDirect3DTexture9_GetLevelDesc(texture, j, &desc);
