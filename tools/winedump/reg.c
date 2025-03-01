@@ -134,12 +134,13 @@ static unsigned int header_checksum(const header *h)
     return checksum;
 }
 
-enum FileSig get_kind_reg(void)
+enum FileSig get_kind_reg( int fd )
 {
-    const header *hdr;
+    header hdr;
 
-    hdr = PRD(0, BLOCK_SIZE);
-    if (hdr && !memcmp(&hdr->signature, "regf", sizeof(hdr->signature)))
+    if (read( fd, &hdr, sizeof(hdr) ) == sizeof(hdr) &&
+        BLOCK_SIZE <= lseek( fd, 0, SEEK_END ) &&
+        !memcmp(&hdr.signature, "regf", sizeof(hdr.signature)))
         return SIG_REG;
     return SIG_UNKNOWN;
 }

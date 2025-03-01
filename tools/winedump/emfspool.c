@@ -164,12 +164,12 @@ static unsigned long dump_emfspool_record(unsigned long off)
     return off + sizeof(*hdr) + hdr->cjSize;
 }
 
-enum FileSig get_kind_emfspool(void)
+enum FileSig get_kind_emfspool(int fd)
 {
-    const header *hdr;
+    header hdr;
 
-    hdr = PRD(0, sizeof(*hdr));
-    if (hdr && hdr->dwVersion == EMFSPOOL_VERSION)
+    if (read(fd, &hdr, sizeof(hdr)) == sizeof(hdr) &&
+        hdr.dwVersion == EMFSPOOL_VERSION)
         return SIG_EMFSPOOL;
     return SIG_UNKNOWN;
 }

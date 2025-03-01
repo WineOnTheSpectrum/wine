@@ -494,12 +494,12 @@ unsigned long dump_emfrecord(const char *pfx, unsigned long offset)
     return offset;
 }
 
-enum FileSig get_kind_emf(void)
+enum FileSig get_kind_emf(int fd)
 {
-    const ENHMETAHEADER*        hdr;
+    ENHMETAHEADER hdr;
 
-    hdr = PRD(0, sizeof(*hdr));
-    if (hdr && hdr->iType == EMR_HEADER && hdr->dSignature == ENHMETA_SIGNATURE)
+    if (read(fd, &hdr, sizeof(hdr)) == sizeof(hdr) &&
+        hdr.iType == EMR_HEADER && hdr.dSignature == ENHMETA_SIGNATURE)
         return SIG_EMF;
     return SIG_UNKNOWN;
 }

@@ -81,11 +81,13 @@ typedef struct
 
 /* FIXME: recognize and dump also NE/PE wrapped fonts */
 
-enum FileSig get_kind_fnt(void)
+enum FileSig get_kind_fnt(int fd)
 {
-    const WINFNT *fnt = PRD(0, sizeof(WINFNT));
-    if (fnt && (fnt->dfVersion == 0x200 || fnt->dfVersion == 0x300) &&
-        PRD(0, fnt->dfSize) != NULL)
+    WINFNT fnt;
+
+    if (read(fd, &fnt, sizeof(fnt)) == sizeof(fnt) &&
+        (fnt.dfVersion == 0x200 || fnt.dfVersion == 0x300) &&
+        fnt.dfSize <= lseek(fd, 0, SEEK_END))
         return SIG_FNT;
     return SIG_UNKNOWN;
 }
