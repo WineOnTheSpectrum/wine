@@ -648,7 +648,10 @@ static NTSTATUS build_report_descriptor(struct unix_device *iface, struct udev_d
         if (test_bit(ffbits, FF_CONSTANT)) usages[count++] = PID_USAGE_ET_CONSTANT_FORCE;
         if (test_bit(ffbits, FF_RAMP)) usages[count++] = PID_USAGE_ET_RAMP;
 
-        if (!hid_device_add_physical(iface, usages, count))
+        /* Hardcode 2 for now until Linux FF api exposes number of FFB axes
+         * (previously hardcoded number of PID axes in Wine)
+         */
+        if (!hid_device_add_physical(iface, usages, count, 2))
             return STATUS_NO_MEMORY;
     }
 
