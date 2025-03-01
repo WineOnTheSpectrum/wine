@@ -2087,6 +2087,7 @@ AC_CHECK_FUNCS(\
 	port_create \
 	posix_fadvise \
 	posix_fallocate \
+	fallocate \
 	prctl \
 	sched_getcpu \
 	sched_yield \
