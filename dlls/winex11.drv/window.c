@@ -1556,9 +1556,9 @@ static void unmap_window( HWND hwnd )
     release_win_data( data );
 }
 
-static UINT window_update_client_state( struct x11drv_win_data *data )
+static UINT window_update_client_state( UINT old_style, struct x11drv_win_data *data )
 {
-    UINT old_style = NtUserGetWindowLongW( data->hwnd, GWL_STYLE ), new_style;
+    UINT new_style;
 
     if (!data->managed) return 0; /* unmanaged windows are managed by the Win32 side */
     if (data->desired_state.wm_state == WithdrawnState) return 0; /* ignore state changes on invisible windows */
@@ -1601,11 +1601,11 @@ static UINT window_update_client_state( struct x11drv_win_data *data )
     return 0;
 }
 
-static UINT window_update_client_config( struct x11drv_win_data *data )
+static UINT window_update_client_config( UINT old_style, struct x11drv_win_data *data )
 {
     static const UINT fullscreen_mask = (1 << NET_WM_STATE_MAXIMIZED) | (1 << NET_WM_STATE_FULLSCREEN);
-    UINT old_style = NtUserGetWindowLongW( data->hwnd, GWL_STYLE ), flags;
     RECT rect, old_rect = data->rects.window, new_rect;
+    UINT flags;
 
     if (!data->managed) return 0; /* unmanaged windows are managed by the Win32 side */
     if (data->desired_state.wm_state != NormalState) return 0; /* ignore config changes on invisible/minimized windows */
@@ -1653,12 +1653,13 @@ static UINT window_update_client_config( struct x11drv_win_data *data )
  */
 BOOL X11DRV_GetWindowStateUpdates( HWND hwnd, UINT *state_cmd, UINT *config_cmd, RECT *rect )
 {
+    UINT old_style = NtUserGetWindowLongW( hwnd, GWL_STYLE );
     struct x11drv_win_data *data;
 
     if (!(data = get_win_data( hwnd ))) return FALSE;
 
-    *state_cmd = window_update_client_state( data );
-    *config_cmd = window_update_client_config( data );
+    *state_cmd = window_update_client_state( old_style, data );
+    *config_cmd = window_update_client_config( old_style, data );
     *rect = window_rect_from_visible( &data->rects, data->current_state.rect );
 
     release_win_data( data );
