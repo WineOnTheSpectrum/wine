@@ -156,7 +156,7 @@ static unsigned int find_host_window_child( struct host_window *win, Window chil
     return i;
 }
 
-static int host_window_error( Display *display, XErrorEvent *event, void *arg )
+static int bad_window_error( Display *display, XErrorEvent *event, void *arg )
 {
     return (event->error_code == BadWindow);
 }
@@ -175,7 +175,7 @@ struct host_window *get_host_window( Window window, BOOL create )
     if (!create || !(win = calloc( 1, sizeof(*win) ))) return NULL;
     win->window = window;
 
-    X11DRV_expect_error( data->display, host_window_error, NULL );
+    X11DRV_expect_error( data->display, bad_window_error, NULL );
     XSelectInput( data->display, window, StructureNotifyMask );
     if (!XGetWindowAttributes( data->display, window, &attr )) memset( &attr, 0, sizeof(attr) );
     if (!XQueryTree( data->display, window, &xroot, &xparent, &xchildren, &nchildren )) xparent = root_window;
@@ -306,6 +306,28 @@ static void remove_startup_notification(Display *display, Window window)
         XSendEvent( display, DefaultRootWindow( display ), False, PropertyChangeMask, &xevent );
         xevent.xclient.message_type = x11drv_atom(_NET_STARTUP_INFO);
     }
+}
+
+HWND hwnd_from_window( Display *display, Window window )
+{
+    unsigned long count, remaining;
+    unsigned long *xhwnd;
+    HWND hwnd = (HWND)-1;
+    int format;
+    Atom type;
+
+    if (!window) return 0;
+    if (!XFindContext( display, window, winContext, (char **)&hwnd )) return hwnd;
+
+    X11DRV_expect_error( display, bad_window_error, NULL );
+    if (!XGetWindowProperty( display, window, x11drv_atom(_WINE_HWND), 0, 65536, False, XA_CARDINAL,
+                             &type, &format, &count, &remaining, (unsigned char **)&xhwnd ))
+    {
+        if (type == XA_CARDINAL && format == 32) hwnd = ULongToHandle(*xhwnd);
+        XFree( xhwnd );
+    }
+    if (X11DRV_check_error()) return (HWND)-1;
+    return hwnd;
 }
 
 static BOOL is_managed( HWND hwnd )
@@ -1651,54 +1673,82 @@ static UINT window_update_client_config( struct x11drv_win_data *data )
 /***********************************************************************
  *      GetWindowStateUpdates   (X11DRV.@)
  */
-BOOL X11DRV_GetWindowStateUpdates( HWND hwnd, UINT *state_cmd, UINT *config_cmd, RECT *rect )
+BOOL X11DRV_GetWindowStateUpdates( HWND hwnd, UINT *state_cmd, UINT *config_cmd, RECT *rect, HWND *foreground )
 {
+    struct x11drv_thread_data *thread_data = x11drv_thread_data();
     struct x11drv_win_data *data;
+    Window window;
 
-    if (!(data = get_win_data( hwnd ))) return FALSE;
+    *state_cmd = *config_cmd = 0;
+    *foreground = 0;
 
-    *state_cmd = window_update_client_state( data );
-    *config_cmd = window_update_client_config( data );
-    *rect = window_rect_from_visible( &data->rects, data->current_state.rect );
+    if (NtUserGetWindowThread( NtUserGetForegroundWindow(), NULL ) == GetCurrentThreadId() &&
+        !thread_data->net_active_window_serial && (window = thread_data->current_net_active_window))
+    {
+        *foreground = hwnd_from_window( thread_data->display, window );
+        if (*foreground == (HWND)-1) *foreground = NtUserGetDesktopWindow();
+        if (*foreground == NtUserGetForegroundWindow()) *foreground = 0;
+    }
 
-    release_win_data( data );
+    if ((data = get_win_data( hwnd )))
+    {
+        *state_cmd = window_update_client_state( data );
+        *config_cmd = window_update_client_config( data );
+        *rect = window_rect_from_visible( &data->rects, data->current_state.rect );
+        release_win_data( data );
+    }
 
-    TRACE( "hwnd %p, returning state_cmd %#x, config_cmd %#x, rect %s\n", hwnd, *state_cmd, *config_cmd, wine_dbgstr_rect(rect) );
-    return *state_cmd || *config_cmd;
+    if (!*state_cmd && !*config_cmd && !*foreground) return FALSE;
+    TRACE( "hwnd %p, returning state_cmd %#x, config_cmd %#x, rect %s, foreground %p\n",
+           hwnd, *state_cmd, *config_cmd, wine_dbgstr_rect(rect), *foreground );
+    return TRUE;
+}
+
+static BOOL handle_state_change( unsigned long serial, unsigned long *expect_serial, UINT size, const void *value,
+                                 void *desired, void *pending, void *current, const char *expected,
+                                 const char *prefix, const char *received, const char *reason )
+{
+    if (serial < *expect_serial) reason = "old ";
+    else if (!*expect_serial && !memcmp( current, value, size )) reason = "no-op ";
+
+    if (reason)
+    {
+        WARN( "Ignoring %s%s%s%s\n", prefix, reason, received, expected );
+        return FALSE;
+    }
+
+    if (!*expect_serial) reason = "unexpected ";
+    else if (memcmp( pending, value, size )) reason = "mismatch ";
+
+    if (!reason) TRACE( "%s%s%s\n", prefix, received, expected );
+    else
+    {
+        WARN( "%s%s%s%s\n", prefix, reason, received, expected );
+        /* avoid requesting the same state again */
+        memcpy( desired, value, size );
+        memcpy( pending, value, size );
+    }
+
+    memcpy( current, value, size );
+    *expect_serial = 0;
+    return TRUE;
 }
 
 void window_wm_state_notify( struct x11drv_win_data *data, unsigned long serial, UINT value )
 {
     UINT *desired = &data->desired_state.wm_state, *pending = &data->pending_state.wm_state, *current = &data->current_state.wm_state;
     unsigned long *expect_serial = &data->wm_state_serial;
-    const char *reason = NULL, *expected, *received;
+    const char *reason = NULL, *expected, *received, *prefix;
 
+    prefix = wine_dbg_sprintf( "window %p/%lx ", data->hwnd, data->whole_window );
     received = wine_dbg_sprintf( "WM_STATE %#x/%lu", value, serial );
     expected = *expect_serial ? wine_dbg_sprintf( ", expected %#x/%lu", *pending, *expect_serial ) : "";
-
-    if (serial < *expect_serial) reason = "old ";
-    else if (!*expect_serial && *current == value) reason = "no-op ";
     /* ignore Metacity/Mutter transient NormalState during WithdrawnState <-> IconicState transitions */
-    else if (value == NormalState && *current + *pending == IconicState) reason = "transient ";
+    if (value == NormalState && *current + *pending == IconicState) reason = "transient ";
 
-    if (reason)
-    {
-        WARN( "Ignoring window %p/%lx %s%s%s\n", data->hwnd, data->whole_window, reason, received, expected );
+    if (!handle_state_change( serial, expect_serial, sizeof(value), &value, desired, pending,
+                              current, expected, prefix, received, reason ))
         return;
-    }
-
-    if (!*expect_serial) reason = "unexpected ";
-    else if (*pending != value) reason = "mismatch ";
-
-    if (!reason) TRACE( "window %p/%lx, %s%s\n", data->hwnd, data->whole_window, received, expected );
-    else
-    {
-        WARN( "window %p/%lx, %s%s%s\n", data->hwnd, data->whole_window, reason, received, expected );
-        *desired = *pending = value; /* avoid requesting the same state again */
-    }
-
-    *current = value;
-    *expect_serial = 0;
 
     /* send any pending changes from the desired state */
     window_set_wm_state( data, data->desired_state.wm_state );
@@ -1710,32 +1760,15 @@ void window_net_wm_state_notify( struct x11drv_win_data *data, unsigned long ser
 {
     UINT *desired = &data->desired_state.net_wm_state, *pending = &data->pending_state.net_wm_state, *current = &data->current_state.net_wm_state;
     unsigned long *expect_serial = &data->net_wm_state_serial;
-    const char *reason = NULL, *expected, *received;
+    const char *expected, *received, *prefix;
 
+    prefix = wine_dbg_sprintf( "window %p/%lx ", data->hwnd, data->whole_window );
     received = wine_dbg_sprintf( "_NET_WM_STATE %#x/%lu", value, serial );
     expected = *expect_serial ? wine_dbg_sprintf( ", expected %#x/%lu", *pending, *expect_serial ) : "";
 
-    if (serial < *expect_serial) reason = "old ";
-    else if (!*expect_serial && *current == value) reason = "no-op ";
-
-    if (reason)
-    {
-        WARN( "Ignoring window %p/%lx %s%s%s\n", data->hwnd, data->whole_window, reason, received, expected );
+    if (!handle_state_change( serial, expect_serial, sizeof(value), &value, desired, pending,
+                              current, expected, prefix, received, NULL ))
         return;
-    }
-
-    if (!*expect_serial) reason = "unexpected ";
-    else if (*pending != value) reason = "mismatch ";
-
-    if (!reason) TRACE( "window %p/%lx, %s%s\n", data->hwnd, data->whole_window, received, expected );
-    else
-    {
-        WARN( "window %p/%lx, %s%s%s\n", data->hwnd, data->whole_window, reason, received, expected );
-        *desired = *pending = value; /* avoid requesting the same state again */
-    }
-
-    *current = value;
-    *expect_serial = 0;
 
     /* send any pending changes from the desired state */
     window_set_wm_state( data, data->desired_state.wm_state );
@@ -1747,32 +1780,62 @@ void window_configure_notify( struct x11drv_win_data *data, unsigned long serial
 {
     RECT *desired = &data->desired_state.rect, *pending = &data->pending_state.rect, *current = &data->current_state.rect;
     unsigned long *expect_serial = &data->configure_serial;
-    const char *reason = NULL, *expected, *received;
+    const char *expected, *received, *prefix;
 
+    prefix = wine_dbg_sprintf( "window %p/%lx ", data->hwnd, data->whole_window );
     received = wine_dbg_sprintf( "config %s/%lu", wine_dbgstr_rect(value), serial );
     expected = *expect_serial ? wine_dbg_sprintf( ", expected %s/%lu", wine_dbgstr_rect(pending), *expect_serial ) : "";
 
-    if (serial < *expect_serial) reason = "old ";
-    else if (!*expect_serial && EqualRect( current, value )) reason = "no-op ";
+    handle_state_change( serial, expect_serial, sizeof(*value), value, desired, pending,
+                         current, expected, prefix, received, NULL );
+}
 
-    if (reason)
-    {
-        WARN( "Ignoring window %p/%lx %s%s%s\n", data->hwnd, data->whole_window, reason, received, expected );
+void net_active_window_notify( unsigned long serial, Window value, Time time )
+{
+    struct x11drv_thread_data *data = x11drv_thread_data();
+    Window *desired = &data->desired_net_active_window, *pending = &data->pending_net_active_window, *current = &data->current_net_active_window;
+    unsigned long *expect_serial = &data->net_active_window_serial;
+    const char *expected, *received;
+
+    received = wine_dbg_sprintf( "_NET_ACTIVE_WINDOW %lx/%lu", value, serial );
+    expected = *expect_serial ? wine_dbg_sprintf( ", expected %lx/%lu", *pending, *expect_serial ) : "";
+    if (!handle_state_change( serial, expect_serial, sizeof(value), &value, desired, pending,
+                              current, expected, "", received, NULL ))
         return;
-    }
 
-    if (!*expect_serial) reason = "unexpected ";
-    else if (!EqualRect( pending, value )) reason = "mismatch ";
+    TRACE( "_NET_ACTIVE_WINDOW changed to %p/%lx\n", hwnd_from_window( data->display, value ), value );
+}
 
-    if (!reason) TRACE( "window %p/%lx, %s%s\n", data->hwnd, data->whole_window, received, expected );
-    else
-    {
-        WARN( "window %p/%lx, %s%s%s\n", data->hwnd, data->whole_window, reason, received, expected );
-        *desired = *pending = *value; /* avoid requesting the same state again */
-    }
+void set_net_active_window( HWND hwnd, HWND previous )
+{
+    struct x11drv_thread_data *data = x11drv_thread_data();
+    Window window;
+    XEvent xev;
 
-    *current = *value;
-    *expect_serial = 0;
+    if (hwnd == NtUserGetDesktopWindow()) return;
+    if (!is_netwm_supported( x11drv_atom(_NET_ACTIVE_WINDOW) )) return;
+    if (!(window = X11DRV_get_whole_window( hwnd ))) return;
+    if (data->pending_net_active_window == window) return;
+
+    xev.xclient.type = ClientMessage;
+    xev.xclient.window = window;
+    xev.xclient.message_type = x11drv_atom(_NET_ACTIVE_WINDOW);
+    xev.xclient.serial = 0;
+    xev.xclient.display = data->display;
+    xev.xclient.send_event = True;
+    xev.xclient.format = 32;
+    xev.xclient.data.l[0] = 2; /* source: pager */
+    xev.xclient.data.l[1] = 0; /* timestamp */
+    xev.xclient.data.l[2] = X11DRV_get_whole_window( previous ); /* current active */
+    xev.xclient.data.l[3] = 0;
+    xev.xclient.data.l[4] = 0;
+
+    data->pending_net_active_window = window;
+    data->net_active_window_serial = NextRequest( data->display );
+    TRACE( "requesting _NET_ACTIVE_WINDOW %p/%lx serial %lu\n", hwnd, window, data->net_active_window_serial );
+    XSendEvent( data->display, DefaultRootWindow( data->display ), False,
+                SubstructureRedirectMask | SubstructureNotifyMask, &xev );
+    XFlush( data->display );
 }
 
 BOOL window_has_pending_wm_state( HWND hwnd, UINT state )
@@ -2120,6 +2183,7 @@ Window create_client_window( HWND hwnd, const XVisualInfo *visual, Colormap colo
  */
 static void create_whole_window( struct x11drv_win_data *data )
 {
+    unsigned long xhwnd = (UINT_PTR)data->hwnd;
     int cx, cy, mask;
     XSetWindowAttributes attr;
     WCHAR text[1024];
@@ -2154,6 +2218,8 @@ static void create_whole_window( struct x11drv_win_data *data )
                                         cx, cy, 0, data->vis.depth, InputOutput,
                                         data->vis.visual, mask, &attr );
     if (!data->whole_window) goto done;
+    XChangeProperty( data->display, data->whole_window, x11drv_atom(_WINE_HWND), XA_CARDINAL, 32,
+                     PropModeReplace, (unsigned char *)&xhwnd, 1 );
     SetRect( &data->current_state.rect, pos.x, pos.y, pos.x + cx, pos.y + cy );
     data->pending_state.rect = data->current_state.rect;
     data->desired_state.rect = data->current_state.rect;
@@ -3295,7 +3361,7 @@ LRESULT X11DRV_WindowMessage( HWND hwnd, UINT msg, WPARAM wp, LPARAM lp )
 /***********************************************************************
  *              is_netwm_supported
  */
-static BOOL is_netwm_supported( Atom atom )
+BOOL is_netwm_supported( Atom atom )
 {
     struct x11drv_thread_data *data = x11drv_thread_data();
     BOOL supported;
