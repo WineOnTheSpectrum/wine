@@ -21,6 +21,7 @@
  */
 
 #include "../tools.h"
+#include "../lto.h"
 
 #ifndef DECLSPEC_NORETURN
 # if defined(_MSC_VER) && (_MSC_VER >= 1200) && !defined(MIDL_PASS)
