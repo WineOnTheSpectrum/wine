@@ -5075,7 +5075,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* BMP */
             /* Clsid */              { 0x557cf400, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cabU, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatBMP,
             /* CodecName */          bmp_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  bmp_format,
@@ -5095,7 +5095,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* JPEG */
             /* Clsid */              { 0x557cf401, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3caeU, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatJPEG,
             /* CodecName */          jpeg_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  jpeg_format,
@@ -5115,7 +5115,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* GIF */
             /* Clsid */              { 0x557cf402, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cb0U, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatGIF,
             /* CodecName */          gif_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  gif_format,
@@ -5135,7 +5135,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* TIFF */
             /* Clsid */              { 0x557cf405, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cb1U, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatTIFF,
             /* CodecName */          tiff_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  tiff_format,
@@ -5155,7 +5155,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* EMF */
             /* Clsid */              { 0x557cf403, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cacU, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatEMF,
             /* CodecName */          emf_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  emf_format,
@@ -5175,7 +5175,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* WMF */
             /* Clsid */              { 0x557cf404, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cadU, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatWMF,
             /* CodecName */          wmf_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  wmf_format,
@@ -5195,7 +5195,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* PNG */
             /* Clsid */              { 0x557cf406, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cafU, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatPNG,
             /* CodecName */          png_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  png_format,
@@ -5215,7 +5215,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
     {
         { /* ICO */
             /* Clsid */              { 0x557cf407, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x0, 0x0, 0xf8, 0x1e, 0xf3, 0x2e } },
-            /* FormatID */           { 0xb96b3cabU, 0x0728U, 0x11d3U, {0x9d, 0x7b, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e} },
+            /* FormatID */           ImageFormatIcon,
             /* CodecName */          ico_codecname,
             /* DllName */            NULL,
             /* FormatDescription */  ico_format,
