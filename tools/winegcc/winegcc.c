@@ -177,6 +177,7 @@ struct options
     int unwind_tables;
     int strip;
     int pic;
+    int lto;
     int no_default_config;
     int build_id;
     const char* wine_objdir;
@@ -364,6 +365,7 @@ static struct strarray get_link_args( struct options *opts, const char *output_n
     struct strarray flags = empty_strarray;
 
     strarray_addall( &link_args, opts->linker_args );
+    append_lto_flags( &link_args, opts->lto, 1 /* prefer flags from env */ );
 
     if (verbose > 1) strarray_add( &flags, "-v" );
 
@@ -653,6 +655,11 @@ static void compile(struct options* opts, const char* lang)
             break;
     }
 
+    if ((opts->processor == proc_cc) || (opts->processor == proc_cxx))
+    {
+        append_lto_flags( &comp_args, opts->lto, 1 /* prefer flags from env */ );
+    }
+
     if (opts->target.platform == PLATFORM_WINDOWS ||
         opts->target.platform == PLATFORM_CYGWIN ||
         opts->target.platform == PLATFORM_MINGW)
@@ -835,6 +842,7 @@ static struct strarray get_winebuild_args( struct options *opts, const char *tar
     strarray_add( &spec_args, binary );
     if (verbose) strarray_add( &spec_args, "-v" );
     if (keep_generated) strarray_add( &spec_args, "--save-temps" );
+    append_lto_flags( &spec_args, opts->lto, 0 /* generic LTO flags */ );
     if (target)
     {
         strarray_add( &spec_args, "--target" );
@@ -1507,6 +1515,7 @@ int main(int argc, char **argv)
     memset(&opts, 0, sizeof(opts));
     opts.target = init_argv0_target( argv[0] );
     opts.pic = 1;
+    opts.lto = -1;
 
     /* determine the processor type */
     if (strendswith(argv[0], "winecpp")) opts.processor = proc_cpp;
@@ -1658,6 +1667,10 @@ int main(int argc, char **argv)
                         opts.pic = 1;
                     else if (!strcmp("-fno-PIC", opts.args.str[i]) || !strcmp("-fno-pic", opts.args.str[i]))
                         opts.pic = 0;
+                    else if (!strcmp( "-flto", opts.args.str[i] ))
+                        opts.lto = 1;
+                    else if (!strcmp( "-fno-lto", opts.args.str[i] ))
+                        opts.lto = 0;
 		    break;
                 case 'i':
                     if (!strcmp( "-isysroot", opts.args.str[i] )) opts.isysroot = opts.args.str[i + 1];
@@ -1947,6 +1960,7 @@ int main(int argc, char **argv)
 	    strarray_add( &opts.files, opts.args.str[i] );
 	}
     }
+    verbose = adjust_verbose_lto( opts.lto, verbose );
 
     if (opts.force_pointer_size) set_target_ptr_size( &opts.target, opts.force_pointer_size );
     if (opts.processor == proc_cpp) linking = 0;

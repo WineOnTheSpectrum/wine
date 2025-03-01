@@ -26,3 +26,8 @@ SOURCES = \
 	version.c \
 	volume.c \
 	winerror.mc
+
+LTO_SKIP_SRC = debug.c thread.c
+i386_LTO_SKIP_SRC = sync.c
+x86_64_LTO_SKIP_SRC = loader.c
+arm64ec_LTO_SKIP_SRC = loader.c

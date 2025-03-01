@@ -44,3 +44,5 @@ SOURCES = \
 	usrmarshal.c
 
 dlldata_EXTRADEFS = -DENTRY_PREFIX=OLE32_ -DPROXY_CLSID=CLSID_PSFactoryBuffer -DWINE_REGISTER_DLL
+
+i386_LTO_SKIP_SRC = stg_prop.c

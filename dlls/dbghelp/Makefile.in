@@ -27,3 +27,5 @@ SOURCES = \
 	symbol.c \
 	type.c \
 	version.rc
+
+i386_LTO_SKIP_SRC = minidump.c

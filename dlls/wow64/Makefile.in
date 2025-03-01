@@ -13,3 +13,5 @@ SOURCES = \
 	syscall.c \
 	system.c \
 	virtual.c
+
+LTO_SKIP_SRC = syscall.c

@@ -67,3 +67,6 @@ SOURCES = \
 	xmlhttprequest.c
 
 nsembed_EXTRADEFS = -DINSTALL_DATADIR="\"${datadir}\""
+
+i386_LTO_SKIP_SRC = ifacewrap.c nsembed.c
+x86_64_LTO_SKIP_SRC = ifacewrap.c

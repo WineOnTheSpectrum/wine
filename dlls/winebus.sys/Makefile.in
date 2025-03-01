@@ -14,3 +14,5 @@ SOURCES = \
 	main.c \
 	unixlib.c \
 	winebus.rc
+
+i386_LTO_SKIP_SRC = main.c

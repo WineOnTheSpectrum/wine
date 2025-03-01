@@ -27,3 +27,5 @@ SOURCES = \
 	version.rc \
 	wrap.c \
 	writer.c
+
+i386_LTO_SKIP_SRC = txthost.c txtsrv.c

@@ -6,3 +6,5 @@ IMPORTS   = msvcrt
 SOURCES = \
 	exception.c \
 	msvcirt.c
+
+i386_LTO_SKIP_SRC = msvcirt.c

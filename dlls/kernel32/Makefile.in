@@ -32,3 +32,7 @@ SOURCES = \
 	version.rc \
 	virtual.c \
 	volume.c
+
+i386_LTO_SKIP_SRC = process.c sync.c thread.c
+x86_64_LTO_SKIP_SRC = module.c
+arm64ec_LTO_SKIP_SRC = module.c

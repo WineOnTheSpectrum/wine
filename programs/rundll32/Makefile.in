@@ -5,3 +5,5 @@ EXTRADLLFLAGS = -mwindows -municode
 
 SOURCES = \
 	rundll32.c
+
+i386_LTO_SKIP = yes

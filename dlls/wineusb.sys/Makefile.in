@@ -10,3 +10,5 @@ SOURCES = \
 	unixlib.c \
 	wineusb.c \
 	wineusb.rc
+
+i386_LTO_SKIP_SRC = wineusb.c

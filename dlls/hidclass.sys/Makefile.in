@@ -6,3 +6,5 @@ SOURCES = \
 	device.c \
 	hidclass.rc \
 	pnp.c
+
+i386_LTO_SKIP_SRC = pnp.c

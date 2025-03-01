@@ -68,3 +68,5 @@ SOURCES = \
 	winproc.c \
 	winstation.c \
 	wsprintf.c
+
+i386_LTO_SKIP_SRC = hook.c sysparams.c win.c winproc.c

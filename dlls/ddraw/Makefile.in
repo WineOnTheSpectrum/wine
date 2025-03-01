@@ -17,3 +17,6 @@ SOURCES = \
 	version.rc \
 	vertexbuffer.c \
 	viewport.c
+
+i386_LTO_SKIP_SRC = device.c
+x86_64_LTO_SKIP_SRC = device.c
