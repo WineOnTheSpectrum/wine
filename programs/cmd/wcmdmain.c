@@ -213,6 +213,67 @@ void WCMD_leave_paged_mode(void)
   pagedMessage = NULL;
 }
 
+static BOOL has_pending_char_events(HANDLE h)
+{
+    INPUT_RECORD ir;
+    DWORD count;
+    BOOL ret = FALSE;
+
+    while (!ret && GetNumberOfConsoleInputEvents(h, &count) && count)
+    {
+        /* FIXME could be racy if another thread/process gets the input record */
+        if (ReadConsoleInputA(h, &ir, 1, &count) && count)
+            ret = ir.EventType == KEY_EVENT &&
+                ir.Event.KeyEvent.bKeyDown &&
+                ir.Event.KeyEvent.uChar.AsciiChar;
+    }
+    return ret;
+}
+
+/***************************************************************************
+ * WCMD_wait_for_input
+ *
+ * Wait for input from a console/file.
+ * Used by commands like PAUSE and DIR /P that need to wait for user
+ * input before continuing.
+ */
+RETURN_CODE WCMD_wait_for_input(HANDLE hIn)
+{
+    RETURN_CODE return_code;
+    DWORD oldmode;
+    DWORD count;
+    WCHAR key;
+
+    return_code = ERROR_INVALID_FUNCTION;
+    if (GetConsoleMode(hIn, &oldmode))
+    {
+        HANDLE h[2] = {hIn, control_c_event};
+
+        SetConsoleMode(hIn, oldmode & ~ENABLE_LINE_INPUT);
+        FlushConsoleInputBuffer(hIn);
+        while (return_code == ERROR_INVALID_FUNCTION)
+        {
+            switch (WaitForMultipleObjects(2, h, FALSE, INFINITE))
+            {
+            case WAIT_OBJECT_0:
+                if (has_pending_char_events(hIn))
+                    return_code = NO_ERROR;
+                /* will make both hIn no long signaled, and also process the pending input record */
+                FlushConsoleInputBuffer(hIn);
+                break;
+            case WAIT_OBJECT_0 + 1:
+                return_code = STATUS_CONTROL_C_EXIT;
+                break;
+            default: break;
+            }
+        }
+        SetConsoleMode(hIn, oldmode);
+    }
+    else if (WCMD_ReadFile(hIn, &key, 1, &count))
+        return_code = NO_ERROR;
+    return return_code;
+}
+
 /***************************************************************************
  * WCMD_ReadFile
  *
@@ -243,10 +304,9 @@ BOOL WCMD_ReadFile(const HANDLE hIn, WCHAR *intoBuf, const DWORD maxChars, LPDWO
  *
  * Send output to specified handle without formatting e.g. when message contains '%'
  */
-static void WCMD_output_asis_handle (DWORD std_handle, const WCHAR *message) {
-  DWORD count;
+static RETURN_CODE WCMD_output_asis_handle (DWORD std_handle, const WCHAR *message) {
+  RETURN_CODE return_code = NO_ERROR;
   const WCHAR* ptr;
-  WCHAR string[1024];
   HANDLE handle = GetStdHandle(std_handle);
 
   if (paged_mode) {
@@ -262,12 +322,17 @@ static void WCMD_output_asis_handle (DWORD std_handle, const WCHAR *message) {
       if (++line_count >= max_height - 1) {
         line_count = 0;
         WCMD_output_asis_len(pagedMessage, lstrlenW(pagedMessage), handle);
-        WCMD_ReadFile(GetStdHandle(STD_INPUT_HANDLE), string, ARRAY_SIZE(string), &count);
+        return_code = WCMD_wait_for_input(GetStdHandle(STD_INPUT_HANDLE));
+        WCMD_output_asis(L"\r\n");
+        if (return_code)
+          break;
       }
     } while (((message = ptr) != NULL) && (*ptr));
   } else {
     WCMD_output_asis_len(message, lstrlenW(message), handle);
   }
+
+  return return_code;
 }
 
 /*******************************************************************
@@ -276,8 +341,8 @@ static void WCMD_output_asis_handle (DWORD std_handle, const WCHAR *message) {
  * Send output to current standard output device, without formatting
  * e.g. when message contains '%'
  */
-void WCMD_output_asis (const WCHAR *message) {
-    WCMD_output_asis_handle(STD_OUTPUT_HANDLE, message);
+RETURN_CODE WCMD_output_asis (const WCHAR *message) {
+    return WCMD_output_asis_handle(STD_OUTPUT_HANDLE, message);
 }
 
 /*******************************************************************
@@ -286,8 +351,8 @@ void WCMD_output_asis (const WCHAR *message) {
  * Send output to current standard error device, without formatting
  * e.g. when message contains '%'
  */
-void WCMD_output_asis_stderr (const WCHAR *message) {
-    WCMD_output_asis_handle(STD_ERROR_HANDLE, message);
+RETURN_CODE WCMD_output_asis_stderr (const WCHAR *message) {
+    return WCMD_output_asis_handle(STD_ERROR_HANDLE, message);
 }
 
 /****************************************************************************
