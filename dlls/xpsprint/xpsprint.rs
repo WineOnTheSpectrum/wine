@@ -9,12 +9,21 @@ use windows_strings::*;
 
 const S_OK: HRESULT = HRESULT(0);
 
+struct IXpsPrintJob;
+struct IXpsPrintJobStream;
+
 #[no_mangle]
 pub extern "C" fn StartXpsPrintJob(
-    printer_name: /*L*/PCWSTR, // 32bit ptr variant not in crate yet.
+    _printer_name: /*L*/PCWSTR, // 32bit ptr variant not in crate yet.
     _job_name:          PCWSTR,
     _output_filename:   PCWSTR,
-    // other args we don't care about.
+    _progress_event:    &u32,
+    _completion_event:  &u32,
+    _printable_pages:   &u8,
+    _printable_pages_count: u8,
+    _xps_printjob:      &IXpsPrintJob,
+    _doc_stream:        &IXpsPrintJobStream,
+    _ticket_stream:     &IXpsPrintJobStream,
 ) -> HRESULT {
     // https://learn.microsoft.com/en-us/windows/win32/api/xpsprint/nf-xpsprint-startxpsprintjob
     //unsafe {

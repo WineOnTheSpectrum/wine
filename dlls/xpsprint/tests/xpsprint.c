@@ -33,12 +33,6 @@
 
 #include "xpsprint.h"
 
-#ifdef __i386__
-static const BOOL abi_supports_stdcall = TRUE;
-#else
-static const BOOL abi_supports_stdcall = FALSE;
-#endif
-
 static void test_StartXpsPrintJob(void)
 {
     LPCWSTR printerName = L"printer";

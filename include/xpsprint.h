@@ -3,8 +3,8 @@
 
 #include <windef.h>
 
-struct {} IXpsPrintJob;
-struct {} IXpsPrintJobStream;
+typedef struct {} IXpsPrintJob;
+typedef struct {} IXpsPrintJobStream;
 
 HRESULT WINAPI StartXpsPrintJob(
   /* [in]  */ LPCWSTR            printerName,
