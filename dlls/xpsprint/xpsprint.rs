@@ -17,8 +17,8 @@ pub extern "C" fn StartXpsPrintJob(
     // other args we don't care about.
 ) -> HRESULT {
     // https://learn.microsoft.com/en-us/windows/win32/api/xpsprint/nf-xpsprint-startxpsprintjob
-    unsafe {
-        println!("{:?}", printer_name.to_string());
-    };
+    //unsafe {
+    //    println!("{:?}", printer_name.to_string());
+    //};
     S_OK
 }
