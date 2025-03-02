@@ -50,7 +50,7 @@ static void test_StartXpsPrintJob(void)
 			  progressEvent, completionEvent,
 			  printablePagesOn, printablePagesOnCount,
 			  NULL, NULL, NULL);
-    ok(hr == E_NOTIMPL, "Unexpected hr %#lx.\n", hr);
+    ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
 }
 
 START_TEST(xpsprint)

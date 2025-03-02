@@ -17,10 +17,10 @@ pub extern "C" fn StartXpsPrintJob(
     _printer_name: /*L*/PCWSTR, // 32bit ptr variant not in crate yet.
     _job_name:          PCWSTR,
     _output_filename:   PCWSTR,
-    _progress_event:    &u32,
-    _completion_event:  &u32,
+    _progress_event:    u64,
+    _completion_event:  u64,
     _printable_pages:   &u8,
-    _printable_pages_count: u8,
+    _printable_pages_count: u32,
     _xps_printjob:      &IXpsPrintJob,
     _doc_stream:        &IXpsPrintJobStream,
     _ticket_stream:     &IXpsPrintJobStream,
