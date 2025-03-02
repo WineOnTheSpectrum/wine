@@ -2,5 +2,11 @@ MODULE = xpsprint.dll
 
 EXTRADLLFLAGS = -Wb,--prefer-native
 
+# FIXME: run `cargo build` to produce the object file at the moment
+# until the build system allows this to work without Cargo.
+# `cargo build --target=x86_64-pc-windows-gnu`.
+#RSOURCES = \
+#	xpsprint.rs
+
 SOURCES = \
 	xpsprint.rc

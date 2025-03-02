@@ -3,4 +3,4 @@
 
 @ stub DllMain
 @ stub StartXpsPrintJob1
-@ stub StartXpsPrintJob
+@ stdcall StartXpsPrintJob(ptr ptr ptr ptr ptr int int ptr ptr ptr)

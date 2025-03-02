@@ -1,0 +1,10 @@
+[package]
+name = "xpsprint"
+
+[lib]
+path = "xpsprint.rs"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+windows-result = "0.3.1"
+windows-strings = "0.3.1"

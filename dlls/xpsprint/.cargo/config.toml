@@ -1,0 +1,5 @@
+# https://doc.rust-lang.org/cargo/reference/config.html
+[build]
+rustflags = ["--emit=obj"]
+target = "x86_64-pc-windows-gnu"
+#target-dir = "."
