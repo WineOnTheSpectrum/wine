@@ -1,0 +1,7 @@
+subdir('wine')
+subdir('winebuild')
+subdir('winedump')
+subdir('winegcc')
+subdir('widl')
+subdir('wrc')
+subdir('wmc')

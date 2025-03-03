@@ -1,0 +1,66 @@
+rc = files(
+    'version.rc',
+)
+
+extra_args = [
+    '-I../../include/msvcrt',
+    '-D_UCRT', '-D_RPCRT4_', '-DMSWMSG',
+]
+
+res = gen_rc_res.process(rc, extra_args : extra_args)
+
+idls = files(
+    'epm.idl',
+    'ndr_types.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
+src = files(
+    'cproxy.c',
+    'cpsf.c',
+    'cstub.c',
+    'ndr_clientserver.c',
+    'ndr_contexthandle.c',
+    'ndr_es.c',
+    'ndr_fullpointer.c',
+    'ndr_marshall.c',
+    'ndr_ole.c',
+    'ndr_stubless.c',
+    'ndr_typelib.c',
+    'rpc_assoc.c',
+    'rpc_async.c',
+    'rpc_binding.c',
+    'rpc_epmap.c',
+    'rpc_message.c',
+    'rpc_server.c',
+    'rpc_transport.c',
+    'rpcrt4_main.c',
+    'thunks.c',
+)
+
+deps = [
+    'uuid',
+    'advapi32',
+    'iphlpapi',
+    'wininet',
+    'secur32',
+    'user32',
+    'ws2_32',
+    'ole32',
+    'oleaut32',
+    'winecrt0',
+    'ucrtbase',
+    'kernel32',
+    'ntdll',
+]
+
+dlls += {
+    'rpcrt4' : {
+        'idl_h' : idl_h,
+        'res' : res,
+        'extra_args' : extra_args,
+        'src' : src,
+        'deps' : deps,
+    }
+}

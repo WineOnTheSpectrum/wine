@@ -1,0 +1,32 @@
+src = [
+    'debug.c',
+    'dos.c',
+    'dump.c',
+    'emf.c',
+    'emfspool.c',
+    'font.c',
+    'le.c',
+    'lib.c',
+    'lnk.c',
+    'main.c',
+    'mf.c',
+    'minidump.c',
+    'misc.c',
+    'msc.c',
+    'msmangle.c',
+    'ne.c',
+    'nls.c',
+    'output.c',
+    'pdb.c',
+    'pe.c',
+    'reg.c',
+    'search.c',
+    'symbol.c',
+    'tlb.c'
+]
+
+executable('winedump', src,
+    include_directories : [config_h_inc, incdir],
+    c_args : extra_flags_tools,
+    native : true,
+)
