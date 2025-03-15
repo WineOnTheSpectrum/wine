@@ -442,6 +442,7 @@ pthread = cc.find_library('pthread', required: true)
 unwind = cc.find_library('unwind', required: true)
 freetype2 = dependency('freetype2', version : '>=2', required : true, native : true)
 cups = dependency('cups', required : true, native : true)
+gnutls = dependency('gnutls', required : true, native : true)
 
 bison_prog = find_program('bison')
 gen_bison = generator(bison_prog,
