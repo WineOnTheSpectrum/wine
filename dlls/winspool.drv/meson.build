@@ -57,8 +57,8 @@ winspool_u_af_64 = static_library('winspool_u_64', [headers, u_src],
 
 winspool_u_o_64 = winspool_u_af_64.extract_all_objects(recursive : true)
 
-winspool_delay_64 = custom_target('winspool_delay_64',
-    output : 'winspool_delay_64.a',
+winspool_64 = custom_target('winspool_64',
+    output : 'winspool_64.a',
     input : [
         'winspool.drv.spec',
     ],

@@ -70,9 +70,9 @@ win32u_w_af_64 = static_library('win32u_w_af_64', [headers, w_src],
 
 win32u_w_o_64 = win32u_w_af_64.extract_all_objects(recursive : true)
 
-win32u_w_64 = custom_target('win32u_w_64',
+win32u_64 = custom_target('win32u_64',
     input : ['win32u.spec', win32u_w_o_64],
-    output : 'libwin32u_w_64.a',
+    output : 'libwin32u_64.a',
     command : [
       winebuild_bin,
       '-w', '--implib', '-o', '@OUTPUT@',

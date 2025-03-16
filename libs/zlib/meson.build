@@ -9,7 +9,7 @@ src = [
     'zutil.c'
 ]
 
-static_library('zlib_32', [headers, src],
+zlib_32 = static_library('zlib_32', [headers, src],
     include_directories : incdir,
     c_args : extra_flags_32 + ['-DZ_SOLO'],
     pic : true,
@@ -17,7 +17,7 @@ static_library('zlib_32', [headers, src],
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('zlib_64', [headers, src],
+zlib_64 = static_library('zlib_64', [headers, src],
     include_directories : incdir,
     c_args : extra_flags_64 + ['-DZ_SOLO'],
     native : false,
