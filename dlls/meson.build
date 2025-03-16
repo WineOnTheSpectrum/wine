@@ -26,7 +26,11 @@ subdir('crypt32')
 subdir('secur32')
 subdir('cryptnet')
 subdir('shell32')
-#subdir('wininet')
+subdir('wininet')
+
+#subdir('mpr')
+#subdir('cryptui')
+#subdir('dhcpcsvc')
 #subdir('shlwapi')
 #subdir('shdocvw')
 #subdir('version')
@@ -42,7 +46,6 @@ subdir('shell32')
 #subdir('uxtheme')
 
 #subdir('msvcrtd')
-#subdir('version')
 
 # Build all library deps first
 foreach dllname, contents : dlls
