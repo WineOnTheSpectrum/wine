@@ -41,12 +41,12 @@ subdir('imagehlp')
 subdir('setupapi') #
 subdir('comdlg32') #
 subdir('mlang')
+subdir('shlwapi') #
 
 #subdir('wintrust')
 #subdir('advpack')
 #subdir('urlmon')
 #subdir('cryptui')
-#subdir('shlwapi')
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
 #subdir('gdiplus')
