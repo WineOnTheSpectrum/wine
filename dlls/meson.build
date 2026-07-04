@@ -45,8 +45,8 @@ subdir('shlwapi') #
 subdir('cryptui') #
 subdir('wintrust')
 subdir('advpack')
+subdir('urlmon')
 
-#subdir('urlmon')
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
 #subdir('gdiplus')
