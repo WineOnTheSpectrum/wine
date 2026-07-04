@@ -40,6 +40,7 @@ subdir('dbghelp')
 subdir('imagehlp')
 subdir('setupapi') #
 subdir('comdlg32') #
+subdir('mlang')
 
 #subdir('wintrust')
 #subdir('advpack')
