@@ -39,8 +39,8 @@ subdir('cabinet')
 subdir('dbghelp')
 subdir('imagehlp')
 subdir('setupapi') #
+subdir('comdlg32') #
 
-#subdir('comdlg32')
 #subdir('wintrust')
 #subdir('advpack')
 #subdir('urlmon')
