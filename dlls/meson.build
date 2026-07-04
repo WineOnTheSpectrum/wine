@@ -46,6 +46,7 @@ subdir('cryptui') #
 subdir('wintrust')
 subdir('advpack')
 subdir('urlmon')
+subdir('propsys')
 
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
