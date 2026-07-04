@@ -44,8 +44,8 @@ subdir('mlang')
 subdir('shlwapi') #
 subdir('cryptui') #
 subdir('wintrust')
+subdir('advpack')
 
-#subdir('advpack')
 #subdir('urlmon')
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
