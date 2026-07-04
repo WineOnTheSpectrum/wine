@@ -42,11 +42,11 @@ subdir('setupapi') #
 subdir('comdlg32') #
 subdir('mlang')
 subdir('shlwapi') #
+subdir('cryptui') #
 
 #subdir('wintrust')
 #subdir('advpack')
 #subdir('urlmon')
-#subdir('cryptui')
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
 #subdir('gdiplus')
