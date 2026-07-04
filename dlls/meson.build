@@ -48,13 +48,13 @@ subdir('advpack')
 subdir('urlmon')
 subdir('propsys')
 subdir('windowscodecs')
+subdir('uxtheme')
 
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
 #subdir('gdiplus')
 #subdir('iphlpapi')
 #subdir('ws2_32')
-#subdir('uxtheme')
 
 #subdir('msvcrtd')
 
