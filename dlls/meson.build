@@ -33,6 +33,7 @@ subdir('mpr')
 subdir('version')
 subdir('msacm32')
 subdir('winmm')
+subdir('shcore')
 
 #subdir('cryptui')
 #subdir('dhcpcsvc')
