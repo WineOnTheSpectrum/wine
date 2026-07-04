@@ -37,6 +37,7 @@ subdir('shcore')
 subdir('userenv')
 subdir('cabinet')
 subdir('dbghelp')
+subdir('imagehlp')
 
 #subdir('wintrust')
 #subdir('setupapi')
