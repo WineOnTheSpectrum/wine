@@ -34,6 +34,7 @@ subdir('version')
 subdir('msacm32')
 subdir('winmm')
 subdir('shcore')
+subdir('userenv')
 
 #subdir('cryptui')
 #subdir('dhcpcsvc')
