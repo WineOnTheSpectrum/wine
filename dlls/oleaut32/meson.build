@@ -3,14 +3,17 @@ rc = files(
 )
 
 extra_args = [
-    '-I../../include/msvcrt',
+    '-I../include/msvcrt',
     '-D_UCRT',
     '-D_OLEAUT32_',
+]
+
+extra_dll_args = [
     '-DENTRY_PREFIX=OLEAUTPS_', '-DPROXY_DELEGATION', '-DWINE_REGISTER_DLL',
     '-DPROXY_CLSID=CLSID_PSFactoryBuffer',
 ]
 
-res = gen_rc_res.process(rc, extra_args : extra_args)
+res = gen_rc_res.process(rc, extra_args : extra_args + extra_dll_args)
 
 idls = files(
     'oleaut32_oaidl.idl',
