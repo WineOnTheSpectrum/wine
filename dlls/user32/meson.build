@@ -3,8 +3,8 @@ rc = files(
 )
 
 extra_args = [
+    '-I../include/msvcrt',
     '-I../libs/png',
-    '-I../libs/zlib',
     '-D_UCRT',
     '-D_USER32_',
 ]

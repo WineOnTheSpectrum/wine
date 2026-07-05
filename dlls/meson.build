@@ -68,7 +68,7 @@ foreach dllname, contents : dlls
     set_variable('@0@_af_64'.format(dllname), static_library('@0@_af_64'.format(dllname),
         [headers] + contents['idl_h'] + contents['idl_c'] + contents['src'],
         include_directories : [incdir, '.'],
-        c_args : extra_flags_64 + contents['extra_args'],
+        c_args : contents['extra_args'] + extra_flags_64,
         native : false,
         build_by_default : meson.is_cross_build(),
     ))

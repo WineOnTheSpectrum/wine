@@ -29,7 +29,7 @@ winecrt0_w_af_64 = static_library('winecrt0_w_af_64', [headers, w_src],
         config_h_inc, incdir, '.',
         '../../include/msvcrt',
     ],
-    c_args : extra_flags_64 + ['-D_MSVCR_VER=0'],
+    c_args : ['-D_MSVCR_VER=0'] + extra_flags_64,
     native : false,
     build_by_default : meson.is_cross_build(),
 )
@@ -41,12 +41,12 @@ winecrt0_u_af_64 = static_library('winecrt0_u_af_64', [headers, u_src],
     ],
     c_args : ['-DWINE_UNIX_LIB'],
     native : true,
-    build_by_default : meson.is_cross_build(),
+    build_by_default : not meson.is_cross_build(),
 )
 winecrt0_u_o_64 = winecrt0_u_af_64.extract_all_objects(recursive : true)
 
 winecrt0_64 = custom_target('winecrt0_64',
-    input : [winecrt0_w_o_64, winecrt0_u_o_64],
+    input : [winecrt0_w_o_64],
     output : 'libwinecrt0_64.a',
     command : [
       winebuild_bin,
@@ -57,3 +57,30 @@ winecrt0_64 = custom_target('winecrt0_64',
     depends : winebuild_bin,
     build_by_default : meson.is_cross_build(),
 )
+
+winecrt0_u_64 = custom_target('winecrt0_u_64',
+    input : [winecrt0_u_o_64],
+    output : 'libwinecrt0_u_64.a',
+    command : [
+      winebuild_bin,
+      '-w', '--staticlib', '-o', '@OUTPUT@',
+      '-b', 'x86_64-w64-mingw32',
+      '@INPUT@',
+    ],
+    depends : winebuild_bin,
+    build_by_default : not meson.is_cross_build(),
+)
+
+# Can't combine libs from different trees yet
+#winecrt0_64 = custom_target('winecrt0_64',
+#    input : [winecrt0_w_o_64, winecrt0_u_o_64],
+#    output : 'libwinecrt0_64.a',
+#    command : [
+#      winebuild_bin,
+#      '-w', '--staticlib', '-o', '@OUTPUT@',
+#      '-b', 'x86_64-w64-mingw32',
+#      '@INPUT@',
+#    ],
+#    depends : winebuild_bin,
+#    build_by_default : true,
+#)
