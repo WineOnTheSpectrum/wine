@@ -55,9 +55,9 @@ subdir('dnsapi')
 subdir('netutils')
 subdir('iphlpapi')
 subdir('netapi32')
+subdir('shdocvw')
 
 #subdir('dhcpcsvc')
-#subdir('shdocvw')
 #subdir('gdiplus')
 #subdir('msvcrtd')
 
