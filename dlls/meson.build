@@ -50,8 +50,8 @@ subdir('propsys')
 subdir('windowscodecs')
 subdir('uxtheme')
 subdir('nsi')
+subdir('ws2_32')
 
-#subdir('ws2_32')
 #subdir('dnsapi')
 #subdir('iphlpapi')
 
