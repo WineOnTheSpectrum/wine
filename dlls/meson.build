@@ -58,8 +58,8 @@ subdir('netapi32')
 subdir('shdocvw')
 subdir('ieframe')
 subdir('gdiplus')
+subdir('dhcpcsvc')
 
-#subdir('dhcpcsvc')
 #subdir('msvcrtd')
 
 # Build all library deps first
