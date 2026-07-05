@@ -49,13 +49,15 @@ subdir('urlmon')
 subdir('propsys')
 subdir('windowscodecs')
 subdir('uxtheme')
+subdir('nsi')
+
+#subdir('ws2_32')
+#subdir('dnsapi')
+#subdir('iphlpapi')
 
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
 #subdir('gdiplus')
-#subdir('iphlpapi')
-#subdir('ws2_32')
-
 #subdir('msvcrtd')
 
 # Build all library deps first
