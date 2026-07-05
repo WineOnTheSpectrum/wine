@@ -52,8 +52,10 @@ subdir('uxtheme')
 subdir('nsi')
 subdir('ws2_32')
 subdir('dnsapi')
+subdir('netutils')
 
 #subdir('iphlpapi')
+#subdir('netapi32')
 
 #subdir('dhcpcsvc')
 #subdir('shdocvw')
