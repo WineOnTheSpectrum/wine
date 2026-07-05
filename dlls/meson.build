@@ -56,6 +56,7 @@ subdir('netutils')
 subdir('iphlpapi')
 subdir('netapi32')
 subdir('shdocvw')
+subdir('ieframe')
 
 #subdir('dhcpcsvc')
 #subdir('gdiplus')
