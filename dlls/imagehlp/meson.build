@@ -20,6 +20,7 @@ deps = [
 
 dlls += {
     'imagehlp' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : [],
         'extra_args' : extra_args,

@@ -71,6 +71,7 @@ deps = [
 
 dlls += {
     'crypt32' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : rc_extra_args,

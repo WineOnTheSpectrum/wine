@@ -49,6 +49,7 @@ ws2_32_so_64 = shared_library('ws2_32_so_64', [src_u],
 
 dlls += {
     'ws2_32' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : extra_args,

@@ -3,6 +3,7 @@ idls = files(
     'irpcss.idl',
 )
 
+idl_c = gen_idl_c.process(idls)
 idl_h = gen_idl_h.process(idls)
 
 src = files(
@@ -35,6 +36,7 @@ deps = [
 
 dlls += {
     'combase' : {
+        'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : [],
         'extra_args' : [],

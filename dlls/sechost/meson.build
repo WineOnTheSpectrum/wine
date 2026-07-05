@@ -3,6 +3,7 @@ idls = files(
     'svcctl.idl',
 )
 
+idl_c = gen_idl_c.process(idls)
 idl_h = gen_idl_h.process(idls)
 
 src = files(
@@ -23,6 +24,7 @@ deps = [
 dlls += {
     'sechost' : {
         'idl_h' : idl_h,
+        'idl_c' : idl_c,
         'res' : [],
         'extra_args' : [],
         'src' : src,

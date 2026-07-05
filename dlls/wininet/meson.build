@@ -50,6 +50,7 @@ deps = [
 
 dlls += {
     'wininet' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : [res1, res2],
         'extra_args' : extra_args,

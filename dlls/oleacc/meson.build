@@ -25,6 +25,7 @@ idls = files(
 )
 
 idl_h = gen_idl_h.process(idls)
+idl_c = gen_idl_c.process(idls)
 
 deps = [
     'uuid',
@@ -40,6 +41,7 @@ deps = [
 
 dlls += {
     'oleacc' : {
+        'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,

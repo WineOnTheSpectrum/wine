@@ -1,11 +1,6 @@
-#EXTRADEFS = -D_KERNEL32_ -D_NORMALIZE_
-#MODULE    = kernel32.dll
-#IMPORTLIB = kernel32
-#IMPORTS   = kernelbase ntdll
-#
-#EXTRADLLFLAGS = -nodefaultlibs -Wb,-F,KERNEL32.dll
 #i386_EXTRADLLFLAGS = -Wl,--image-base,0x7b800000
 #x86_64_EXTRADLLFLAGS = -Wl,--image-base,0x178000000
+
 rc = files(
     'version.rc',
 )

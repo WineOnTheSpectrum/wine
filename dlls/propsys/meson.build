@@ -14,6 +14,7 @@ idls = files(
     'propsys_classes.idl'
 )
 
+idl_c = gen_idl_c.process(idls)
 idl_h = gen_idl_h.process(idls)
 
 deps = [
@@ -28,6 +29,7 @@ deps = [
 
 dlls += {
     'propsys' : {
+        'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : [],
         'extra_args' : extra_args,

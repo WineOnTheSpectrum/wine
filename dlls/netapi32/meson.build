@@ -19,6 +19,7 @@ idls = files(
     'atsvc.idl',
 )
 
+idl_c = gen_idl_c.process(idls)
 idl_h = gen_idl_h.process(idls)
 
 deps = [
@@ -50,6 +51,7 @@ netapi32_so_64 = shared_library('netapi32_so_64', [src_u],
 
 dlls += {
     'netapi32' : {
+        'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : [],
         'extra_args' : extra_args,

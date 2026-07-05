@@ -44,6 +44,7 @@ dnsapi_so_64 = shared_library('dnsapi_so_64', [src_u],
 
 dlls += {
     'dnsapi' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : extra_args,

@@ -44,6 +44,7 @@ secur32_so_64 = shared_library('secur32_so_64', [u_src],
 
 dlls += {
     'secur32' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : [],
         'extra_args' : w_extra_args,

@@ -14,6 +14,7 @@ idls = files(
     'ndr_types.idl',
 )
 
+idl_c = gen_idl_c.process(idls)
 idl_h = gen_idl_h.process(idls)
 
 src = files(
@@ -57,6 +58,7 @@ deps = [
 
 dlls += {
     'rpcrt4' : {
+        'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,

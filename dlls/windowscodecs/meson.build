@@ -53,11 +53,10 @@ idls = files(
     'windowscodecs_wincodec.idl',
 )
 
+idl_c = gen_idl_c.process(idls)
 idl_h = gen_idl_h.process(idls)
 
 deps = [
-    'tiff',
-    'jpeg',
     'png',
     'uuid',
     'ole32',
@@ -76,6 +75,7 @@ deps = [
 
 dlls += {
     'windowscodecs' : {
+        'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,

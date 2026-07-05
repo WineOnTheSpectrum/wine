@@ -66,7 +66,7 @@ subdir('dhcpcsvc')
 foreach dllname, contents : dlls
 
     set_variable('@0@_af_64'.format(dllname), static_library('@0@_af_64'.format(dllname),
-        [headers] + contents['idl_h'] + contents['src'],
+        [headers] + contents['idl_h'] + contents['idl_c'] + contents['src'],
         include_directories : [incdir, '.'],
         c_args : extra_flags_64 + contents['extra_args'],
         native : false,
@@ -111,6 +111,7 @@ endforeach
 #        ] + contents['res'] + deps_64,
 #        command : [
 #        winegcc_bin,
+#            '-I@BUILD_DIR@',
 #            '-o', '@OUTPUT@',
 #            '--wine-objdir', '.',
 #            '-b', 'x86_64-w64-mingw32',

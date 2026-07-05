@@ -46,7 +46,8 @@ deps = [
 
 dlls += {
     'dbghelp' : {
-        'idl_h' : idl_h,
+        'idl_c' : [],
+        'idl_h' : [],
         'res' : res,
         'extra_args' : extra_args,
         'src' : src,

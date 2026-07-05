@@ -46,6 +46,7 @@ deps = [
 
 dlls += {
     'setupapi' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : extra_args,

@@ -44,6 +44,7 @@ bcrypt_so_64 = shared_library('bcrypt_so_64', [u_src],
 
 dlls += {
     'bcrypt' : {
+        'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : rc_extra_args,
