@@ -16,6 +16,7 @@ rc = files(
 )
 
 rc_extra_args = [
+    '-I../include/msvcrt',
     '-I../libs/tomcrypt/src/headers',
     '-D_MSVCR_VER=0',
     '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
@@ -112,20 +113,6 @@ ntdll_af_64 = static_library('ntdll_artefacts_64', [src],
     build_by_default : meson.is_cross_build(),
 )
 ntdll_o_64 = ntdll_af_64.extract_all_objects(recursive : true)
-ntdll_64 = custom_target('ntdll_64',
-    input : 'ntdll.spec',
-    output : 'libntdll_64.a',
-    command : [
-      winebuild_bin,
-      '-w', '--implib', '-o', '@OUTPUT@',
-      '--without-dlltool',
-      '-b', 'x86_64-w64-mingw32',
-      '--export',
-      '@INPUT@',
-    ],
-    depends : winebuild_bin,
-    build_by_default : meson.is_cross_build(),
-)
 
 custom_target('ntdll_64.dll',
     output : 'ntdll_64.dll',
@@ -140,9 +127,26 @@ custom_target('ntdll_64.dll',
 	'-b', 'x86_64-w64-mingw32',
 	'-Wl,--wine-builtin',
 	'-shared',
+        '-nodefaultlibs',
+        '-Wl,--image-base,0x170000000',
 	'@INPUT@'
     ] + extra_dll_flags_64,
     depends : winegcc_bin,
+    build_by_default : meson.is_cross_build(),
+)
+
+ntdll_64 = custom_target('ntdll_64',
+    input : 'ntdll.spec',
+    output : 'libntdll_64.a',
+    command : [
+      winebuild_bin,
+      '-w', '--implib', '-o', '@OUTPUT@',
+      '--without-dlltool',
+      '-b', 'x86_64-w64-mingw32',
+      '--export',
+      '@INPUT@',
+    ],
+    depends : winebuild_bin,
     build_by_default : meson.is_cross_build(),
 )
 

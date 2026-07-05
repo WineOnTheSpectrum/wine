@@ -12,6 +12,11 @@ src = files(
     'trace.c',
 )
 
+extra_args = [
+    '-I../include/msvcrt',
+    '-D_UCRT',
+]
+
 deps = [
     'kernelbase',
     'rpcrt4',
@@ -26,7 +31,7 @@ dlls += {
         'idl_h' : idl_h,
         'idl_c' : idl_c,
         'res' : [],
-        'extra_args' : [],
+        'extra_args' : extra_args,
         'src' : src,
         'deps' : deps,
     }

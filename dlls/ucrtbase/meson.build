@@ -3,6 +3,8 @@ rc = files(
 )
 
 extra_args = [
+    '-I../dlls/ucrtbase',
+    '-I../dlls/msvcrt',
     '-I../include/msvcrt',
     '-D_UCRT', '-D_CRTIMP=',
 ]
@@ -58,6 +60,7 @@ deps = [
     'user32',
     'winecrt0',
     'kernel32',
+    'ntdll',
 ]
 
 dlls += {

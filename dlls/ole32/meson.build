@@ -3,7 +3,7 @@ rc = files(
 )
 
 extra_args = [
-    '-I../../include/msvcrt',
+    '-I../include/msvcrt',
     '-D_UCRT', '-D_OLE32_',
     '-DENTRY_PREFIX=OLE32_', '-DPROXY_CLSID=CLSID_PSFactoryBuffer', '-DWINE_REGISTER_DLL',
 ]

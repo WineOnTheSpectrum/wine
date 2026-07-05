@@ -5,6 +5,7 @@ rc = files(
 extra_args = [
     '-I../libs/png',
     '-I../libs/zlib',
+    '-D_UCRT',
     '-D_USER32_',
 ]
 
@@ -54,14 +55,14 @@ src = files(
 deps = [
     'png',
     'zlib',
-    'uuid',
     'gdi32',
     'sechost',
     'advapi32',
     'kernelbase',
     'win32u',
-    'imm32',
-    'combase',
+    'uuid',
+    #'imm32',
+    #'combase',
     'winecrt0',
     'ucrtbase',
     'kernel32',

@@ -40,7 +40,7 @@ deps = [
     'comdlg32',
     'mpr',
     'mlang',
-    #'urlmon', XXX
+    'urlmon', #XXX
     'shell32',
     'winmm',
     'winecrt0',

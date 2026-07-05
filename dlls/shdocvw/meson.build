@@ -8,7 +8,7 @@ rc = files(
 )
 
 extra_args = [
-    '-I../../include/msvcrt',
+    '-I../include/msvcrt',
     '-D_UCRT',
 ]
 

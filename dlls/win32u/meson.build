@@ -63,7 +63,7 @@ u_src = files(
 
 win32u_w_af_64 = static_library('win32u_w_af_64', [headers, w_src],
     include_directories : [config_h_inc, incdir, '.'],
-    c_args : extra_flags_64 + ['-D_WIN32U_'],
+    c_args : extra_flags_64 + ['-D_MSVCR_VER=0', '-D_WIN32U_'],
     native : false,
     build_by_default : meson.is_cross_build(),
 )

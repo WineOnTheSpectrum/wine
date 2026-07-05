@@ -38,11 +38,11 @@ subdir('userenv')
 subdir('cabinet')
 subdir('dbghelp')
 subdir('imagehlp')
-subdir('setupapi') #
-subdir('comdlg32') #
+subdir('setupapi')
+subdir('comdlg32')
 subdir('mlang')
-subdir('shlwapi') #
-subdir('cryptui') #
+subdir('shlwapi')
+subdir('cryptui')
 subdir('wintrust')
 subdir('advpack')
 subdir('urlmon')
@@ -95,32 +95,32 @@ foreach dllname, contents : dlls
 endforeach
 
 # Uncomment when enough dlls are populated
-#
-## Build and link all dlls
-#foreach dllname, contents : dlls
-#
-#    deps_64 = []
-#    foreach dll : contents['deps']
-#        deps_64 += get_variable('@0@_64'.format(dll))
-#    endforeach
-#
-#    custom_target('@0@_64.dll'.format(dllname),
-#        output : '@0@_64.dll'.format(dllname),
-#        input : [
-#            '@0@/@0@.spec'.format(dllname), get_variable('@0@_o_64'.format(dllname)),
-#        ] + contents['res'] + deps_64,
-#        command : [
-#        winegcc_bin,
-#            '-I@BUILD_DIR@',
-#            '-o', '@OUTPUT@',
-#            '--wine-objdir', '.',
-#            '-b', 'x86_64-w64-mingw32',
-#            '-Wl,--wine-builtin',
-#            '-shared',
-#            '@INPUT@',
-#        ],
-#        depends : winegcc_bin,
-#        build_by_default : meson.is_cross_build(),
-#    )
-#
-#endforeach
+
+# Build and link all dlls
+foreach dllname, contents : dlls
+
+    deps_64 = []
+    foreach dll : contents['deps']
+        deps_64 += get_variable('@0@_64'.format(dll))
+    endforeach
+
+    custom_target('@0@_64.dll'.format(dllname),
+        output : '@0@_64.dll'.format(dllname),
+        input : [
+            '@0@/@0@.spec'.format(dllname), get_variable('@0@_o_64'.format(dllname)),
+        ] + contents['res'] + deps_64,
+        command : [
+        winegcc_bin,
+            '-I../dlls/@0@'.format(dllname),
+            '-o', '@OUTPUT@',
+            '--wine-objdir', '.',
+            '-b', 'x86_64-w64-mingw32',
+            '-Wl,--wine-builtin',
+            '-shared',
+            '@INPUT@',
+        ],
+        depends : winegcc_bin,
+        build_by_default : meson.is_cross_build(),
+    )
+
+endforeach
