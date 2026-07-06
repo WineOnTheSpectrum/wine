@@ -33,9 +33,9 @@ deps = [
     'kernelbase',
     'cabinet',
     'shell32',
-    'wintrust', #XXX avoid circular dependency
+    'wintrust', # delay?
     'ole32',
-    'comdlg32', #XXX add lib
+    'comdlg32',
     'user32',
     'version',
     'winecrt0',

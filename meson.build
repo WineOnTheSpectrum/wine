@@ -476,7 +476,7 @@ gen_idl_c = generator(widl_bin,
     output : '@BASENAME@_c.c',
     arguments : [
         '-o', '@OUTPUT@',
-        '-m64',
+        '-b', 'x86_64-w64-mingw32',
         '--nostdinc',
         '-Ldlls/\\*',
         '-I@0@/include'.format(meson.global_source_root()),

@@ -70,9 +70,19 @@ win32u_w_af_64 = static_library('win32u_w_af_64', [headers, w_src],
 
 win32u_w_o_64 = win32u_w_af_64.extract_all_objects(recursive : true)
 
-win32u_64 = custom_target('win32u_64',
-    input : ['win32u.spec', win32u_w_o_64],
-    output : 'libwin32u_64.a',
+win32u_u_af_64 = static_library('win32u_u_af_64', [headers, u_src],
+    include_directories : [config_h_inc, incdir, '.'],
+    c_args : ['-D_WIN32U_', '-DWINE_UNIX_LIB'],
+    dependencies : [freetype2, pthread, libm],
+    native : true,
+    build_by_default : not meson.is_cross_build(),
+)
+
+win32u_u_o_64 = win32u_u_af_64.extract_all_objects(recursive : true)
+
+win32u_u_64 = custom_target('win32u_u_64',
+    input : 'win32u.spec',
+    output : 'libwin32u_u_64.a',
     command : [
       winebuild_bin,
       '-w', '--implib', '-o', '@OUTPUT@',
@@ -81,16 +91,29 @@ win32u_64 = custom_target('win32u_64',
       '@INPUT@',
     ],
     depends : winebuild_bin,
+    build_by_default : not meson.is_cross_build(),
+)
+
+win32u_w_64 = custom_target('win32u_w_64',
+    input : 'win32u.spec',
+    output : 'libwin32u_w_64.a',
+    command : [
+      winebuild_bin,
+      '-w', '--implib', '-o', '@OUTPUT@',
+      '--without-dlltool',
+      '-b', 'x86_64-w64-mingw32',
+      '--export',
+      '@INPUT@',
+    ],
+    depends : winebuild_bin,
     build_by_default : meson.is_cross_build(),
 )
 
-win32u_u_64 = static_library('win32u_u_64', [headers, u_src],
-    include_directories : [config_h_inc, incdir, '.'],
-    c_args : ['-D_WIN32U_', '-DWINE_UNIX_LIB'],
-    dependencies : [freetype2, pthread, libm],
-    native : true,
-    build_by_default : not meson.is_cross_build(),
-)
+if meson.is_cross_build()
+    win32u_64 = win32u_w_64
+else
+    win32u_64 = win32u_u_64
+endif
 
 custom_target('win32u_64.dll',
     output : 'win32u_64.dll',

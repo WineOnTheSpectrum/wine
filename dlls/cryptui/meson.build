@@ -22,8 +22,8 @@ deps = [
     'user32',
     'gdi32',
     'advapi32',
-    'wintrust', #XXX
-    'urlmon', #XXX
+    'wintrust', # delay?
+    'urlmon', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',

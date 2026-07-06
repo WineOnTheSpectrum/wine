@@ -22,9 +22,9 @@ extra_args = [
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    #'dnsapi',
+    'dnsapi', # delay?
     'advapi32',
-    #'iphlpapi',
+    'iphlpapi', # delay?
     'user32',
     'winecrt0',
     'ucrtbase',

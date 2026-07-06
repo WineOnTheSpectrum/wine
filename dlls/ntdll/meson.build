@@ -97,6 +97,7 @@ ntdll_so_64 = shared_library('ntdll_so_64', [unix_src],
     c_args : [
         '-DWINE_UNIX_LIB',
         '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
+        '-static-libgcc',
     ] + datadir_define + dllpath_define,
     native : true,
     dependencies : [libdl, pthread, unwind],

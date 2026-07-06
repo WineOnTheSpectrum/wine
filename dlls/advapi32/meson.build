@@ -27,8 +27,8 @@ src = files(
 deps = [
     'kernelbase',
     'sechost',
-    'rpcrt4',
-    'user32',
+    'rpcrt4', # delay?
+    'user32', # delay?
     'winecrt0',
     'msvcrt',
     'kernel32',

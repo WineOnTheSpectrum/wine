@@ -20,7 +20,7 @@ extra_args = [
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    #'winmm', XXX avoid circular dependency
+    'winmm', # delay?
     'user32',
     'advapi32',
     'winecrt0',

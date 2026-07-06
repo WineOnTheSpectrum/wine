@@ -30,7 +30,7 @@ deps = [
     'user32',
     'gdi32',
     'advapi32',
-    #'msimg32',
+    #XXX 'msimg32', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',

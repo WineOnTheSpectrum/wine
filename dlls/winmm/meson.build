@@ -29,7 +29,7 @@ deps = [
     'advapi32',
     'ole32',
     'msacm32',
-    #'dinput8', XXX is this needed?
+    #XXX 'dinput8', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',

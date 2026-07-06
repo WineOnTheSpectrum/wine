@@ -61,8 +61,8 @@ deps = [
     'kernelbase',
     'win32u',
     'uuid',
-    #'imm32',
-    #'combase',
+    'imm32', # delay?
+    'combase', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',

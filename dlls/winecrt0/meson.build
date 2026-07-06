@@ -45,9 +45,9 @@ winecrt0_u_af_64 = static_library('winecrt0_u_af_64', [headers, u_src],
 )
 winecrt0_u_o_64 = winecrt0_u_af_64.extract_all_objects(recursive : true)
 
-winecrt0_64 = custom_target('winecrt0_64',
+winecrt0_w_64 = custom_target('winecrt0_w_64',
     input : [winecrt0_w_o_64],
-    output : 'libwinecrt0_64.a',
+    output : 'libwinecrt0_w_64.a',
     command : [
       winebuild_bin,
       '-w', '--staticlib', '-o', '@OUTPUT@',
@@ -64,12 +64,18 @@ winecrt0_u_64 = custom_target('winecrt0_u_64',
     command : [
       winebuild_bin,
       '-w', '--staticlib', '-o', '@OUTPUT@',
-      '-b', 'x86_64-w64-mingw32',
+      '-m64',
       '@INPUT@',
     ],
     depends : winebuild_bin,
     build_by_default : not meson.is_cross_build(),
 )
+
+if meson.is_cross_build()
+    winecrt0_64 = winecrt0_w_64
+else
+    winecrt0_64 = winecrt0_u_64
+endif
 
 # Can't combine libs from different trees yet
 #winecrt0_64 = custom_target('winecrt0_64',

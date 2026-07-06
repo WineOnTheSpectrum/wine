@@ -21,8 +21,8 @@ deps = [
     'crypt32',
     'user32',
     'advapi32',
-    'cryptui', #
-    'imagehlp', #
+    'cryptui', # delay?
+    'imagehlp', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',

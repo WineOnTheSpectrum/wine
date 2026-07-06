@@ -3,6 +3,8 @@ rc = files(
 )
 
 extra_args = [
+    '-I../include/msvcrt',
+    '-D_UCRT',
     '-D_GDI32_',
 ]
 
@@ -36,7 +38,7 @@ deps = [
     'user32',
     'advapi32',
     'win32u',
-    'winspool',
+    'winspool', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',

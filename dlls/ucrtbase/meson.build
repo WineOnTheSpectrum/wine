@@ -56,8 +56,8 @@ src = files(
 deps = [
     'musl',
     'ntdll',
-    'advapi32',
-    'user32',
+    'advapi32', # delay?
+    'user32', # delay?
     'winecrt0',
     'kernel32',
     'ntdll',

@@ -21,7 +21,7 @@ extra_args = [
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    #'netapi32',
+    'netapi32', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
