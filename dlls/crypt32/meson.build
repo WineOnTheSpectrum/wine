@@ -76,7 +76,8 @@ dlls += {
         'idl_h' : [],
         'res' : res,
         'extra_args' : rc_extra_args,
-        'src' : src,
+        'src' : w_src,
+        'obj' : [],
         'deps': deps,
     }
 }

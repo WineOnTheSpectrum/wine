@@ -11,14 +11,9 @@ extra_args = [
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
-src = files(
+w_src1 = files(
     '../msvcrt/console.c',
     '../msvcrt/cpp.c',
-    '../msvcrt/crt_gccmain.c',
-    '../msvcrt/crt_main.c',
-    '../msvcrt/crt_winmain.c',
-    '../msvcrt/crt_wmain.c',
-    '../msvcrt/crt_wwinmain.c',
     '../msvcrt/ctype.c',
     '../msvcrt/data.c',
     '../msvcrt/dir.c',
@@ -39,18 +34,26 @@ src = files(
     '../msvcrt/lock.c',
     '../msvcrt/main.c',
     '../msvcrt/math.c',
-    '../msvcrt/mathf.c',
     '../msvcrt/mbcs.c',
     '../msvcrt/misc.c',
-    'printf.c',
     '../msvcrt/process.c',
     '../msvcrt/scanf.c',
-    '../msvcrt/sincos.c',
     '../msvcrt/string.c',
     '../msvcrt/thread.c',
     '../msvcrt/time.c',
     '../msvcrt/undname.c',
     '../msvcrt/wcs.c',
+)
+
+w_src2 = files(
+    '../msvcrt/crt_gccmain.c',
+    '../msvcrt/crt_main.c',
+    '../msvcrt/crt_winmain.c',
+    '../msvcrt/crt_wmain.c',
+    '../msvcrt/crt_wwinmain.c',
+    '../msvcrt/mathf.c',
+    'printf.c',
+    '../msvcrt/sincos.c',
 )
 
 deps = [
@@ -63,13 +66,27 @@ deps = [
     'ntdll',
 ]
 
+ucrtbase_w2_af_64 = static_library('ucrtbase_w2_af_64', [headers, w_src2],
+    include_directories : [
+        config_h_inc, incdir, '.',
+        '../../dlls/ucrtbase',
+        '../../dlls/msvcrt',
+        '../../include/msvcrt',
+    ],
+    c_args : ['-D_UCRT', '-D_CRTIMP='] + extra_flags_64,
+    native : false,
+    build_by_default : meson.is_cross_build(),
+)
+ucrtbase_w2_o_64 = ucrtbase_w2_af_64.extract_all_objects(recursive : true)
+
 dlls += {
     'ucrtbase' : {
         'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : extra_args,
-        'src' : src,
+        'src' : w_src1,
+        'obj' : ucrtbase_w2_o_64,
         'deps' : deps,
     }
 }

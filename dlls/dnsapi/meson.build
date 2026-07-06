@@ -50,6 +50,7 @@ dlls += {
         'res' : res,
         'extra_args' : extra_args,
         'src' : src_w,
+        'obj' : [],
         'deps' : deps,
     }
 }

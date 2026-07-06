@@ -78,7 +78,7 @@ foreach dllname, contents : dlls
     )
     
     set_variable('@0@_64'.format(dllname), custom_target('@0@_64'.format(dllname),
-        input : '@0@/@0@.spec'.format(dllname),
+        input : ['@0@/@0@.spec'.format(dllname)] + contents['obj'],
         output : 'lib@0@_64.a'.format(dllname),
         command : [
           winebuild_bin,

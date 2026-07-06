@@ -48,7 +48,8 @@ dlls += {
         'idl_h' : [],
         'res' : [],
         'extra_args' : w_extra_args,
-        'src' : src,
+        'src' : w_src,
+        'obj' : [],
         'deps': deps,
     }
 }

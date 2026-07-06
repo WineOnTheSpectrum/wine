@@ -10,15 +10,10 @@ extra_args = [
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
-src = files(
+w_src1 = files(
     'concurrency.c',
     'console.c',
     'cpp.c',
-    'crt_gccmain.c',
-    'crt_main.c',
-    'crt_winmain.c',
-    'crt_wmain.c',
-    'crt_wwinmain.c',
     'ctype.c',
     'data.c',
     'dir.c',
@@ -35,23 +30,31 @@ src = files(
     'file.c',
     'handler4.c',
     'heap.c',
-    'iob.c',
     'locale.c',
     'lock.c',
     'main.c',
     'math.c',
-    'mathf.c',
     'mbcs.c',
     'misc.c',
-    'onexit.c',
     'process.c',
     'scanf.c',
-    'sincos.c',
     'string.c',
     'thread.c',
     'time.c',
     'undname.c',
-    'wcs.c'
+    'wcs.c',
+)
+
+w_src2 = files(
+    'crt_gccmain.c',
+    'crt_main.c',
+    'crt_winmain.c',
+    'crt_wmain.c',
+    'crt_wwinmain.c',
+    'iob.c',
+    'mathf.c',
+    'onexit.c',
+    'sincos.c',
 )
 
 deps = [
@@ -63,13 +66,24 @@ deps = [
     'kernel32',
 ]
 
+msvcrt_w2_af_64 = static_library('msvcrt_w2_af_64', [w_src2],
+    include_directories : [
+        config_h_inc, incdir, '.',
+        '../../include/msvcrt',
+    ],
+    c_args : ['-D_MSVCR_VER=0', '-D_CRTIMP='] + extra_flags_64,
+    native : false,
+    build_by_default : meson.is_cross_build(),
+)
+
 dlls += {
     'msvcrt' : {
         'idl_c' : [],
         'idl_h' : [],
         'res' : res,
         'extra_args' : extra_args,
-        'src' : src,
+        'src' : w_src1,
+        'obj' : msvcrt_w2_af_64,
         'deps' : deps,
     }
 }

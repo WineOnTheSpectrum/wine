@@ -55,6 +55,7 @@ dlls += {
         'res' : [res1, res2],
         'extra_args' : extra_args,
         'src' : src,
+        'obj' : [],
         'deps' : deps,
     }
 }
