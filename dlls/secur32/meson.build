@@ -3,7 +3,7 @@ u_src = files(
 )
 
 u_extra_args = [
-    '-DWINE_UNIX_LIB',
+    '-DWINE_UNIX_LIB', '-D__WINESRC__',
 ]
 
 w_src = files(
@@ -18,8 +18,8 @@ w_src = files(
 w_extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__',
 ]
-
 
 deps = [
     'advapi32',

@@ -14,6 +14,6 @@ src = [
 
 wmc_bin = executable('wmc', src,
     include_directories : [config_h_inc, '.', incdir],
-    c_args : datadir_define,
+    c_args : [datadir_define] + extra_flags_tools,
     native : true,
 )

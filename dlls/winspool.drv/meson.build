@@ -49,7 +49,7 @@ winspool_w_64 = custom_target('winspool_w_64',
 
 winspool_u_af_64 = static_library('winspool_u_64', [headers, u_src],
     include_directories : [config_h_inc, incdir, '.'],
-    c_args : ['-DWINE_UNIX_LIB'],
+    c_args : ['-DWINE_UNIX_LIB', '-D__WINESRC__'],
     dependencies : [cups],
     native : true,
     build_by_default : not meson.is_cross_build(),

@@ -16,6 +16,7 @@ rc = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
@@ -34,7 +35,7 @@ dnsapi_so_64 = shared_library('dnsapi_so_64', [src_u],
 	incdir,
     ],
     c_args : [
-        '-DWINE_UNIX_LIB',
+        '-DWINE_UNIX_LIB', '-D__WINESRC__',
     ] + datadir_define + dllpath_define,
     native : true,
     link_with : [ntdll_so_64],

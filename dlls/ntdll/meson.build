@@ -20,6 +20,7 @@ rc_extra_args = [
     '-I../libs/tomcrypt/src/headers',
     '-D_MSVCR_VER=0',
     '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
+    '-D__WINESRC__',
 ]
 
 version_res = gen_rc_res.process(rc, extra_args : rc_extra_args)
@@ -95,8 +96,8 @@ ntdll_so_64 = shared_library('ntdll_so_64', [unix_src],
 	incdir,
     ],
     c_args : [
-        '-DWINE_UNIX_LIB',
         '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
+        '-DWINE_UNIX_LIB', '-D__WINESRC__',
         '-static-libgcc',
     ] + datadir_define + dllpath_define,
     native : true,
@@ -108,12 +109,31 @@ ntdll_af_64 = static_library('ntdll_artefacts_64', [src],
     include_directories : [
 	incdir,
         '../../include/msvcrt',
+        '../../libs/tomcrypt/src/headers',
     ],
     c_args : extra_flags_64 + rc_extra_args,
     native : false,
     build_by_default : meson.is_cross_build(),
 )
 ntdll_o_64 = ntdll_af_64.extract_all_objects(recursive : true)
+
+ntdll_64 = custom_target('ntdll_64',
+    input : 'ntdll.spec',
+    output : 'libntdll_64.a',
+    command : [
+      winebuild_bin,
+      '-w', '--implib', '-o', '@OUTPUT@',
+      '--without-dlltool',
+      '-b', 'x86_64-w64-mingw32',
+      '--export',
+      '@INPUT@',
+    ],
+    depends : [
+        winebuild_bin,
+        ntdll_af_64,
+    ],
+    build_by_default : meson.is_cross_build(),
+)
 
 custom_target('ntdll_64.dll',
     output : 'ntdll_64.dll',
@@ -133,21 +153,6 @@ custom_target('ntdll_64.dll',
 	'@INPUT@'
     ] + extra_dll_flags_64,
     depends : winegcc_bin,
-    build_by_default : meson.is_cross_build(),
-)
-
-ntdll_64 = custom_target('ntdll_64',
-    input : 'ntdll.spec',
-    output : 'libntdll_64.a',
-    command : [
-      winebuild_bin,
-      '-w', '--implib', '-o', '@OUTPUT@',
-      '--without-dlltool',
-      '-b', 'x86_64-w64-mingw32',
-      '--export',
-      '@INPUT@',
-    ],
-    depends : winebuild_bin,
     build_by_default : meson.is_cross_build(),
 )
 

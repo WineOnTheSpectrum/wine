@@ -88,7 +88,10 @@ foreach dllname, contents : dlls
           '--export',
           '@INPUT@',
         ],
-        depends : winebuild_bin,
+        depends : [
+            winebuild_bin,
+            get_variable('@0@_af_64'.format(dllname)),
+        ],
         build_by_default : meson.is_cross_build(),
     ))
 
@@ -119,7 +122,10 @@ foreach dllname, contents : dlls
             '-shared',
             '@INPUT@',
         ],
-        depends : winegcc_bin,
+        depends : [
+            winegcc_bin,
+            get_variable('@0@_64'.format(dllname)),
+        ],
         build_by_default : meson.is_cross_build(),
     )
 

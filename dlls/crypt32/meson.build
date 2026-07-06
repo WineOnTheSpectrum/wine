@@ -5,6 +5,7 @@ rc = files(
 rc_extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT', '-D_CRYPT32_',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : rc_extra_args)
@@ -15,7 +16,7 @@ u_src = files(
 
 u_extra_args = [
     '-D_CRYPT32_',
-    '-DWINE_UNIX_LIB',
+    '-DWINE_UNIX_LIB', '-D__WINESRC__',
 ]
 
 w_src = files(

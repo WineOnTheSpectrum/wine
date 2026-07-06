@@ -13,6 +13,7 @@ src_u = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__',
 ]
 
 idls = files(
@@ -41,7 +42,7 @@ netapi32_so_64 = shared_library('netapi32_so_64', [src_u],
 	incdir,
     ],
     c_args : [
-        '-DWINE_UNIX_LIB',
+        '-DWINE_UNIX_LIB', '-D__WINESRC__',
     ] + datadir_define + dllpath_define,
     native : true,
     link_with : [ntdll_so_64],

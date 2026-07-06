@@ -6,6 +6,7 @@ rc_extra_args = [
     '-I../include/msvcrt',
     '-I../libs/tomcrypt/src/headers',
     '-D_UCRT', '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : rc_extra_args)
@@ -19,7 +20,8 @@ u_src = files(
 )
 
 u_extra_args = [
-    '-DWINE_UNIX_LIB', '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE',
+    '-DWINE_UNIX_LIB', '-D__WINESRC__',
+    '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE',
 ]
 
 deps = [

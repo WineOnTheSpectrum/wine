@@ -39,8 +39,9 @@ winecrt0_u_af_64 = static_library('winecrt0_u_af_64', [headers, u_src],
     include_directories : [
         config_h_inc, incdir, '.',
     ],
-    c_args : ['-DWINE_UNIX_LIB'],
+    c_args : ['-DWINE_UNIX_LIB', '-D__WINESRC__'],
     native : true,
+    pic : true,
     build_by_default : not meson.is_cross_build(),
 )
 winecrt0_u_o_64 = winecrt0_u_af_64.extract_all_objects(recursive : true)

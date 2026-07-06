@@ -32,5 +32,6 @@ src = [
 
 widl_bin = executable('widl', src,
     include_directories : [config_h_inc, '.', incdir, '../wrc'],
+    c_args : extra_flags_tools,
     native : true,
 )

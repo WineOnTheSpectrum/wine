@@ -1,12 +1,10 @@
 project('wine', 'c')
 
-add_global_arguments('-D__WINESRC__', language : 'c', native : true)
 #add_global_arguments('-DWINE_NO_INLINE_STRING', language : 'c', native : true)
 add_global_arguments('-DINCLUDEDIR="\"/usr/local/include\""', language : 'c', native : true)
 add_global_arguments('-DBINDIR="\"/usr/local/bin\""', language : 'c', native : true)
 add_global_arguments('-DLIBDIR="\"/usr/local/lib\""', language : 'c', native : true)
 
-add_global_arguments('-D__WINESRC__', language : 'c', native : false)
 #add_global_arguments('-DWINE_NO_INLINE_STRING', language : 'c', native : false)
 add_global_arguments('-DINCLUDEDIR="\"/usr/local/include\""', language : 'c', native : false)
 add_global_arguments('-DBINDIR="\"/usr/local/bin\""', language : 'c', native : false)
@@ -25,16 +23,16 @@ extra_flags_tools = [
     '-DCPP="cpp"',
     '-DCXX="g++ -m64"',
     '-DLD="ld"',
-    '-DWINE_UNIX_LIB',
+    '-D__WINESRC__', '-DWINE_UNIX_LIB',
 ]
 
 extra_dll_flags_32 = [
-    '-nodefaultlibs', '-nostartfiles',
+    '-nodefaultlibs',
     '-Wl,--image-base,0x7b000000', # FIXME this address is specific to a dll
 ]
 
 extra_dll_flags_64 = [
-    '-nodefaultlibs', '-nostartfiles',
+    '-nodefaultlibs',
     '-Wl,--image-base,0x174000000', # FIXME this address is specific to a dll
 ]
 
