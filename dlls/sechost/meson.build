@@ -19,11 +19,11 @@ extra_args = [
 
 deps = [
     'kernelbase',
-    'rpcrt4', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'rpcrt4', # delay?
 ]
 
 dlls += {

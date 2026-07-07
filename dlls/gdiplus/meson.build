@@ -22,6 +22,7 @@ rc = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)

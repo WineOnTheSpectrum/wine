@@ -29,11 +29,11 @@ deps = [
     'advapi32',
     'ole32',
     'msacm32',
-    #XXX 'dinput8', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    #XXX 'dinput8', # delay?
 ]
 
 dlls += {

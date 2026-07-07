@@ -20,13 +20,13 @@ extra_args = [
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    'winmm', # delay?
     'user32',
     'advapi32',
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'winmm', # delay?
 ]
 
 dlls += {

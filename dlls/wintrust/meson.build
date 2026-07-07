@@ -21,12 +21,12 @@ deps = [
     'crypt32',
     'user32',
     'advapi32',
-    'cryptui', # delay?
-    'imagehlp', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'cryptui', # delay?
+    'imagehlp', # delay?
 ]
 
 dlls += {

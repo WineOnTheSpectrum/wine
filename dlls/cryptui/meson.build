@@ -22,12 +22,12 @@ deps = [
     'user32',
     'gdi32',
     'advapi32',
-    'wintrust', # delay?
-    'urlmon', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'wintrust', # delay?
+    'urlmon', # delay?
 ]
 
 dlls += {

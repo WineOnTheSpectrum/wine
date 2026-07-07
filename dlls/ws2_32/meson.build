@@ -23,14 +23,14 @@ extra_args = [
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    'dnsapi', # delay?
     'advapi32',
-    'iphlpapi', # delay?
     'user32',
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'dnsapi', # delay?
+    'iphlpapi', # delay?
 ]
 
 ws2_32_so_64 = shared_library('ws2_32_so_64', [src_u],

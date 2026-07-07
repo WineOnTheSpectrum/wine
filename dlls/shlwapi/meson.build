@@ -40,13 +40,13 @@ deps = [
     'comdlg32',
     'mpr',
     'mlang',
-    'urlmon', # delay?
     'shell32',
     'winmm',
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'urlmon', # delay?
 ]
 
 dlls += {

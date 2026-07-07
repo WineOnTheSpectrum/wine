@@ -30,11 +30,11 @@ deps = [
     'user32',
     'gdi32',
     'advapi32',
-    #XXX 'msimg32', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    #XXX 'msimg32', # delay?
 ]
 
 dlls += {

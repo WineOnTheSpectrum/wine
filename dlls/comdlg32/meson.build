@@ -36,7 +36,6 @@ idl_h = gen_idl_h.process(idls)
 deps = [
     'uuid',
     'shell32',
-    'shlwapi', # delay?
     'comctl32',
     'winspool',
     'user32',
@@ -47,6 +46,7 @@ deps = [
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'shlwapi', # delay?
 ]
 
 dlls += {

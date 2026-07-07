@@ -60,11 +60,11 @@ w_src2 = files(
 deps = [
     'musl',
     'ntdll',
-    'advapi32', # delay?
-    'user32', # delay?
     'winecrt0',
     'kernel32',
     'ntdll',
+    'advapi32', # delay?
+    'user32', # delay?
 ]
 
 ucrtbase_w2_af_64 = static_library('ucrtbase_w2_af_64', [headers, w_src2],

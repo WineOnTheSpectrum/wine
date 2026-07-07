@@ -44,7 +44,7 @@ extra_flags_32 = [
 
 extra_flags_64 = [
 #  '-Wall',
-#  '-fno-strict-aliasing',
+  '-fno-strict-aliasing',
 #  '-Wdeclaration-after-statement',
 #  '-Wempty-body',
 #  '-Wignored-qualifiers',

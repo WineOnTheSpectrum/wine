@@ -9,7 +9,7 @@ extra_args = [
     '-D_USER32_',
 ]
 
-res = gen_rc_res.process(rc, extra_args : extra_args + ['-D__WINESRC__'])
+res = gen_rc_res.process(rc, extra_args : extra_args + ['-D__WINESRC__', '-D__WINE_PE_BUILD'])
 
 src = files(
     'button.c',
@@ -61,12 +61,12 @@ deps = [
     'kernelbase',
     'win32u',
     'uuid',
-    'imm32', # delay?
-    'combase', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'imm32', # delay?
+    'combase', # delay?
 ]
 
 dlls += {

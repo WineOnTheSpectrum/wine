@@ -27,12 +27,12 @@ src = files(
 deps = [
     'kernelbase',
     'sechost',
-    'rpcrt4', # delay?
-    'user32', # delay?
     'winecrt0',
-    'msvcrt',
+    'ucrtbase', #XXX should be msvcrt
     'kernel32',
     'ntdll',
+    'rpcrt4', # delay?
+    'user32', # delay?
 ]
 
 dlls += {

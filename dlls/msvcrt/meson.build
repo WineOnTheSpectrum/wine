@@ -3,6 +3,7 @@ rc = files(
 )
 
 extra_args = [
+    '-I../include',
     '-I../include/msvcrt',
     '-D_MSVCR_VER=0',
     '-D_CRTIMP=',

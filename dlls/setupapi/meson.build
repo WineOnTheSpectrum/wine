@@ -33,7 +33,6 @@ deps = [
     'kernelbase',
     'cabinet',
     'shell32',
-    'wintrust', # delay?
     'ole32',
     'comdlg32',
     'user32',
@@ -42,6 +41,7 @@ deps = [
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'wintrust', # delay?
 ]
 
 dlls += {

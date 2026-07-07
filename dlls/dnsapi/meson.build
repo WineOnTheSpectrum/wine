@@ -22,11 +22,11 @@ extra_args = [
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    'netapi32', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'netapi32', # delay?
 ]
 
 dnsapi_so_64 = shared_library('dnsapi_so_64', [src_u],

@@ -54,11 +54,11 @@ deps = [
     'wininet',
     'user32',
     'advapi32',
-    'advpack', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'advpack', # delay?
 ]
 
 dlls += {

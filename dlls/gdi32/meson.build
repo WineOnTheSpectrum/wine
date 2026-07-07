@@ -38,11 +38,11 @@ deps = [
     'user32',
     'advapi32',
     'win32u',
-    'winspool', # delay?
     'winecrt0',
     'ucrtbase',
     'kernel32',
     'ntdll',
+    'winspool', # delay?
 ]
 
 dlls += {
