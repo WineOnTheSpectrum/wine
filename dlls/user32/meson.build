@@ -9,7 +9,7 @@ extra_args = [
     '-D_USER32_',
 ]
 
-res = gen_rc_res.process(rc, extra_args : extra_args)
+res = gen_rc_res.process(rc, extra_args : extra_args + ['-D__WINESRC__'])
 
 src = files(
     'button.c',

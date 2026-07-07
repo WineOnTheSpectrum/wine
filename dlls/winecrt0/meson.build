@@ -26,7 +26,7 @@ u_src = files(
 
 winecrt0_w_af_64 = static_library('winecrt0_w_af_64', [headers, w_src],
     include_directories : [
-        config_h_inc, incdir, '.',
+        incdir, '.',
         '../../include/msvcrt',
     ],
     c_args : ['-D_MSVCR_VER=0'] + extra_flags_64,

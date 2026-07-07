@@ -95,7 +95,7 @@ win32u_u_64 = custom_target('win32u_u_64',
 )
 
 win32u_w_64 = custom_target('win32u_w_64',
-    input : 'win32u.spec',
+    input : ['win32u.spec', win32u_w_af_64],
     output : 'libwin32u_w_64.a',
     command : [
       winebuild_bin,
@@ -118,7 +118,7 @@ endif
 custom_target('win32u_64.dll',
     output : 'win32u_64.dll',
     input : [
-        'win32u.spec', win32u_w_64,
+        'win32u.spec', win32u_64,
         ntdll_64, winecrt0_64,
     ],
     command : [

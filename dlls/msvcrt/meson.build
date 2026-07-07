@@ -66,12 +66,11 @@ deps = [
     'kernel32',
 ]
 
-msvcrt_w2_af_64 = static_library('msvcrt_w2_af_64', [w_src2],
+msvcrt_w2_af_64 = static_library('msvcrt_w2_af_64', [headers, w_src2],
     include_directories : [
-        config_h_inc, incdir, '.',
-        '../../include/msvcrt',
+        incdir, '.',
     ],
-    c_args : ['-D_MSVCR_VER=0', '-D_CRTIMP='] + extra_flags_64,
+    c_args : extra_args + extra_flags_64,
     native : false,
     build_by_default : meson.is_cross_build(),
 )

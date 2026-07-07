@@ -1,4 +1,4 @@
-src = files(
+src1 = files(
     'bitmap.c',
     'bmpdecode.c',
     'bmpencode.c',
@@ -29,10 +29,12 @@ src = files(
     'scaler.c',
     'stream.c',
     'ungif.c',
-    'uuid.c',
     'wincodecs_common.c',
 )
 
+src2 = files(
+    'uuid.c',
+) 
 
 rc = files(
     'version.rc',
@@ -44,7 +46,7 @@ extra_args = [
     '-I../libs/jpeg',
     '-I../libs/png',
     '-D_UCRT',
-    '-DENTRY_PREFIX=WIC_', '-DPROXY_DELEGATION', '-DWINE_REGISTER_DLL',
+    '-DENTRY_PREFIX=WIC_', '-DPROXY_DELEGATION',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
@@ -73,14 +75,23 @@ deps = [
     'ntdll',
 ]
 
+windowscodecs_w2_af_64 = static_library('windowscodecs_w2_af_64', [headers, src2],
+    include_directories : [
+        incdir, '.',
+    ],
+    c_args : extra_args + extra_flags_64,
+    native : false,
+    build_by_default : meson.is_cross_build(),
+)
+
 dlls += {
     'windowscodecs' : {
         'idl_c' : idl_c,
         'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,
-        'src' : src,
-        'obj' : [],
+        'src' : src1,
+        'obj' : windowscodecs_w2_af_64,
         'deps' : deps,
     }
 }

@@ -69,7 +69,9 @@ foreach dllname, contents : dlls
         [headers] + contents['idl_h'] + contents['idl_c'] + contents['src'],
         include_directories : [incdir, '.'],
         c_args : contents['extra_args'] + extra_flags_64,
+        #link_args : ['-Wl,--whole-archive'],
         native : false,
+        pic : true,
         build_by_default : meson.is_cross_build(),
     ))
     

@@ -68,12 +68,9 @@ deps = [
 
 ucrtbase_w2_af_64 = static_library('ucrtbase_w2_af_64', [headers, w_src2],
     include_directories : [
-        config_h_inc, incdir, '.',
-        '../../dlls/ucrtbase',
-        '../../dlls/msvcrt',
-        '../../include/msvcrt',
+        incdir, '.',
     ],
-    c_args : ['-D_UCRT', '-D_CRTIMP='] + extra_flags_64,
+    c_args : extra_args + extra_flags_64,
     native : false,
     build_by_default : meson.is_cross_build(),
 )
@@ -86,7 +83,7 @@ dlls += {
         'res' : res,
         'extra_args' : extra_args,
         'src' : w_src1,
-        'obj' : ucrtbase_w2_o_64,
+        'obj' : ucrtbase_w2_af_64,
         'deps' : deps,
     }
 }
