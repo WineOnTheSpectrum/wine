@@ -112,7 +112,7 @@ foreach dllname, contents : dlls
     custom_target('@0@_64.dll'.format(dllname),
         output : '@0@_64.dll'.format(dllname),
         input : [
-            '@0@/@0@.spec'.format(dllname), get_variable('@0@_64'.format(dllname)),
+            '@0@/@0@.spec'.format(dllname), get_variable('@0@_o_64'.format(dllname)),
         ] + contents['res'] + deps_64,
         command : [
         winegcc_bin,

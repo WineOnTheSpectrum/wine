@@ -70,7 +70,7 @@ kernel32_64 = custom_target('kernel32_64',
 custom_target('kernel32_64.dll',
     output : 'kernel32_64.dll',
     input : [
-        'kernel32.spec', kernel32_64, version_res,
+        'kernel32.spec', kernel32_o_64, version_res,
         kernelbase_64, ntdll_64, winecrt0_64,
     ],
     command : [

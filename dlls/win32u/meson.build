@@ -124,7 +124,7 @@ endif
 custom_target('win32u_64.dll',
     output : 'win32u_64.dll',
     input : [
-        'win32u.spec', win32u_64,
+        'win32u.spec', win32u_w_o_64,
         ntdll_64, winecrt0_64,
     ],
     command : [
