@@ -38,19 +38,39 @@ src = files(
     'volume.c',
 )
 
-kernel32_64 = static_library('kernel32_64', [headers, src],
-    include_directories : incdir,
+kernel32_af_64 = static_library('kernel32_af_64', [headers, src],
+    include_directories : [
+        incdir, '.',
+    ],
     c_args : extra_flags_64 + rc_extra_flags,
     native : false,
     build_by_default : meson.is_cross_build(),
 )
 
-kernel32_o_64 = kernel32_64.extract_all_objects(recursive : true)
+kernel32_o_64 = kernel32_af_64.extract_all_objects(recursive : true)
+
+kernel32_64 = custom_target('kernel32_64',
+    input : 'kernel32.spec',
+    output : 'libkernel32_64.a',
+    command : [
+      winebuild_bin,
+      '-w', '--implib', '-o', '@OUTPUT@',
+      '--without-dlltool',
+      '-b', 'x86_64-w64-mingw32',
+      '--export',
+      '@INPUT@',
+    ],
+    depends : [
+        winebuild_bin,
+        kernel32_af_64,
+    ],
+    build_by_default : meson.is_cross_build(),
+)
 
 custom_target('kernel32_64.dll',
     output : 'kernel32_64.dll',
     input : [
-        'kernel32.spec', kernel32_o_64, version_res,
+        'kernel32.spec', kernel32_64, version_res,
         kernelbase_64, ntdll_64, winecrt0_64,
     ],
     command : [

@@ -25,7 +25,7 @@ w_src = files(
 )
 
 winspool_w_af_64 = static_library('winspool_w_af_64', [headers, w_src],
-    include_directories : [config_h_inc, incdir, '.'],
+    include_directories : [incdir, '.'],
     c_args : extra_flags_64 + rc_extra_args,
     native : false,
     build_by_default : meson.is_cross_build(),
@@ -43,7 +43,10 @@ winspool_w_64 = custom_target('winspool_w_64',
       '--export',
       '@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        winspool_w_af_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
 
@@ -60,7 +63,7 @@ winspool_u_o_64 = winspool_u_af_64.extract_all_objects(recursive : true)
 winspool_64 = custom_target('winspool_64',
     output : 'winspool_64.a',
     input : [
-        'winspool.drv.spec',
+        'winspool.drv.spec', winspool_w_64,
     ],
     command : [
 	winebuild_bin,
@@ -70,7 +73,10 @@ winspool_64 = custom_target('winspool_64',
 	'--export',
 	'@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        winspool_w_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
 

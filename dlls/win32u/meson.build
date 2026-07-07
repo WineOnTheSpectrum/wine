@@ -62,7 +62,7 @@ u_src = files(
 )
 
 win32u_w_af_64 = static_library('win32u_w_af_64', [headers, w_src],
-    include_directories : [config_h_inc, incdir, '.'],
+    include_directories : [incdir, '.'],
     c_args : extra_flags_64 + ['-D_MSVCR_VER=0', '-D_WIN32U_'],
     native : false,
     build_by_default : meson.is_cross_build(),
@@ -90,12 +90,15 @@ win32u_u_64 = custom_target('win32u_u_64',
       '--export',
       '@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        win32u_u_af_64,
+    ],
     build_by_default : not meson.is_cross_build(),
 )
 
 win32u_w_64 = custom_target('win32u_w_64',
-    input : ['win32u.spec', win32u_w_af_64],
+    input : 'win32u.spec',
     output : 'libwin32u_w_64.a',
     command : [
       winebuild_bin,
@@ -105,7 +108,10 @@ win32u_w_64 = custom_target('win32u_w_64',
       '--export',
       '@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        win32u_w_af_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
 
@@ -131,6 +137,9 @@ custom_target('win32u_64.dll',
 	'-nodefaultlibs',
 	'@INPUT@',
     ],
-    depends : winegcc_bin,
+    depends : [
+        winegcc_bin,
+        win32u_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )

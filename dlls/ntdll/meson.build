@@ -138,7 +138,7 @@ ntdll_64 = custom_target('ntdll_64',
 custom_target('ntdll_64.dll',
     output : 'ntdll_64.dll',
     input : [
-        'ntdll.spec', ntdll_o_64, version_res,
+        'ntdll.spec', ntdll_64, version_res,
         tomcrypt_64, musl_64, winecrt0_64,
     ],
     command : [
@@ -152,7 +152,10 @@ custom_target('ntdll_64.dll',
         '-Wl,--image-base,0x170000000',
 	'@INPUT@'
     ] + extra_dll_flags_64,
-    depends : winegcc_bin,
+    depends : [
+        winegcc_bin,
+        ntdll_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
 

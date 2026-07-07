@@ -54,14 +54,17 @@ kernelbase_64 = custom_target('kernelbase_64',
       '--export',
       '@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        kernelbase_af_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
 
 custom_target('kernelbase_64.dll',
     output : 'kernelbase_64.dll',
     input : [
-        'kernelbase.spec', kernelbase_o_64, kernelbase_res, winerror_res,
+        'kernelbase.spec', kernelbase_64, kernelbase_res, winerror_res,
         uuid_64, ntdll_64, winecrt0_64,
     ],
     command : [
@@ -74,6 +77,9 @@ custom_target('kernelbase_64.dll',
 	'-nodefaultlibs', '-nostartfiles', '-Wl,--image-base,0x174000000',
 	'@INPUT@',
     ],
-    depends : winegcc_bin,
+    depends : [
+        winegcc_bin,
+        kernelbase_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
