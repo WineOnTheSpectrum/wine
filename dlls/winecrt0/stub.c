@@ -22,12 +22,15 @@
 #include "windef.h"
 #include "winbase.h"
 #include "wine/exception.h"
+//#include "wine/debug.h"
 
 void __cdecl __wine_spec_unimplemented_stub( const char *module, const char *function )
 {
-    ULONG_PTR args[2];
+    //ULONG_PTR args[2];
 
-    args[0] = (ULONG_PTR)module;
-    args[1] = (ULONG_PTR)function;
-    for (;;) RaiseException( EXCEPTION_WINE_STUB, EXCEPTION_NONCONTINUABLE, 2, args );
+    //args[0] = (ULONG_PTR)module;
+    //args[1] = (ULONG_PTR)function;
+    //for (;;) RaiseException( EXCEPTION_WINE_STUB, EXCEPTION_NONCONTINUABLE, 2, args );
+
+    //XXX cant print here either wine_dbg_printf("XXX %s missing stub\n", __func__);
 }

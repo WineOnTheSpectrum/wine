@@ -21,9 +21,13 @@
 #include <stdarg.h>
 #include "windef.h"
 #include "winbase.h"
+//#include "wine/debug.h"
 
 BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
 {
-    if (reason == DLL_PROCESS_ATTACH) DisableThreadLibraryCalls( inst );
+    if (reason == DLL_PROCESS_ATTACH) {
+	//XXX skip missing symbol: DisableThreadLibraryCalls( inst );
+	//XXX cant print either here wine_dbg_printf("XXX %s missing DisableThreadLibraryCalls symbol\n", __func__);
+    }
     return TRUE;
 }
