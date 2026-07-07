@@ -20,7 +20,7 @@ rc_extra_args = [
     '-I../libs/tomcrypt/src/headers',
     '-D_MSVCR_VER=0',
     '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
-    '-D__WINESRC__',
+    '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
 
 version_res = gen_rc_res.process(rc, extra_args : rc_extra_args)

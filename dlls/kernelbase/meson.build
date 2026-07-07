@@ -11,6 +11,7 @@ rc = files(
 
 rc_extra_args = [
     '-D_MSVCR_VER=0', '-DWINBASEAPI=', '-DWINADVAPI=', '-DWINUSERAPI=', '-DWINSHLWAPI=',
+    '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
 
 kernelbase_res = gen_rc_res.process(rc, extra_args : rc_extra_args)
