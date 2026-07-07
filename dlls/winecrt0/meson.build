@@ -55,7 +55,10 @@ winecrt0_w_64 = custom_target('winecrt0_w_64',
       '-b', 'x86_64-w64-mingw32',
       '@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        winecrt0_w_af_64,
+    ],
     build_by_default : meson.is_cross_build(),
 )
 
@@ -68,7 +71,10 @@ winecrt0_u_64 = custom_target('winecrt0_u_64',
       '-m64',
       '@INPUT@',
     ],
-    depends : winebuild_bin,
+    depends : [
+        winebuild_bin,
+        winecrt0_u_af_64,
+    ],
     build_by_default : not meson.is_cross_build(),
 )
 
