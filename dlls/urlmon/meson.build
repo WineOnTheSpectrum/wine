@@ -41,8 +41,8 @@ idls = files(
     'urlmon_urlmon.idl',
 )
 
-idl_c = gen_idl_c.process(idls)
-idl_h = gen_idl_h.process(idls)
+idl_c = gen_idl_c.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process(idls, extra_args : extra_args)
 
 deps = [
     'uuid',
