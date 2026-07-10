@@ -26,7 +26,10 @@ idls = files(
 
 idl_h = gen_idl_h.process(idls, extra_args : extra_dll_args)
 idl_c = gen_idl_c.process(idls, extra_args : extra_dll_args)
-tres = gen_idl_tres.process(idls, extra_args : extra_dll_args)
+idl_t = gen_idl_tres.process(idls, extra_args : extra_dll_args)
+idl_r = gen_idl_rres.process(idls, extra_args : extra_dll_args)
+idl_p = gen_idl_p_c.process(idls, extra_args : extra_dll_args)
+idl_d = gen_idl_dlldata.process(idls, extra_args : extra_dll_args)
 
 deps = [
     'uuid',
@@ -42,9 +45,9 @@ deps = [
 
 dlls += {
     'oleacc' : {
-        'idl_c' : idl_c,
-        'idl_h' : idl_h,
-        'res' : [res, tres],
+        'idl_c' : [idl_c, idl_t, idl_r, idl_p, idl_d],
+        'idl_h' : [stdole2_tlb, idl_h],
+        'res' : res,
         'extra_args' : extra_args + extra_dll_args,
         'src' : src,
         'obj' : [],
