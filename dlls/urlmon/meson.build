@@ -32,7 +32,8 @@ extra_args = [
     '-DENTRY_PREFIX=URLMON_',
     '-DPROXY_DELEGATION',
     '-DWINE_REGISTER_DLL',
-    '-DPROXY_CLSID_IS="{0x79EAC9F1,0xBAF9,0x11CE,{0x8C,0x82,0x00,0xAA,0x00,0x4B,0xA9,0x0B}}"',
+    '-DPROXY_CLSID_IS={0x79EAC9F1,0xBAF9,0x11CE,{0x8C,0x82,0x00,0xAA,0x00,0x4B,0xA9,0x0B}}',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
@@ -41,8 +42,10 @@ idls = files(
     'urlmon_urlmon.idl',
 )
 
-idl_c = gen_idl_c.process(idls, extra_args : extra_args)
+idl_p = gen_idl_p_c.process(idls, extra_args : extra_args)
 idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+idl_r = gen_idl_rres.process(idls, extra_args : extra_args)
+idl_d = gen_idl_dlldata.process(idls, extra_args : extra_args)
 
 deps = [
     'uuid',
@@ -63,7 +66,7 @@ deps = [
 
 dlls += {
     'urlmon' : {
-        'idl_c' : idl_c,
+        'idl_c' : [idl_p, idl_d, idl_r],
         'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,
