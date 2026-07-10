@@ -30,6 +30,7 @@ res = gen_rc_res.process(rc, extra_args : extra_args)
 deps = [
     'uuid',
     'shlwapi',
+    'ole32',
     'oleaut32',
     'user32',
     'gdi32',
