@@ -43,17 +43,17 @@ src = [
     'jutils.c'
 ]
 
-static_library('jpeg_32', [headers, src],
+jpeg_32 = static_library('jpeg_32', [headers, src],
     include_directories : incdir,
-    c_args : extra_flags_32,
+    c_args : extra_flags_lib_32 + ['-D_UCRT', '-D_WIN32', '-DUSE_WINDOWS_MESSAGEBOX'],
     pic : true,
     native : false,
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('jpeg_64', [headers, src],
+jpeg_64 = static_library('jpeg_64', [headers, src],
     include_directories : incdir,
-    c_args : extra_flags_64,
+    c_args : extra_flags_lib_64 + ['-D_UCRT', '-D__WINE_PE_BUILD', '-DUSE_WINDOWS_MESSAGEBOX'],
     native : false,
     build_by_default : meson.is_cross_build(),
 )

@@ -32,17 +32,17 @@ src = [
     'libtiff/tif_zip.c'
 ]
 
-static_library('tiff_32', [headers, src],
+tiff_32 = static_library('tiff_32', [headers, src],
     include_directories : [incdir, '../../include/msvcrt', 'libtiff', '.', '../../libs/jpeg', '../../libs/zlib'],
-    c_args : extra_flags_32 + ['-D_UCRT', '-DFAR=', '-DZ_SOLO'],
+    c_args : extra_flags_lib_32 + ['-D_UCRT', '-DFAR=', '-DZ_SOLO', '-D_WIN32'],
     pic : true,
     native : false,
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('tiff_64', [headers, src],
+tiff_64 = static_library('tiff_64', [headers, src],
     include_directories : [incdir, '../../include/msvcrt', 'libtiff', '.', '../../libs/jpeg', '../../libs/zlib'],
-    c_args : extra_flags_64 + ['-D_UCRT', '-DFAR=', '-DZ_SOLO'],
+    c_args : extra_flags_lib_64 + ['-D_UCRT', '-DFAR=', '-DZ_SOLO', '-D__WINE_PE_BUILD'],
     native : false,
     build_by_default : meson.is_cross_build(),
 )

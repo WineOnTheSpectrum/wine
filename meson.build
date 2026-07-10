@@ -36,13 +36,20 @@ extra_dll_flags_64 = [
     '-Wl,--image-base,0x174000000', # FIXME this address is specific to a dll
 ]
 
-extra_flags_32 = [
-  '-m32',
+extra_flags_wine_32 = [
   '-D__WINESRC__', '-D_WIN32',
+]
+
+extra_flags_lib_32 = [
+  '-m32',
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-gdwarf-4', '-mabi=ms',
 ]
 
-extra_flags_64 = [
+extra_flags_wine_64 = [
+  '-D__WINESRC__', '-D__WINE_PE_BUILD',
+]
+
+extra_flags_lib_64 = [
 #  '-Wall',
   '-fno-strict-aliasing',
 #  '-Wdeclaration-after-statement',
@@ -61,9 +68,11 @@ extra_flags_64 = [
 #  '-Wabsolute-value',
 #  '-Wformat-overflow',
 #  '-Wnonnull',
-  '-D__WINESRC__', '-D__WINE_PE_BUILD',
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-mcx16', '-mcmodel=small', '-gdwarf-4',
 ]
+
+extra_flags_32 = extra_flags_wine_32 + extra_flags_lib_32
+extra_flags_64 = extra_flags_wine_64 + extra_flags_lib_64
 
 cdata = configuration_data()
 
