@@ -5,17 +5,23 @@ rc = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT', '-D_RPCRT4_', '-DMSWMSG',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
-idls = files(
+idl0 = files(
     'epm.idl',
+)
+
+idl1 = files(
     'ndr_types.idl',
 )
 
-idl_c = gen_idl_c.process(idls)
-idl_h = gen_idl_h.process(idls)
+idl_c = gen_idl_c.process([idl0, idl1], extra_args : extra_args)
+idl_h = gen_idl_h.process([idl0, idl1], extra_args : extra_args)
+idl_d = gen_idl_dlldata.process(idl1, extra_args : extra_args)
+idl_p = gen_idl_p_c.process(idl1, extra_args : extra_args)
 
 src = files(
     'cproxy.c',
@@ -58,7 +64,7 @@ deps = [
 
 dlls += {
     'rpcrt4' : {
-        'idl_c' : idl_c,
+        'idl_c' : [idl_c, idl_p, idl_d],
         'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,
