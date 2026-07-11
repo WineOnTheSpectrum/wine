@@ -34,7 +34,7 @@ deps = [
     'ucrtbase',
     'kernel32',
     'ntdll',
-    #XXX 'msimg32', # delay?
+    'msimg32', # delay?
 ]
 
 dlls += {
