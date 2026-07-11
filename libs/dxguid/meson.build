@@ -5,7 +5,7 @@ src = [
     'dxguid.c'
 ]
 
-static_library('dxguid_32', [headers, src],
+dxguid_32 = static_library('dxguid_32', [headers, src],
     include_directories : incdir,
     c_args : extra_flags_32,
     pic : true,
@@ -13,7 +13,7 @@ static_library('dxguid_32', [headers, src],
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('dxguid_64', [headers, src],
+dxguid_64 = static_library('dxguid_64', [headers, src],
     include_directories : incdir,
     c_args : extra_flags_64,
     native : false,

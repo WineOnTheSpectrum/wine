@@ -33,7 +33,7 @@ deps = [
     'ucrtbase',
     'kernel32',
     'ntdll',
-    #XXX 'dinput8', # delay?
+    'dinput8', # delay?
 ]
 
 dlls += {
