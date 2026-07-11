@@ -1,4 +1,4 @@
-src = [
+src = files(
     'libs/vkd3d-common/blob.c',
     'libs/vkd3d-common/debug.c',
     'libs/vkd3d-common/error.c',
@@ -28,7 +28,51 @@ src = [
     'libs/vkd3d/state.c',
     'libs/vkd3d/utils.c',
     'libs/vkd3d/vkd3d_main.c'
-]
+)
+
+idls = files(
+    '../../include/dcommon.idl',
+    '../../include/d2d1_1.idl',
+    '../../include/d2d1_2.idl',
+    '../../include/d2d1_3.idl',
+    '../../include/d2d1effectauthor.idl',
+    '../../include/d2d1effects_1.idl',
+    '../../include/d2d1effects_2.idl',
+    '../../include/d2d1effects.idl',
+    '../../include/d2d1.idl',
+    '../../include/d3d10_1.idl',
+    '../../include/d3d10effect.idl',
+    '../../include/d3d10.idl',
+    '../../include/d3d10sdklayers.idl',
+    '../../include/d3d10shader.idl',
+    '../../include/d3d11_1.idl',
+    '../../include/d3d11_2.idl',
+    '../../include/d3d11_3.idl',
+    '../../include/d3d11_4.idl',
+    '../../include/d3d11.idl',
+    '../../include/d3d11on12.idl',
+    '../../include/d3d11sdklayers.idl',
+    '../../include/d3d12.idl',
+    '../../include/d3d12sdklayers.idl',
+    '../../include/d3d12shader.idl',
+    '../../include/d3d12video.idl',
+    '../../include/d3d9on12.idl',
+    '../../include/d3dcommon.idl',
+    '../../include/d3dx11core.idl',
+    '../../include/dxgi1_2.idl',
+    '../../include/dxgi1_3.idl',
+    '../../include/dxgi1_4.idl',
+    '../../include/dxgi1_5.idl',
+    '../../include/dxgi1_6.idl',
+    '../../include/dxgicommon.idl',
+    '../../include/dxgidebug.idl',
+    '../../include/dxgiformat.idl',
+    '../../include/dxgi.idl',
+    '../../include/dxgitype.idl',
+    '../../include/dxva2api.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
 
 bison_srcs = gen_bison.process(
     'libs/vkd3d-shader/hlsl.y',
@@ -40,7 +84,7 @@ flex_srcs = gen_flex.process(
     'libs/vkd3d-shader/preproc.l',
 )
 
-static_library('vkd3d_32', [headers, bison_srcs, flex_srcs, src],
+static_library('vkd3d_32', [headers, idl_h, bison_srcs, flex_srcs, src],
     include_directories : [incdir, 'include', 'include/private', 'libs/vkd3d', 'libs/vkd3d-shader'],
     c_args : extra_flags_32 + [
 	'-DWINE_NO_NAMELESS_EXTENSION',
@@ -53,7 +97,7 @@ static_library('vkd3d_32', [headers, bison_srcs, flex_srcs, src],
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('vkd3d_64', [headers, bison_srcs, flex_srcs, src],
+static_library('vkd3d_64', [headers, idl_h, bison_srcs, flex_srcs, src],
     include_directories : [incdir, 'include', 'include/private', 'libs/vkd3d', 'libs/vkd3d-shader'],
     c_args : extra_flags_64 + [
 	'-DWINE_NO_NAMELESS_EXTENSION',

@@ -7,7 +7,6 @@ src = files(
     'ie.c',
     'ieframe_main.c',
     'iehtmlwnd.c',
-    #'ietoolbar.svg',
     'iexplore.c',
     'intshcut.c',
     'navigate.c',
@@ -19,24 +18,41 @@ src = files(
     'view.c',
     'webbrowser.c',
 )
+    #'ietoolbar.svg',
 
 rc = files(
     'ieframe.rc',
 )
 
 extra_args = [
+    '-I../include',
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
+
+idl0 = files(
+    '../../include/mshtmhst.idl',
+    '../../include/hlink.idl',
+    '../../include/htiface.idl',
+    '../../include/htiframe.idl',
+    '../../include/shdeprecated.idl',
+    '../../include/docobjectservice.idl',
+    '../../include/mshtml.idl',
+    '../../include/dimm.idl',
+    '../../include/ieautomation.idl',
+    '../../include/urlhist.idl',
+    '../../include/perhist.idl',
+)
 
 idls = files(
     'ieframe_v1.idl',
 )
 
-idl_c = gen_idl_c.process(idls)
-idl_h = gen_idl_h.process(idls)
+idl_c = gen_idl_c.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process([idl0, idls], extra_args : extra_args)
 
 deps = [
     'uuid',

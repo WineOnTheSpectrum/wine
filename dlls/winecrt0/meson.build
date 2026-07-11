@@ -24,7 +24,13 @@ u_src = files(
     'exe_wmain.c',
 )
 
-winecrt0_w_af_64 = static_library('winecrt0_w_af_64', [headers, w_src],
+idls = files(
+    '../../include/atliface.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
+winecrt0_w_af_64 = static_library('winecrt0_w_af_64', [headers, idl_h, w_src],
     include_directories : [
         incdir, '.',
     ],
@@ -34,7 +40,7 @@ winecrt0_w_af_64 = static_library('winecrt0_w_af_64', [headers, w_src],
 )
 winecrt0_w_o_64 = winecrt0_w_af_64.extract_all_objects(recursive : true)
 
-winecrt0_u_af_64 = static_library('winecrt0_u_af_64', [headers, u_src],
+winecrt0_u_af_64 = static_library('winecrt0_u_af_64', [headers, idl_h, u_src],
     include_directories : [
         config_h_inc, incdir, '.',
     ],
@@ -82,17 +88,3 @@ if meson.is_cross_build()
 else
     winecrt0_64 = winecrt0_u_64
 endif
-
-# Can't combine libs from different trees yet
-#winecrt0_64 = custom_target('winecrt0_64',
-#    input : [winecrt0_w_o_64, winecrt0_u_o_64],
-#    output : 'libwinecrt0_64.a',
-#    command : [
-#      winebuild_bin,
-#      '-w', '--staticlib', '-o', '@OUTPUT@',
-#      '-b', 'x86_64-w64-mingw32',
-#      '@INPUT@',
-#    ],
-#    depends : winebuild_bin,
-#    build_by_default : true,
-#)

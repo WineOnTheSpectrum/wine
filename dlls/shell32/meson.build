@@ -5,6 +5,7 @@ rc = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_MSVCR_VER=0', '-D_SHELL32_',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
@@ -14,8 +15,13 @@ idls = files(
     'shell32_tlb.idl',
 )
 
-idl_c = gen_idl_c.process(idls)
-idl_h = gen_idl_h.process(idls)
+idl0 = files(
+    '../../include/commoncontrols.idl',
+    '../../include/shimgdata.idl',
+)
+
+idl_c = gen_idl_c.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process([idls, idl0], extra_args : extra_args)
 
 src = files(
     'appbar.c',

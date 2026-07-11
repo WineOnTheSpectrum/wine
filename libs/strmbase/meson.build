@@ -1,4 +1,4 @@
-src = [
+src = files(
     'dispatch.c',
     'filter.c',
     'mediatype.c',
@@ -6,9 +6,15 @@ src = [
     'pospass.c',
     'renderer.c',
     'seeking.c'
-]
+)
 
-static_library('strmbase_32', [headers, src],
+idls = files(
+    '../../include/strmif.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
+static_library('strmbase_32', [headers, idl_h, src],
     include_directories : incdir,
     c_args : extra_flags_32,
     pic : true,
@@ -16,7 +22,7 @@ static_library('strmbase_32', [headers, src],
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('strmbase_64', [headers, src],
+static_library('strmbase_64', [headers, idl_h, src],
     include_directories : incdir,
     c_args : extra_flags_64,
     native : false,

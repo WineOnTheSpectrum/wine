@@ -9,6 +9,12 @@ extra_args = [
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
+idls = files(
+    '../../include/iads.idl',
+)
+
+idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+
 src = files(
     'advapi.c',
     'cred.c',
@@ -38,7 +44,7 @@ deps = [
 dlls += {
     'advapi32' : {
         'idl_c' : [],
-        'idl_h' : [],
+        'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,
         'src' : src,

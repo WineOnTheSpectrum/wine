@@ -53,11 +53,16 @@ extra_args = [
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
+idl0 = files(
+    '../../include/wincodec.idl',
+    '../../include/wincodecsdk.idl',
+)
+
 idls = files(
     'windowscodecs_wincodec.idl',
 )
 
-idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process([idl0, idls], extra_args : extra_args)
 idl_p = gen_idl_p_c.process(idls, extra_args : extra_args)
 idl_r = gen_idl_rres.process(idls, extra_args : extra_args)
 idl_d = gen_idl_dlldata.process(idls, extra_args : extra_args)
@@ -82,7 +87,7 @@ deps = [
     'ntdll',
 ]
 
-windowscodecs_w2_af_64 = static_library('windowscodecs_w2_af_64', [headers, src2],
+windowscodecs_w2_af_64 = static_library('windowscodecs_w2_af_64', [headers, idl_h, src2],
     include_directories : [
         incdir, '.',
     ],

@@ -3,13 +3,15 @@ rc = files(
 )
 
 extra_args = [
+    '-I../include',
     '-I../include/msvcrt',
     '-I../libs/png',
     '-D_UCRT',
     '-D_USER32_',
+    '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
 
-res = gen_rc_res.process(rc, extra_args : extra_args + ['-D__WINESRC__', '-D__WINE_PE_BUILD'])
+res = gen_rc_res.process(rc, extra_args : extra_args)
 
 src = files(
     'button.c',

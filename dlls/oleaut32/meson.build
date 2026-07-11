@@ -19,6 +19,7 @@ res = gen_rc_res.process(rc, extra_args : extra_args + extra_dll_args)
 idls = files(
     'oleaut32_oaidl.idl',
     'oleaut32_ocidl.idl',
+    '../../include/wincodec.idl',
 )
 
 idl_c = gen_idl_c.process(idls, extra_args : extra_args + extra_dll_args)

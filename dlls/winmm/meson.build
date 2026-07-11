@@ -21,6 +21,13 @@ extra_args = [
     '-D_WINMM_',
 ]
 
+idls = files(
+    '../../include/audioclient.idl',
+    '../../include/audiopolicy.idl',
+)
+
+idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
@@ -39,7 +46,7 @@ deps = [
 dlls += {
     'winmm' : {
         'idl_c' : [],
-        'idl_h' : [],
+        'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,
         'src' : src,

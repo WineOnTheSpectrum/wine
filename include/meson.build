@@ -1,6 +1,46 @@
-# Ordering: idls that need to be built first go at the top.
-# The rest are in alphabetical order.
-idls = files(
+# Essential reusable core idls
+idl_h = files(
+  'shobjidl_core.idl',
+  'objectarray.idl',
+  'structuredquerycondition.idl',
+  'propsys.idl',
+  'comcat.idl',
+  'shobjidl.idl',
+  'shtypes.idl',
+  'shldisp.idl',
+  'servprov.idl',
+  'docobj.idl',
+  'msxml.idl',
+  'urlmon.idl',
+  'ocidl.idl',
+  'exdisp.idl',
+  'wtypes.idl',
+  'unknwn.idl',
+  'oleacc.idl',
+  'oleidl.idl',
+  'objidl.idl',
+  'oaidl.idl',
+  'propidl.idl',
+  'objidlbase.idl',
+
+  'wine/atsvc.idl',
+  'wine/dcetypes.idl',
+  'wine/epm.idl',
+  'wine/fil_data.idl',
+  'wine/iaccessible2.idl',
+  'wine/irot.idl',
+  'wine/irpcss.idl',
+  'wine/itss.idl',
+  'wine/mfinternal.idl',
+  'wine/orpc.idl',
+  'wine/plugplay.idl',
+  'wine/schrpc.idl',
+  'wine/svcctl.idl',
+  'wine/winedxgi.idl',
+)
+
+# TODO: wipe this and spread them over all dlls
+idls2 = files(
   'objidlbase.idl',
 
 #  'access.idl',
@@ -381,6 +421,7 @@ idls = files(
   'xpsobjectmodel_1.idl',
   'xpsobjectmodel.idl',
 
+
   'wine/atsvc.idl',
   'wine/dcetypes.idl',
   'wine/epm.idl',
@@ -397,4 +438,4 @@ idls = files(
   'wine/winedxgi.idl',
 )
 
-headers = gen_idl_h.process(idls, preserve_path_from : meson.current_source_dir())
+headers = gen_idl_h.process(idl_h, preserve_path_from : meson.current_source_dir())

@@ -4,6 +4,8 @@ idl0 = files(
 
 idl1 = files(
     'irpcss.idl',
+    '../../include/roparameterizediid.idl',
+    '../../include/restrictederrorinfo.idl',
 )
 
 extra_args = [

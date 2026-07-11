@@ -1,10 +1,11 @@
+idl0 = files(
+    '../../include/iads.idl',
+)
+
 idls = files(
     'plugplay.idl',
     'svcctl.idl',
 )
-
-idl_c = gen_idl_c.process(idls)
-idl_h = gen_idl_h.process(idls)
 
 src = files(
     'security.c',
@@ -15,7 +16,11 @@ src = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__',
 ]
+
+idl_c = gen_idl_c.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process([idl0, idls], extra_args : extra_args)
 
 deps = [
     'kernelbase',

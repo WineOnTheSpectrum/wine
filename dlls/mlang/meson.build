@@ -9,16 +9,22 @@ rc = files(
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
+    '-D__WINESRC__',
 ]
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
+
+idl0 = files(
+    '../../include/mimeole.idl',
+    '../../include/mlang.idl',
+)
 
 idls = files(
     'mlang_classes.idl',
 )
 
-idl_c = gen_idl_c.process(idls)
-idl_h = gen_idl_h.process(idls)
+idl_c = gen_idl_c.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process([idl0, idls], extra_args : extra_args)
 
 deps = [
     'uuid',

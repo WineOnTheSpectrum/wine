@@ -27,6 +27,7 @@ rc = files(
 )
 
 extra_args = [
+    '-I../include',
     '-I../include/msvcrt',
     '-D_UCRT',
     '-DENTRY_PREFIX=URLMON_',
@@ -42,8 +43,12 @@ idls = files(
     'urlmon_urlmon.idl',
 )
 
+idl0 = files(
+    '../../include/hlink.idl',
+)
+
 idl_p = gen_idl_p_c.process(idls, extra_args : extra_args)
-idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+idl_h = gen_idl_h.process([idl0, idls], extra_args : extra_args)
 idl_r = gen_idl_rres.process(idls, extra_args : extra_args)
 idl_d = gen_idl_dlldata.process(idls, extra_args : extra_args)
 

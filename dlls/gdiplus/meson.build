@@ -25,6 +25,14 @@ extra_args = [
     '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
 
+idls = files(
+    '../../include/mlang.idl',
+    '../../include/wincodec.idl',
+    '../../include/wincodecsdk.idl',
+)
+
+idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
@@ -45,7 +53,7 @@ deps = [
 dlls += {
     'gdiplus' : {
         'idl_c' : [],
-        'idl_h' : [],
+        'idl_h' : idl_h,
         'res' : res,
         'extra_args' : extra_args,
         'src' : src,
