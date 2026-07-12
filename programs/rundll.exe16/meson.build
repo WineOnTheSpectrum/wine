@@ -1,13 +1,13 @@
 src = files(
-    'eject.c',
+    'rundll.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-m16',
 ]
 
-exes += {
-    'eject' : {
+exe16s += {
+    'rundll' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

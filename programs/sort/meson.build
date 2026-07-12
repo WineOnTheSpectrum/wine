@@ -1,13 +1,13 @@
 src = files(
-    'eject.c',
+    'main.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'sort' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

@@ -1,13 +1,13 @@
 src = files(
-    'eject.c',
+    'main.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'aspnet_regiis' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

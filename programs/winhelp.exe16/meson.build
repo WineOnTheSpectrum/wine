@@ -1,13 +1,13 @@
 src = files(
-    'eject.c',
+    'winhelp.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-m16',
 ]
 
-exes += {
-    'eject' : {
+exe16s += {
+    'winhelp' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

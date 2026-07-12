@@ -1,13 +1,13 @@
-src = files(
-    'eject.c',
+src = files( 
+    'netsh.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'netsh' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

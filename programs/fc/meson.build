@@ -1,13 +1,13 @@
-src = files(
-    'eject.c',
+src = files( 
+    'fc.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'fc' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

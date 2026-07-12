@@ -1,13 +1,13 @@
 src = files(
-    'eject.c',
+    'winoldap.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-m16',
 ]
 
-exes += {
-    'eject' : {
+mod16s += {
+    'winoldap' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

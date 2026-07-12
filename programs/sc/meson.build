@@ -1,16 +1,18 @@
 src = files(
-    'eject.c',
+    'sc.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'sc' : {
         'src' : src,
         'flags' : flags,
         'res' : [],
-        'deps' : [],
+        'deps' : [
+            'advapi32',
+        ],
     }
 }

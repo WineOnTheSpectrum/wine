@@ -1,3 +1,8 @@
+coms = {}
+exes = {}
+exe16s = {}
+mod16s = {}
+
 subdir('arp')
 subdir('aspnet_regiis')
 subdir('attrib')

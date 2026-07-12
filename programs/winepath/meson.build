@@ -1,13 +1,17 @@
 src = files(
-    'eject.c',
+    'winepath.c',
+)
+
+man = files(
+    'winepath.man.in',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'winepath' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

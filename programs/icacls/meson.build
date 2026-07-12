@@ -1,5 +1,5 @@
-src = files(
-    'eject.c',
+src = files( 
+    'icacls_main.c',
 )
 
 flags = [
@@ -7,7 +7,7 @@ flags = [
 ]
 
 exes += {
-    'eject' : {
+    'icacls' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

@@ -1,5 +1,5 @@
 src = files(
-    'eject.c',
+    'main.c',
 )
 
 flags = [
@@ -7,7 +7,7 @@ flags = [
 ]
 
 exes += {
-    'eject' : {
+    'secedit' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

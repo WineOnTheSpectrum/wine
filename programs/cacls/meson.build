@@ -1,5 +1,5 @@
 src = files(
-    'eject.c',
+    'cacls_main.c',
 )
 
 flags = [
@@ -7,7 +7,7 @@ flags = [
 ]
 
 exes += {
-    'eject' : {
+    'cacls' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

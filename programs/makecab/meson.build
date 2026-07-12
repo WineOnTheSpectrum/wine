@@ -1,13 +1,13 @@
-src = files(
-    'eject.c',
+src = files( 
+    'makecab.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mconsole', '-municode',
 ]
 
 exes += {
-    'eject' : {
+    'makecab' : {
         'src' : src,
         'flags' : flags,
         'res' : [],

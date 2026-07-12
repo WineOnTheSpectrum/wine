@@ -1,5 +1,5 @@
 src = files(
-    'eject.c',
+    'main.c',
 )
 
 flags = [
@@ -7,10 +7,12 @@ flags = [
 ]
 
 exes += {
-    'eject' : {
+    'wuauserv' : {
         'src' : src,
         'flags' : flags,
         'res' : [],
-        'deps' : [],
+        'deps' : [
+            'advapi32',
+        ],
     }
 }

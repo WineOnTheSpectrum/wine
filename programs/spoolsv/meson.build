@@ -1,16 +1,18 @@
 src = files(
-    'eject.c',
+    'main.c',
 )
 
 flags = [
-    '-mconsole',
+    '-mwindows',
 ]
 
 exes += {
-    'eject' : {
+    'spoolsv' : {
         'src' : src,
         'flags' : flags,
         'res' : [],
-        'deps' : [],
+        'deps' : [
+            'advapi32',
+        ],
     }
 }

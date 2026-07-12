@@ -1,5 +1,5 @@
 src = files(
-    'eject.c',
+    'unlodctr_main.c',
 )
 
 flags = [
@@ -7,10 +7,12 @@ flags = [
 ]
 
 exes += {
-    'eject' : {
+    'unlodctr' : {
         'src' : src,
         'flags' : flags,
         'res' : [],
-        'deps' : [],
+        'deps' : [
+            'loadperf',
+        ],
     }
 }
