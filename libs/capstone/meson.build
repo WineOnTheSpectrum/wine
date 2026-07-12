@@ -28,7 +28,7 @@ src = [
 # EXTRAINCL = $(CAPSTONE_PE_CFLAGS)
 # EXTRADEFS = -DCAPSTONE_HAS_ARM -DCAPSTONE_HAS_ARM64 -DCAPSTONE_HAS_X86 -DNDEBUG
 
-static_library('capstone_32', [headers, src],
+capstone_32 = static_library('capstone_32', [headers, src],
     include_directories : [incdir, 'include'],
     c_args : extra_flags_32 + [
       '-DCAPSTONE_HAS_X86',
@@ -39,7 +39,7 @@ static_library('capstone_32', [headers, src],
     build_by_default : meson.is_cross_build(),
 )
 
-static_library('capstone_64', [headers, src],
+capstone_64 = static_library('capstone_64', [headers, src],
     include_directories : [incdir, 'include'],
     c_args : extra_flags_64 + [
       '-DCAPSTONE_HAS_X86',
