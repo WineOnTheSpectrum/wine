@@ -6,9 +6,15 @@ flags = [
     '-mwindows', '-municode',
 ]
 
+idls = files(
+    '../../include/wincodec.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
 exes += {
     'winemenubuilder' : {
-        'src' : src,
+        'src' : [idl_h, src],
         'flags' : flags,
         'res' : [],
         'deps' : [

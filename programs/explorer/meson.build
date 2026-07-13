@@ -16,9 +16,15 @@ flags = [
     '-mwindows', '-municode',
 ]
 
+idls = files(
+    '../../include/commoncontrols.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
 exes += {
     'explorer' : {
-        'src' : src,
+        'src' : [idl_h, src],
         'flags' : flags,
         'res' : res,
         'deps' : [

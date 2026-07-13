@@ -117,22 +117,50 @@ subdir('wuauserv')
 subdir('wusa')
 subdir('xcopy')
 
-## Build and link all exes
-#foreach exename, contents : exes
-#
-#    deps_64 = []
-#    foreach dep : contents['deps']
-#        deps_64 += get_variable('@0@_64'.format(dep))
-#    endforeach
-#
-#    executable('@0@'.format(exename), [headers] + contents['src'],
-#        include_directories : [incdir, '.', '@0@'.format(exename)],
-#        c_args : contents['flags'] + extra_flags_64,
-#        native : false,
-#        build_by_default : meson.is_cross_build(),
-#        link_with : deps_64 + [
-#            winecrt0_64, ucrtbase_64, kernel32_64, ntdll_64,
-#        ],
-#    )
-#
-#endforeach
+# Build and link all exes
+foreach exename, contents : exes
+
+    # Build all srcs as a library first
+    set_variable('@0@_af_64'.format(exename), static_library('@0@_af_64'.format(exename),
+        [headers] + contents['src'],
+        include_directories : [incdir, '.', '@0@'.format(exename)],
+        c_args : ['-I../include/msvcrt', '-D_UCRT'] + contents['flags'] + extra_flags_64,
+        native : false,
+        pic : true,
+        build_by_default : meson.is_cross_build(),
+    ))
+
+    set_variable('@0@_o_64'.format(exename),
+        get_variable('@0@_af_64'.format(exename)).extract_all_objects(recursive : true)
+    )
+
+    deps_64 = []
+    foreach dep : contents['deps']
+        deps_64 += get_variable('@0@_64'.format(dep))
+    endforeach
+    deps_64 += [winecrt0_64, ucrtbase_64, kernel32_64, ntdll_64]
+
+    # Link exes
+    custom_target('@0@_64.exe'.format(exename),
+        output : '@0@_64.exe'.format(exename),
+        input : [
+            get_variable('@0@_o_64'.format(exename)),
+        ] + contents['res'] + deps_64,
+        command : [
+            winegcc_bin,
+            '-I../programs/@0@'.format(exename),
+            '-o', '@OUTPUT@',
+            '--wine-objdir', '.',
+            '-b', 'x86_64-w64-mingw32',
+            '-Wl,--wine-builtin',
+        ] + contents['flags'] + [
+            '@INPUT@',
+        ],
+        depends : [
+            winegcc_bin,
+            get_variable('@0@_af_64'.format(exename)),
+        ],
+        build_by_default : meson.is_cross_build(),
+    )
+
+endforeach

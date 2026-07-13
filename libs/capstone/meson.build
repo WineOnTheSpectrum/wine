@@ -1,4 +1,4 @@
-src = [
+src = files(
     'MCInst.c',
     'MCInstrDesc.c',
     'MCRegisterInfo.c',
@@ -22,17 +22,17 @@ src = [
     'arch/X86/X86Module.c',
     'cs.c',
     'utils.c'
-]
+)
 
-# FIXME: add flags.
-# EXTRAINCL = $(CAPSTONE_PE_CFLAGS)
 # EXTRADEFS = -DCAPSTONE_HAS_ARM -DCAPSTONE_HAS_ARM64 -DCAPSTONE_HAS_X86 -DNDEBUG
 
 capstone_32 = static_library('capstone_32', [headers, src],
-    include_directories : [incdir, 'include'],
+    include_directories : [incdir, 'include', '../../include/msvcrt'],
     c_args : extra_flags_32 + [
       '-DCAPSTONE_HAS_X86',
-      '-DNDEBUG'
+      '-DNDEBUG',
+      '-D_UCRT',
+      '-D_WIN32',
     ],
     pic : true,
     native : false,
@@ -40,10 +40,12 @@ capstone_32 = static_library('capstone_32', [headers, src],
 )
 
 capstone_64 = static_library('capstone_64', [headers, src],
-    include_directories : [incdir, 'include'],
+    include_directories : [incdir, 'include', '../../include/msvcrt'],
     c_args : extra_flags_64 + [
       '-DCAPSTONE_HAS_X86',
-      '-DNDEBUG'
+      '-DNDEBUG',
+      '-D_UCRT',
+      '-D__WINE_PE_BUILD',
     ],
     native : false,
     build_by_default : meson.is_cross_build(),

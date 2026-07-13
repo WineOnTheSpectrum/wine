@@ -84,7 +84,7 @@ dlls += {
         'res' : res,
         'extra_args' : extra_args,
         'src' : w_src1,
-        'obj' : ucrtbase_w2_af_64,
+        'obj' : ucrtbase_w2_o_64,
         'deps' : deps,
     }
 }

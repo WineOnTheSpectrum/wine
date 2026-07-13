@@ -10,13 +10,19 @@ rc = files(
 
 res = gen_rc_res.process(rc)
 
+idls = files(
+    '../../include/msxml2.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
 flags = [
     '-mwindows', '-municode',
 ]
 
 exes += {
     'dxdiag' : {
-        'src' : src,
+        'src' : [idl_h, src],
         'flags' : flags,
         'res' : res,
         'deps' : [

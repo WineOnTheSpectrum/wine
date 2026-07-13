@@ -9,6 +9,7 @@ idl = files(
 )
 
 idl_h = gen_idl_h.process(idl)
+idl_s = gen_idl_s_c.process(idl)
 
 flags = [
     '-mwindows',
@@ -16,7 +17,7 @@ flags = [
 
 exes += {
     'services' : {
-        'src' : [idl_h, src],
+        'src' : [idl_h, idl_s, src],
         'flags' : flags,
         'res' : [],
         'deps' : [

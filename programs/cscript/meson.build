@@ -5,7 +5,8 @@ src = files(
 )
 
 idls = files(
-    '../wscript/ihost.idl'
+    '../wscript/ihost.idl',
+    '../../include/activscp.idl',
 )
 
 defs = [
@@ -23,6 +24,13 @@ exes += {
         'src' : [idl_h, src],
         'flags' : flags,
         'res' : res,
-        'deps' : [],
+        'deps' : [
+            'uuid',
+            'shell32',
+            'oleaut32',
+            'ole32',
+            'user32',
+            'advapi32',
+        ],
     }
 }

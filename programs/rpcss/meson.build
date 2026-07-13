@@ -11,6 +11,7 @@ idls = files(
 )
 
 idl_h = gen_idl_h.process(idls)
+idl_s = gen_idl_s_c.process(idls)
 
 flags = [
     '-mconsole', '-municode',
@@ -18,7 +19,7 @@ flags = [
 
 exes += {
     'rpcss' : {
-        'src' : [idl_h, src],
+        'src' : [idl_h, idl_s, src],
         'flags' : flags,
         'res' : [],
         'deps' : [

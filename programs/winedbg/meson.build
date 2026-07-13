@@ -40,6 +40,7 @@ man = files(
 )
 
 flags = [
+    '-I../libs/capstone/include',
     '-mconsole',
 ]
 

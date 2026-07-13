@@ -6,6 +6,7 @@ src = files(
 
 idl = files(
     'ihost.idl',
+    '../../include/activscp.idl',
 )
 
 idl_h = gen_idl_h.process(idl)
