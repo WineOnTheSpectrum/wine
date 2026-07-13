@@ -65,6 +65,7 @@ subdir('shdocvw')
 subdir('gdiplus')
 subdir('dhcpcsvc')
 subdir('msvfw32')
+subdir('loadperf')
 
 #subdir('msvcrtd')
 
