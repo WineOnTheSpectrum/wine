@@ -9,8 +9,10 @@ subdir('winspool.drv')
 # Populate lists of files for dlls that depend on other dlls
 dlls = {}
 
+# data only dll
 subdir('stdole2.tlb')
 
+# regular dlls
 subdir('user32')
 subdir('advapi32')
 subdir('ucrtbase')
@@ -72,17 +74,25 @@ subdir('odbccp32')
 subdir('msi')
 subdir('ntoskrnl')
 subdir('hal')
+subdir('newdev')
 
 #subdir('msvcrtd')
 
-# Build all library deps first
+# real mode dlls
+dll16s = {}
+
+subdir('kernel')
+#subdir('gdi')
+#subdir('user')
+
+
+# Build all 64 bit libraries
 foreach dllname, contents : dlls
 
     set_variable('@0@_af_64'.format(dllname), static_library('@0@_af_64'.format(dllname),
         [headers] + contents['idl_h'] + contents['idl_c'] + contents['src'],
         include_directories : [incdir, '.'],
         c_args : contents['extra_args'] + extra_flags_64,
-        #link_args : ['-Wl,--whole-archive'],
         native : false,
         pic : true,
         build_by_default : meson.is_cross_build(),
@@ -96,12 +106,12 @@ foreach dllname, contents : dlls
         input : ['@0@/@0@.spec'.format(dllname)] + contents['obj'],
         output : 'lib@0@_64.a'.format(dllname),
         command : [
-          winebuild_bin,
-          '-w', '--implib', '-o', '@OUTPUT@',
-          '--without-dlltool',
-          '-b', 'x86_64-w64-mingw32',
-          '--export',
-          '@INPUT@',
+            winebuild_bin,
+            '-w', '--implib', '-o', '@OUTPUT@',
+            '--without-dlltool',
+            '-b', 'x86_64-w64-mingw32',
+            '--export',
+            '@INPUT@',
         ],
         depends : [
             winebuild_bin,
@@ -112,9 +122,7 @@ foreach dllname, contents : dlls
 
 endforeach
 
-# Uncomment when enough dlls are populated
-
-# Build and link all dlls
+# Build and link all 64 bit dlls
 foreach dllname, contents : dlls
 
     deps_64 = []
@@ -128,12 +136,13 @@ foreach dllname, contents : dlls
             '@0@/@0@.spec'.format(dllname), get_variable('@0@_o_64'.format(dllname)),
         ] + contents['res'] + deps_64,
         command : [
-        winegcc_bin,
+            winegcc_bin,
             '-I../dlls/@0@'.format(dllname),
             '-o', '@OUTPUT@',
             '--wine-objdir', '.',
             '-b', 'x86_64-w64-mingw32',
             '-Wl,--wine-builtin',
+            '-Wb,--dll-name,@0@'.format(dllname),
             '-shared',
             '@INPUT@',
         ],
@@ -145,3 +154,74 @@ foreach dllname, contents : dlls
     )
 
 endforeach
+
+# Build all real mode libraries for 64 bit
+foreach dllname, contents : dll16s
+
+    set_variable('@0@_af_64'.format(dllname), static_library('@0@_af_64'.format(dllname),
+        [headers] + contents['idl_h'] + contents['idl_c'] + contents['src'],
+        include_directories : [incdir, '.'],
+        c_args : contents['extra_args'] + extra_flags_64_32,
+        native : false,
+        pic : true,
+        build_by_default : meson.is_cross_build(),
+    ))
+    
+    set_variable('@0@_o_64'.format(dllname),
+        get_variable('@0@_af_64'.format(dllname)).extract_all_objects(recursive : true)
+    )
+    
+    set_variable('@0@_64'.format(dllname), custom_target('@0@_64'.format(dllname),
+        input : ['@0@/@0@.spec'.format(dllname)] + contents['obj'],
+        output : 'lib@0@_64.a'.format(dllname),
+        command : [
+            winebuild_bin,
+            '-w', '--implib', '-o', '@OUTPUT@',
+            '--without-dlltool',
+            '-b', 'x86_64-w64-mingw32',
+            '-m16',
+            '--export',
+            '@INPUT@',
+        ],
+        depends : [
+            winebuild_bin,
+            get_variable('@0@_af_64'.format(dllname)),
+        ],
+        build_by_default : meson.is_cross_build(),
+    ))
+
+endforeach
+
+## Build and link all real mode dlls for 64 bit
+#foreach dllname, contents : dll16s
+#
+#    deps_64 = []
+#    foreach dll : contents['deps']
+#        deps_64 += get_variable('@0@_64'.format(dll))
+#    endforeach
+#
+#    custom_target('@0@_64.dll'.format(dllname),
+#        output : '@0@_64.dll'.format(dllname),
+#        input : [
+#            '@0@/@0@.spec'.format(dllname), get_variable('@0@_o_64'.format(dllname)),
+#        ] + contents['res'] + deps_64,
+#        command : [
+#            winegcc_bin,
+#            '-I../dlls/@0@'.format(dllname),
+#            '-o', '@OUTPUT@',
+#            '--wine-objdir', '.',
+#            '-b', 'x86_64-w64-mingw32',
+#            '-Wl,--wine-builtin',
+#            '-Wb,--dll-name,@0@'.format(dllname),
+#            '-m16',
+#            '-shared',
+#            '@INPUT@',
+#        ],
+#        depends : [
+#            winegcc_bin,
+#            get_variable('@0@_64'.format(dllname)),
+#        ],
+#        build_by_default : meson.is_cross_build(),
+#    )
+#
+#endforeach

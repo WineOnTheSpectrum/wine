@@ -26,14 +26,18 @@ extra_flags_tools = [
     '-D__WINESRC__', '-DWINE_UNIX_LIB',
 ]
 
+extra_dll_flags_16 = [
+    '-nodefaultlibs',
+]
+
 extra_dll_flags_32 = [
     '-nodefaultlibs',
-    '-Wl,--image-base,0x7b000000', # FIXME this address is specific to a dll
+    #'-Wl,--image-base,0x7b000000', # FIXME this address is specific to a dll
 ]
 
 extra_dll_flags_64 = [
     '-nodefaultlibs',
-    '-Wl,--image-base,0x174000000', # FIXME this address is specific to a dll
+    #'-Wl,--image-base,0x174000000', # FIXME this address is specific to a dll
 ]
 
 extra_flags_wine_32 = [
@@ -71,6 +75,7 @@ extra_flags_lib_64 = [
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-mcx16', '-mcmodel=small', '-gdwarf-4',
 ]
 
+extra_flags_64_32 = extra_flags_wine_64 + extra_flags_lib_32
 extra_flags_32 = extra_flags_wine_32 + extra_flags_lib_32
 extra_flags_64 = extra_flags_wine_64 + extra_flags_lib_64
 

@@ -19,6 +19,13 @@ rc = files(
 
 res = gen_rc_res.process(rc)
 
+idls = files(
+    '../../include/audioclient.idl',
+    '../../include/audiopolicy.idl',
+)
+
+idl_h = gen_idl_h.process(idls)
+
 man = files(
     'winecfg.man.in',
 )
@@ -29,7 +36,7 @@ flags = [
 
 exes += {
     'winecfg' : {
-        'src' : src,
+        'src' : [idl_h, src],
         'flags' : flags,
         'res' : res,
         'deps' : [
