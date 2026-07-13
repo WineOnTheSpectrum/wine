@@ -64,6 +64,7 @@ subdir('ieframe')
 subdir('shdocvw')
 subdir('gdiplus')
 subdir('dhcpcsvc')
+subdir('msvfw32')
 
 #subdir('msvcrtd')
 
