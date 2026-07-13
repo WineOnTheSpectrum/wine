@@ -70,6 +70,8 @@ subdir('sxs')
 subdir('mspatcha')
 subdir('odbccp32')
 subdir('msi')
+subdir('ntoskrnl')
+subdir('hal')
 
 #subdir('msvcrtd')
 
