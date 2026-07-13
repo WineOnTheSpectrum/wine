@@ -524,6 +524,27 @@ gen_idl_tres = generator(widl_bin,
     ],
 )
 
+gen_idl_i_c = generator(widl_bin,
+    output : [
+        '@BASENAME@_i.c',
+    ],
+    arguments : [
+        '-o', '@OUTPUT@',
+        '-b', 'x86_64-w64-mingw32',
+        '-u',
+        '--nostdinc',
+        '-I@BUILD_DIR@',
+        '-Ldlls/stdole2.tlb',
+        '-Ldlls/*',
+        '-I@0@/include'.format(meson.global_source_root()),
+        '-I@0@/include/msvcrt'.format(meson.global_source_root()),
+        '-I@BUILD_DIR@',
+        '@EXTRA_ARGS@',
+        '-D_UCRT', '-D__WINESRC__',
+        '@INPUT@',
+    ],
+)
+
 gen_idl_p_c = generator(widl_bin,
     output : [
         '@BASENAME@_p.c',

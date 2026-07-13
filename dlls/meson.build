@@ -66,6 +66,10 @@ subdir('gdiplus')
 subdir('dhcpcsvc')
 subdir('msvfw32')
 subdir('loadperf')
+subdir('sxs')
+subdir('mspatcha')
+subdir('odbccp32')
+subdir('msi')
 
 #subdir('msvcrtd')
 
