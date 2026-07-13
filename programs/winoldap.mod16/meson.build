@@ -3,7 +3,7 @@ src = files(
 )
 
 flags = [
-    '-mconsole', '-m16',
+    '-mconsole',
 ]
 
 mod16s += {
