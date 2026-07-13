@@ -75,6 +75,8 @@ subdir('msi')
 subdir('ntoskrnl')
 subdir('hal')
 subdir('newdev')
+subdir('mswsock')
+subdir('wsock32')
 
 #subdir('msvcrtd')
 
