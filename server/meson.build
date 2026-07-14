@@ -1,4 +1,4 @@
-src = [
+src = files(
 	'async.c',
 	'atom.c',
 	'change.c',
@@ -41,9 +41,9 @@ src = [
 	'user.c',
 	'window.c',
 	'winstation.c'
-]
+)
 
-executable('server', src,
+executable('wineserver', src,
     include_directories : [config_h_inc, incdir],
     c_args : [datadir_define] + extra_flags_tools,
     native : true,
