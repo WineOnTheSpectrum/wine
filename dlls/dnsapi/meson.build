@@ -29,7 +29,8 @@ deps = [
     'netapi32', # delay?
 ]
 
-dnsapi_so_64 = shared_library('dnsapi_so_64', [src_u],
+dnsapi_so_64 = shared_library('dnsapi', [src_u],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,

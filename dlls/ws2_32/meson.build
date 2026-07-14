@@ -33,7 +33,8 @@ deps = [
     'iphlpapi', # delay?
 ]
 
-ws2_32_so_64 = shared_library('ws2_32_so_64', [src_u],
+ws2_32_so_64 = shared_library('ws2_32', [src_u],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,

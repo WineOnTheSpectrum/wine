@@ -80,7 +80,8 @@ winspool_64 = custom_target('winspool_64',
     build_by_default : meson.is_cross_build(),
 )
 
-winspool_so_64 = shared_library('winspool_so_64', [],
+winspool_so_64 = shared_library('winspool', [],
+    name_prefix : '',
     objects : [winspool_u_o_64],
     link_with : [ntdll_so_64],
     dependencies : [libdl],

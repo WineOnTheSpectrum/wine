@@ -37,7 +37,8 @@ deps = [
     'ntdll',
 ]
 
-netapi32_so_64 = shared_library('netapi32_so_64', [src_u],
+netapi32_so_64 = shared_library('netapi32', [src_u],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,

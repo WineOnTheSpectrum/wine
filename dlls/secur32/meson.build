@@ -30,7 +30,8 @@ deps = [
     'ntdll',
 ]
 
-secur32_so_64 = shared_library('secur32_so_64', [u_src],
+secur32_so_64 = shared_library('secur32', [u_src],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,

@@ -63,7 +63,7 @@ kernelbase_64 = custom_target('kernelbase_64',
 )
 
 custom_target('kernelbase_64.dll',
-    output : 'kernelbase_64.dll',
+    output : 'kernelbase.dll',
     input : [
         'kernelbase.spec', kernelbase_o_64, kernelbase_res, winerror_res,
         uuid_64, ntdll_64, winecrt0_64,

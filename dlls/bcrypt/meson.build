@@ -33,7 +33,8 @@ deps = [
     'ntdll',
 ]
 
-bcrypt_so_64 = shared_library('bcrypt_so_64', [u_src],
+bcrypt_so_64 = shared_library('bcrypt', [u_src],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,

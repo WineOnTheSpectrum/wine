@@ -47,7 +47,8 @@ w_src = files(
     'str.c',
 )
 
-crypt32_so_64 = shared_library('crypt32_so_64', [u_src],
+crypt32_so_64 = shared_library('crypt32', [u_src],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,

@@ -90,7 +90,8 @@ unix_src = files(
     'unix/version.c', # FIXME generate from version string
 )
 
-ntdll_so_64 = shared_library('ntdll_so_64', [unix_src],
+ntdll_so_64 = shared_library('ntdll', [unix_src],
+    name_prefix : '',
     include_directories : [
         config_h_inc,
 	incdir,
@@ -136,7 +137,7 @@ ntdll_64 = custom_target('ntdll_64',
 )
 
 custom_target('ntdll_64.dll',
-    output : 'ntdll_64.dll',
+    output : 'ntdll.dll',
     input : [
         'ntdll.spec', ntdll_o_64, version_res,
         tomcrypt_64, musl_64, winecrt0_64,

@@ -142,7 +142,7 @@ foreach exename, contents : exes
 
     # Link exes
     custom_target('@0@_64.exe'.format(exename),
-        output : '@0@_64.exe'.format(exename),
+        output : '@0@.exe'.format(exename),
         input : [
             get_variable('@0@_o_64'.format(exename)),
         ] + contents['res'] + deps_64,
