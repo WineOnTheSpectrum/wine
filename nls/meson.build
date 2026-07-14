@@ -96,5 +96,5 @@ custom_target('nls',
         '-c',
         'echo "Copied nls"',
     ],
-    build_by_default : not meson.is_cross_build(),
+    build_by_default : true,
 )

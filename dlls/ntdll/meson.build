@@ -103,7 +103,7 @@ ntdll_so_64 = shared_library('ntdll', [unix_src],
     ] + datadir_define + dllpath_define,
     native : true,
     dependencies : [libdl, pthread, unwind],
-    build_by_default : not meson.is_cross_build(),
+    build_by_default : true,
 )
 
 ntdll_af_64 = static_library('ntdll_artefacts_64', [src],

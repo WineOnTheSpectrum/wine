@@ -47,5 +47,5 @@ executable('wineserver', src,
     include_directories : [config_h_inc, incdir],
     c_args : [datadir_define] + extra_flags_tools,
     native : true,
-    build_by_default : not meson.is_cross_build(),
+    build_by_default : true,
 )
