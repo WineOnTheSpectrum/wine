@@ -86,6 +86,7 @@ cdata = configuration_data()
 
 cc = meson.get_compiler('c', native : true)
 mingw_cc = meson.get_compiler('c', native : false)
+sh = find_program('sh')
 
 cdata.set('EXEEXT', '""')
 cdata.set('HAVE_ARPA_INET_H', cc.has_header('arpa/inet.h'))
@@ -674,3 +675,14 @@ subdir('libs')
 subdir('dlls')
 subdir('programs')
 subdir('nls')
+
+custom_target('top_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'ln -sf . x86_64-windows',
+    ],
+    build_by_default : meson.is_cross_build(),
+)

@@ -77,7 +77,6 @@ src = files(
     'sortdefault.nls',
 )
 
-sh = find_program('sh')
 copy_nls = generator(sh,
     output : '@BASENAME@.nls',
     arguments : [
