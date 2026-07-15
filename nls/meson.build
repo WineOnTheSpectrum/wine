@@ -82,7 +82,7 @@ copy_nls = generator(sh,
     output : '@BASENAME@.nls',
     arguments : [
         '-c',
-        'cp @INPUT@ @BUILD_DIR@/../@BASENAME@.nls',
+        'cp @INPUT@ @OUTPUT@',
     ],
 )
 
@@ -94,7 +94,7 @@ custom_target('nls',
     command : [
         sh,
         '-c',
-        'echo "Copied nls"',
+        'cd nls && cp -s nls.p/*.nls . && cd .. && touch @OUTPUT@',
     ],
     build_by_default : true,
 )
