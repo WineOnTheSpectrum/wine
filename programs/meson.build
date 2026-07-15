@@ -308,3 +308,14 @@ endforeach
 #    )
 #
 #endforeach
+
+custom_target('programs_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'cd programs && ln -sf . x86_64-windows && cd ..',
+    ],
+    build_by_default : meson.is_cross_build(),
+)

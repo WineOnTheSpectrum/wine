@@ -9,8 +9,9 @@ subdir('winspool.drv')
 # Populate lists of files for dlls that depend on other dlls
 dlls = {}
 
-# data only dll
+# data only dlls
 subdir('stdole2.tlb')
+subdir('apisetschema')
 
 # regular dlls
 subdir('user32')
