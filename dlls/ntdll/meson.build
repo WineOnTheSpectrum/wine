@@ -160,6 +160,17 @@ custom_target('ntdll_64.dll',
     build_by_default : meson.is_cross_build(),
 )
 
+custom_target('ntdll_64_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'cd dlls/ntdll && ln -sf . x86_64-windows && cd ../..',
+    ],
+    build_by_default : meson.is_cross_build(),
+)
+
 #unix_loader_EXTRADEFS =',
 #	-DBINDIR=\"${bindir}\"',
 #	-DLIBDIR=\"${libdir}\"',

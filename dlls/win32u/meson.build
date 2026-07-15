@@ -143,3 +143,14 @@ custom_target('win32u_64.dll',
     ],
     build_by_default : meson.is_cross_build(),
 )
+
+custom_target('win32u_64_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'cd dlls/win32u && ln -sf . x86_64-windows && cd ../..',
+    ],
+    build_by_default : meson.is_cross_build(),
+)

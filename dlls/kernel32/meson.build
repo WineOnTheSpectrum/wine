@@ -88,3 +88,14 @@ custom_target('kernel32_64.dll',
     depends : winegcc_bin,
     build_by_default : meson.is_cross_build(),
 )
+
+custom_target('kernel32_64_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'cd dlls/kernel32 && ln -sf . x86_64-windows && cd ../..',
+    ],
+    build_by_default : meson.is_cross_build(),
+)

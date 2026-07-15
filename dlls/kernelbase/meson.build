@@ -84,3 +84,14 @@ custom_target('kernelbase_64.dll',
     ],
     build_by_default : meson.is_cross_build(),
 )
+
+custom_target('kernelbase_64_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'cd dlls/kernelbase && ln -sf . x86_64-windows && cd ../..',
+    ],
+    build_by_default : meson.is_cross_build(),
+)

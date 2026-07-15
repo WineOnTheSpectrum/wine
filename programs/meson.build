@@ -163,6 +163,18 @@ foreach exename, contents : exes
         build_by_default : meson.is_cross_build(),
     )
 
+    # symlink exe for in-tree tests
+    custom_target('@0@_symlink'.format(exename),
+        input : [],
+        output : '@0@_symlink'.format(exename),
+        command : [
+          sh,
+          '-c',
+          'mkdir -p programs/x86_64-windows && cd programs/x86_64-windows && ln -sf ../@0@.exe @0@.exe && cd ../.. && touch programs/@0@_symlink'.format(exename),
+        ],
+        build_by_default : meson.is_cross_build(),
+    )
+
 endforeach
 
 # Build and link all coms
@@ -308,14 +320,3 @@ endforeach
 #    )
 #
 #endforeach
-
-custom_target('programs_symlink',
-    input : [],
-    output : 'x86_64-windows',
-    command : [
-      sh,
-      '-c',
-      'cd programs && ln -sf . x86_64-windows && cd ..',
-    ],
-    build_by_default : meson.is_cross_build(),
-)
