@@ -50,6 +50,10 @@ deps = [
     'ntdll',
 ]
 
+manifest = files(
+    'gdiplus.manifest',
+)
+
 dlls += {
     'gdiplus' : {
         'idl_c' : [],
@@ -59,5 +63,6 @@ dlls += {
         'src' : src,
         'obj' : [],
         'deps' : deps,
+        'manifest' : manifest,
     }
 }

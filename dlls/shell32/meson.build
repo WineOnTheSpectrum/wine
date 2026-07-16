@@ -89,6 +89,10 @@ deps = [
     'ntdll',
 ]
 
+manifest = files(
+    'shell32.manifest',
+)
+
 dlls += {
     'shell32' : {
         'idl_c' : idl_c,
@@ -98,5 +102,6 @@ dlls += {
         'src' : src,
         'obj' : [],
         'deps' : deps,
+        'manifest': manifest,
     }
 }

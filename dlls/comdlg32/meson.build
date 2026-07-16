@@ -49,6 +49,10 @@ deps = [
     'shlwapi', # delay?
 ]
 
+manifest = files(
+    'comdlg32.manifest',
+)
+
 dlls += {
     'comdlg32' : {
         'idl_c' : idl_c,
@@ -58,5 +62,6 @@ dlls += {
         'src' : src,
         'obj' : [],
         'deps' : deps,
+        'manifest' : manifest,
     }
 }

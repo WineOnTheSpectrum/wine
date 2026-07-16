@@ -44,6 +44,10 @@ deps = [
     'msimg32', # delay?
 ]
 
+manifest = files(
+    'uxtheme.manifest',
+)
+
 dlls += {
     'uxtheme' : {
         'idl_c' : [],
@@ -53,5 +57,6 @@ dlls += {
         'src' : src,
         'obj' : [],
         'deps' : deps,
+        'manifest' : manifest,
     }
 }

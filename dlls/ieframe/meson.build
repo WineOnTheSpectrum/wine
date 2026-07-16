@@ -71,6 +71,10 @@ deps = [
     'ntdll',
 ]
 
+manifest = files(
+    'ieframe.manifest',
+)
+
 dlls += {
     'ieframe' : {
         'idl_c' : idl_c,
@@ -80,5 +84,6 @@ dlls += {
         'src' : src,
         'obj' : [],
         'deps' : deps,
+        'manifest' : manifest,
     }
 }

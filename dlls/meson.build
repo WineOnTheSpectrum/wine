@@ -166,6 +166,20 @@ foreach dllname, contents : dlls
         build_by_default : meson.is_cross_build(),
     )
 
+    # Only copy manifests that exist
+    if 'manifest' in contents
+        custom_target('@0@_64.manifest'.format(dllname),
+            output : '@0@.manifest'.format(dllname),
+            input : contents['manifest'],
+            command : [
+                sh,
+                '-c',
+                'cp @INPUT0@ @OUTPUT0@',
+            ],
+            build_by_default : meson.is_cross_build(),
+        )
+    endif
+
     # Only define tests that exist
     if 'test' in contents
         tdeps_64 = [ get_variable('@0@_af_64'.format(dllname)) ]
