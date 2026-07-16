@@ -88,6 +88,16 @@ subdir('kernel')
 #subdir('gdi')
 #subdir('user')
 
+custom_target('dlls_symlink',
+    input : [],
+    output : 'x86_64-windows',
+    command : [
+      sh,
+      '-c',
+      'cd dlls && ln -sf . x86_64-windows && cd ..',
+    ],
+    build_by_default : meson.is_cross_build(),
+)
 
 # Build all 64 bit libraries
 foreach dllname, contents : dlls
@@ -129,8 +139,8 @@ endforeach
 foreach dllname, contents : dlls
 
     deps_64 = []
-    foreach dll : contents['deps']
-        deps_64 += get_variable('@0@_64'.format(dll))
+    foreach dep : contents['deps']
+        deps_64 += get_variable('@0@_64'.format(dep))
     endforeach
 
     custom_target('@0@_64.dll'.format(dllname),
@@ -155,6 +165,35 @@ foreach dllname, contents : dlls
         ],
         build_by_default : meson.is_cross_build(),
     )
+
+    # Only define tests that exist
+    if 'test' in contents
+        tdeps_64 = [ get_variable('@0@_af_64'.format(dllname)) ]
+        foreach tdep : contents['test']['deps']
+            tdeps_64 += get_variable('@0@_64'.format(tdep))
+        endforeach
+
+        set_variable('testexe_@0@_64'.format(dllname), executable('testexe-@0@_64'.format(dllname),
+            [headers, contents['test']['src']],
+            include_directories : [incdir, '.'],
+            c_args : [ '-mconsole', '-DSTANDALONE'],
+            link_with : tdeps_64 + [
+                winecrt0_64, ucrtbase_64, kernel32_64, ntdll_64,
+            ],
+            native : false,
+            build_by_default : meson.is_cross_build(),
+        ))
+
+        test('@0@_dll_64'.format(dllname), runtest,
+            args: [
+                '-T', '.',
+                '-M', 'dlls/@0@.dll'.format(dllname),
+                '-p', 'programs/winetest.exe',
+                get_variable('testexe_@0@_64'.format(dllname)).full_path(),
+            ],
+            depends: get_variable('testexe_@0@_64'.format(dllname)),
+        )
+    endif
 
 endforeach
 
@@ -228,14 +267,3 @@ endforeach
 #    )
 #
 #endforeach
-
-custom_target('dlls_symlink',
-    input : [],
-    output : 'x86_64-windows',
-    command : [
-      sh,
-      '-c',
-      'cd dlls && ln -sf . x86_64-windows && cd ..',
-    ],
-    build_by_default : meson.is_cross_build(),
-)

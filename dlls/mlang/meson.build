@@ -38,6 +38,21 @@ deps = [
     'ntdll',
 ]
 
+
+tsrc = files(
+    'tests/mlang.c',
+)
+
+t = {
+    'src' : [idl_h, idl_c, tsrc],
+    'deps' : [
+        'oleaut32',
+        'ole32',
+        'user32',
+        'gdi32',
+    ],
+}
+
 dlls += {
     'mlang' : {
         'idl_c' : idl_c,
@@ -47,5 +62,6 @@ dlls += {
         'src' : src,
         'obj' : [],
         'deps' : deps,
+        'test' : t,
     }
 }
