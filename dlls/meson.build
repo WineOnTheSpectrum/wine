@@ -175,8 +175,8 @@ foreach dllname, contents : dlls
 
         set_variable('testexe_@0@_64'.format(dllname), executable('testexe-@0@_64'.format(dllname),
             [headers, contents['test']['src']],
-            include_directories : [incdir, '.'],
-            c_args : [ '-mconsole', '-DSTANDALONE'],
+            include_directories : [incdir, '.', '../include/msvcrt'],
+            c_args : [ '-nostdinc', '-mconsole', '-DSTANDALONE', '-D_UCRT', '-D__WINESRC__'],
             link_with : tdeps_64 + [
                 winecrt0_64, ucrtbase_64, kernel32_64, ntdll_64,
             ],
