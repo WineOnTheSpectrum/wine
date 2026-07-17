@@ -17,7 +17,6 @@ src = files(
     'window_surface.c',
 )
 
-# XXX compile this?
 w_src = files(
     'dllmain.c',
 )
@@ -47,13 +46,56 @@ extra_args = [
 
 res = gen_rc_res.process(rc, extra_args : extra_args)
 
-winewayland_so_64 = shared_library('winewayland.drv', [headers, wayland_h, wayland_c, src],
-    name_prefix : '',
+winewayland_u_af_64 = static_library('winewayland_u_64', [headers, wayland_h, wayland_c, src],
     include_directories : [config_h_inc, incdir, '.'],
-    c_args : ['-DWINE_UNIX_LIB', '-D__WINESRC__', '-Idlls/winewayland.drv/winewayland.drv.so.p'],
-    dependencies : [egl, waylandegl, waylandclient, xkbcommon, xkbregistry, pthread, libm],
-    link_with : [win32u_so_64, ntdll_so_64],
+    c_args : ['-DWINE_UNIX_LIB', '-Idlls/winewayland.drv/winewayland.drv.so.p'] + extra_flags_64,
     native : true,
+    pic : true,
+    build_by_default : true,
+)
+
+winewayland_u_o_64 = winewayland_u_af_64.extract_all_objects(recursive : true)
+
+winewayland_so_64 = shared_library('winewayland', [],
+    name_prefix : '',
+    objects : [winewayland_u_o_64],
+    c_args : ['-Wl,-Bsymbolic', '-Wl,-z,defs'],
+    dependencies : [waylandclient, waylandegl, xkbcommon, xkbregistry, pthread, libm],
+    link_with : [ntdll_so_64, win32u_so_64],
+    native : true,
+    build_by_default : true,
+)
+
+winewayland_w_af_64 = static_library('winewayland_w_af_64', [headers, w_src],
+    include_directories : [config_h_inc, incdir, '.'],
+    c_args : ['-Idlls/winewayland.drv/winewayland_w_af_64.a.p'] + extra_args + extra_flags_64,
+    native : false,
+    pic : true,
+    build_by_default : true,
+)
+
+winewayland_w_o_64 = winewayland_w_af_64.extract_all_objects(recursive : true)
+
+winewayland_drv_64 = custom_target('winewayland_drv_64',
+    input : [
+        'winewayland.drv.spec',
+        winewayland_w_o_64,
+        res,
+        winecrt0_64,
+        ucrtbase_64,
+        kernel32_64,
+        ntdll_64,
+    ],
+    output : 'winewayland.drv',
+    command : [
+        winegcc_bin,
+        '-o', '@OUTPUT@',
+        '--wine-objdir', '.',
+        '-b', 'x86_64-w64-mingw32',
+        '-Wl,--wine-builtin',
+        '-shared',
+        '@INPUT@',
+    ],
     build_by_default : true,
 )
 

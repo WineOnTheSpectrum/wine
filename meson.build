@@ -49,6 +49,32 @@ extra_flags_lib_32 = [
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-gdwarf-4', '-mabi=ms',
 ]
 
+extra_flags_unix_lib_64 = [
+#  '-Wall',
+#  '-pipe',
+#  '-fcf-protection=none',
+#  '-fno-stack-protector',
+  '-fno-strict-aliasing',
+#  '-Wdeclaration-after-statement',
+#  '-Wempty-body',
+#  '-Wignored-qualifiers',
+#  '-Winit-self',
+#  '-Wlogical-op',
+#  '-Wno-packed-not-aligned',
+#  '-Wpointer-arith',
+#  '-Wshift-overflow=2',
+#  '-Wstrict-prototypes',
+#  '-Wtype-limits',
+#  '-Wunused-but-set-parameter',
+#  '-Wvla',
+#  '-Wwrite-strings',
+#  '-Werror',
+#  '-fasynchronous-unwind-tables',
+#  '-fshort-wchar',
+#  '-Wno-format',
+  '-fno-builtin', '-fvisibility=hidden', '-gdwarf-4', '-mabi=ms',
+]
+
 extra_flags_wine_64 = [
   '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
@@ -75,6 +101,7 @@ extra_flags_lib_64 = [
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-mcx16', '-mcmodel=small', '-gdwarf-4',
 ]
 
+extra_flags_unix_64 = extra_flags_wine_32 + extra_flags_unix_lib_64
 extra_flags_64_32 = extra_flags_wine_64 + extra_flags_lib_32
 extra_flags_32 = extra_flags_wine_32 + extra_flags_lib_32
 extra_flags_64 = extra_flags_wine_64 + extra_flags_lib_64
@@ -455,7 +482,6 @@ libm = cc.find_library('m', required: true)
 libdl = cc.find_library('dl', required: true)
 pthread = cc.find_library('pthread', required: true)
 unwind = cc.find_library('unwind', required: true)
-egl = cc.find_library('EGL', required : true)
 waylandegl = cc.find_library('wayland-egl', required : true)
 waylandclient = cc.find_library('wayland-client', required : true)
 xkbcommon = cc.find_library('xkbcommon', required : true)

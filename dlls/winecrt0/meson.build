@@ -30,6 +30,17 @@ idls = files(
 
 idl_h = gen_idl_h.process(idls)
 
+winecrt0_wu_af_64 = static_library('winecrt0_wu_af_64', [headers, idl_h, w_src],
+    include_directories : [
+        incdir, '.',
+    ],
+    c_args : ['-I../include/msvcrt', '-D_MSVCR_VER=0'] + extra_flags_unix_64,
+    native : true,
+    pic : true,
+    build_by_default : true,
+)
+winecrt0_wu_o_64 = winecrt0_wu_af_64.extract_all_objects(recursive : true)
+
 winecrt0_w_af_64 = static_library('winecrt0_w_af_64', [headers, idl_h, w_src],
     include_directories : [
         incdir, '.',
@@ -68,7 +79,7 @@ winecrt0_w_64 = custom_target('winecrt0_w_64',
 )
 
 winecrt0_u_64 = custom_target('winecrt0_u_64',
-    input : [winecrt0_u_o_64],
+    input : [winecrt0_u_o_64, winecrt0_wu_o_64],
     output : 'libwinecrt0_u_64.a',
     command : [
       winebuild_bin,
