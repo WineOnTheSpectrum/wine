@@ -5,6 +5,7 @@ subdir('kernelbase')
 subdir('kernel32')
 subdir('win32u')
 subdir('winspool.drv')
+subdir('winewayland.drv')
 
 # Populate lists of files for dlls that depend on other dlls
 dlls = {}

@@ -88,6 +88,7 @@ cc = meson.get_compiler('c', native : true)
 mingw_cc = meson.get_compiler('c', native : false)
 sh = find_program('sh')
 runtest = find_program('tools/runtest')
+wayland_scanner_bin = find_program('wayland-scanner')
 
 cdata.set('EXEEXT', '""')
 cdata.set('HAVE_ARPA_INET_H', cc.has_header('arpa/inet.h'))
@@ -103,7 +104,7 @@ cdata.set('HAVE_CUPS_CUPS_H', cc.has_header('cups/cups.h'))
 cdata.set('HAVE_CUPS_PPD_H', cc.has_header('cups/ppd.h'))
 cdata.set('HAVE_DLADDR1', cc.has_function('dladdr1'))
 cdata.set('HAVE_DLINFO', cc.has_function('dlinfo'))
-cdata.set('HAVE_EGL_EGL_H', cc.has_header('EGL/egl.h'))
+cdata.set('HAVE_EGL_EGL_H', cc.has_header('EGL/egl.h', required : true))
 cdata.set('HAVE_ELF_H', cc.has_header('elf.h'))
 cdata.set('HAVE_EPOLL_CREATE', cc.has_function('epoll_create'))
 cdata.set('HAVE_EPOLL_PWAIT2', cc.has_function('epoll_pwait2'))
@@ -138,7 +139,7 @@ cdata.set('HAVE_LIBPROCSTAT', cc.find_library('procstat', required: false).found
 cdata.set('HAVE_LIBPROCSTAT_H', cc.has_header('libprocstat.h'))
 cdata.set('HAVE_LIBUDEV_H', cc.has_header('libudev.h'))
 cdata.set('HAVE_LIBUNWIND', cc.find_library('unwind', required: false).found())
-cdata.set('HAVE_LIBWAYLAND_EGL', false)
+cdata.set('HAVE_LIBWAYLAND_EGL', cc.has_header('wayland-egl.h', required : true))
 cdata.set('HAVE_LIBXSHAPE', false)
 cdata.set('HAVE_LIBXXSHM', false)
 cdata.set('HAVE_LINK_H', cc.has_header('link.h'))
@@ -194,7 +195,7 @@ cdata.set('HAVE_OSS_SYSINFO_NUMAUDIOENGINES',
     cc.has_member('struct oss_sysinfo', 'numaudioengines', prefix : '#include <sys/soundcard.h>')
 )
 cdata.set('HAVE_PCAP_PCAP_H', cc.has_header('pcap/pcap.h'))
-cdata.set('HAVE_PIPE2', cc.has_function('pipe2'))
+cdata.set('HAVE_PIPE2', cc.has_function('pipe2') ? 1 : false)
 cdata.set('HAVE_PORT_CREATE', cc.has_function('port_create'))
 cdata.set('HAVE_PORT_H', cc.has_header('port.h'))
 cdata.set('HAVE_POSIX_FADVISE', cc.has_function('posix_fadvise'))
@@ -385,8 +386,8 @@ cdata.set('HAVE_X11_EXTENSIONS_XRENDER_H', false)
 cdata.set('HAVE_X11_EXTENSIONS_XSHM_H', false)
 cdata.set('HAVE_XEVENT_XCOOKIE', false)
 cdata.set('HAVE_XICCALLBACK_CALLBACK', false)
-cdata.set('HAVE_XKBCOMMON_XKBCOMMON_H', false)
-cdata.set('HAVE_XKBCOMMON_XKBREGISTRY_H', false)
+cdata.set('HAVE_XKBCOMMON_XKBCOMMON_H', cc.has_header('xkbcommon/xkbcommon.h', required : true))
+cdata.set('HAVE_XKBCOMMON_XKBREGISTRY_H', cc.has_header('xkbcommon/xkbregistry.h', required : true))
 cdata.set('HAVE_XRENDERCREATELINEARGRADIENT', false)
 cdata.set('HAVE_XRENDERSETPICTURETRANSFORM', false)
 cdata.set('HAVE_XRRGETPROVIDERRESOURCES', false)
@@ -454,6 +455,11 @@ libm = cc.find_library('m', required: true)
 libdl = cc.find_library('dl', required: true)
 pthread = cc.find_library('pthread', required: true)
 unwind = cc.find_library('unwind', required: true)
+egl = cc.find_library('EGL', required : true)
+waylandegl = cc.find_library('wayland-egl', required : true)
+waylandclient = cc.find_library('wayland-client', required : true)
+xkbcommon = cc.find_library('xkbcommon', required : true)
+xkbregistry = cc.find_library('xkbregistry', required : true)
 freetype2 = dependency('freetype2', version : '>=2', required : true, native : true)
 cups = dependency('cups', required : true, native : true)
 gnutls = dependency('gnutls', required : true, native : true)
@@ -667,6 +673,24 @@ gen_mc_pot = generator(wmc_bin,
         '-u', '-o', '@OUTPUT@',
 	'@INPUT@',
 	'--po-dir=po',
+    ],
+)
+
+gen_wayland_xml_h = generator(wayland_scanner_bin,
+    output : '@BASENAME@-client-protocol.h',
+    arguments : [
+        'client-header',
+        '@INPUT@',
+        '@OUTPUT@',
+    ],
+)
+
+gen_wayland_xml_c = generator(wayland_scanner_bin,
+    output : '@BASENAME@.c',
+    arguments : [
+        'private-code',
+        '@INPUT@',
+        '@OUTPUT@',
     ],
 )
 
