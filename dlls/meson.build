@@ -205,6 +205,9 @@ foreach dllname, contents : dlls
                 '-p', 'programs/winetest.exe',
                 get_variable('testexe_@0@_64'.format(dllname)).full_path(),
             ],
+            env: [
+                'WINEDEBUG=warn+all',
+            ],
             depends: get_variable('testexe_@0@_64'.format(dllname)),
         )
     endif
