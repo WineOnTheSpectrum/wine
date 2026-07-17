@@ -70,31 +70,14 @@ win32u_w_af_64 = static_library('win32u_w_af_64', [headers, w_src],
 
 win32u_w_o_64 = win32u_w_af_64.extract_all_objects(recursive : true)
 
-win32u_u_af_64 = static_library('win32u_u_af_64', [headers, u_src],
+win32u_so_64 = shared_library('win32u', [headers, u_src],
+    name_prefix : '',
     include_directories : [config_h_inc, incdir, '.'],
     c_args : ['-D_WIN32U_', '-DWINE_UNIX_LIB', '-D__WINESRC__'],
     dependencies : [freetype2, pthread, libm],
+    link_with : [ntdll_so_64],
     native : true,
-    build_by_default : not meson.is_cross_build(),
-)
-
-win32u_u_o_64 = win32u_u_af_64.extract_all_objects(recursive : true)
-
-win32u_u_64 = custom_target('win32u_u_64',
-    input : 'win32u.spec',
-    output : 'libwin32u_u_64.a',
-    command : [
-      winebuild_bin,
-      '-w', '--implib', '-o', '@OUTPUT@',
-      '-m64',
-      '--export',
-      '@INPUT@',
-    ],
-    depends : [
-        winebuild_bin,
-        win32u_u_af_64,
-    ],
-    build_by_default : not meson.is_cross_build(),
+    build_by_default : true,
 )
 
 win32u_w_64 = custom_target('win32u_w_64',
@@ -115,11 +98,7 @@ win32u_w_64 = custom_target('win32u_w_64',
     build_by_default : meson.is_cross_build(),
 )
 
-if meson.is_cross_build()
-    win32u_64 = win32u_w_64
-else
-    win32u_64 = win32u_u_64
-endif
+win32u_64 = win32u_w_64
 
 custom_target('win32u_64.dll',
     output : 'win32u.dll',

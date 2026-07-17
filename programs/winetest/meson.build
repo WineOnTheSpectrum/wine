@@ -58,7 +58,6 @@ exes += {
             'gdi32',
             'advapi32',
             'wsock32',
-            'msvcrt',
             'ole32',
         ],
     }
