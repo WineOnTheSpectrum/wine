@@ -36,7 +36,6 @@ idl_h = files(
   'wine/plugplay.idl',
   'wine/schrpc.idl',
   'wine/svcctl.idl',
-  'wine/winedxgi.idl',
 )
 
 headers = gen_idl_h.process(idl_h, preserve_path_from : meson.current_source_dir())
