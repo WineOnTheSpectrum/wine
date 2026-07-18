@@ -235,7 +235,7 @@ foreach dllname, contents : dlls
             command : [
                 sh,
                 '-c',
-                'mkdir -p dlls/@0@.drv && cd dlls/@0@.drv && ln -sf ../@0@_64.drv @0@.drv && cd ../..'.format(dllname),
+                'mkdir -p dlls && cd dlls && ln -sf @0@_64.drv @0@.drv && touch @0@_64_drv_symlink && cd ..'.format(dllname),
             ],
             depends : [
                 get_variable('@0@_64_drv'.format(dllname)),
