@@ -96,7 +96,7 @@ winewayland_drv_64 = custom_target('winewayland_drv_64',
         '-shared',
         '@INPUT@',
     ],
-    build_by_default : true,
+    build_by_default : meson.is_cross_build(),
 )
 
 custom_target('winewayland_64_symlink',

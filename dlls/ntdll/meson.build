@@ -15,17 +15,20 @@ rc = files(
     'version.rc',
 )
 
-rc_extra_args = [
+extra_msvc = [
     '-I../include/msvcrt',
     '-I../libs/tomcrypt/src/headers',
     '-D_MSVCR_VER=0',
-    '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
-    '-D__WINESRC__', '-D__WINE_PE_BUILD',
 ]
 
-version_res = gen_rc_res.process(rc, extra_args : rc_extra_args)
+extra_args = [
+    '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
+    '-D__WINESRC__',
+]
 
-src = files(
+version_res = gen_rc_res.process(rc, extra_args : extra_msvc + extra_args)
+
+w_src = files(
     'actctx.c',
     'atom.c',
     'crypt.c',
@@ -96,9 +99,8 @@ ntdll_so_64 = shared_library('ntdll', [unix_src],
         config_h_inc,
 	incdir,
     ],
-    c_args : [
-        '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
-        '-DWINE_UNIX_LIB', '-D__WINESRC__',
+    c_args : extra_args + extra_flags_lib_64 + [
+        '-DWINE_UNIX_LIB',
         '-static-libgcc',
     ] + datadir_define + dllpath_define,
     native : true,
@@ -106,17 +108,18 @@ ntdll_so_64 = shared_library('ntdll', [unix_src],
     build_by_default : true,
 )
 
-ntdll_af_64 = static_library('ntdll_artefacts_64', [src],
+ntdll_w_af_64 = static_library('ntdll_artefacts_64', [w_src],
     include_directories : [
 	incdir,
         '../../include/msvcrt',
         '../../libs/tomcrypt/src/headers',
     ],
-    c_args : extra_flags_64 + rc_extra_args,
+    c_args : extra_msvc + extra_args + extra_flags_64,
     native : false,
+    pic : true,
     build_by_default : meson.is_cross_build(),
 )
-ntdll_o_64 = ntdll_af_64.extract_all_objects(recursive : true)
+ntdll_w_o_64 = ntdll_w_af_64.extract_all_objects(recursive : true)
 
 ntdll_64 = custom_target('ntdll_64',
     input : 'ntdll.spec',
@@ -131,7 +134,7 @@ ntdll_64 = custom_target('ntdll_64',
     ],
     depends : [
         winebuild_bin,
-        ntdll_af_64,
+        ntdll_w_af_64,
     ],
     build_by_default : meson.is_cross_build(),
 )
@@ -139,7 +142,7 @@ ntdll_64 = custom_target('ntdll_64',
 custom_target('ntdll_64.dll',
     output : 'ntdll.dll',
     input : [
-        'ntdll.spec', ntdll_o_64, version_res,
+        'ntdll.spec', ntdll_w_o_64, version_res,
         tomcrypt_64, musl_64, winecrt0_64,
     ],
     command : [
@@ -161,7 +164,7 @@ custom_target('ntdll_64.dll',
 )
 
 custom_target('ntdll_64_symlink',
-    input : [],
+  input : [],
     output : 'x86_64-windows',
     command : [
       sh,
