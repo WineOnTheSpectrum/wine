@@ -23,6 +23,8 @@ idl1 = files(
 
 idl2 = files(
     'irot.idl',
+    '../../include/ctxtcall.idl',
+    '../../include/inspectable.idl',
 )
 
 idl_h = gen_idl_h.process([idl0, idl1, idl2], extra_args : extra_args)

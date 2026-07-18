@@ -1,5 +1,9 @@
 idl0 = files(
     'dcom.idl',
+    '../../include/ctxtcall.idl',
+    '../../include/activation.idl',
+    '../../include/inspectable.idl',
+    '../../include/hstring.idl',
 )
 
 idl1 = files(

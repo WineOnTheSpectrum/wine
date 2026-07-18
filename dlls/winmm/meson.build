@@ -24,6 +24,7 @@ extra_args = [
 idls = files(
     '../../include/audioclient.idl',
     '../../include/audiopolicy.idl',
+    '../../include/mmdeviceapi.idl',
 )
 
 idl_h = gen_idl_h.process(idls, extra_args : extra_args)

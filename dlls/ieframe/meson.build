@@ -45,6 +45,7 @@ idl0 = files(
     '../../include/ieautomation.idl',
     '../../include/urlhist.idl',
     '../../include/perhist.idl',
+    '../../include/dispex.idl',
 )
 
 idls = files(

@@ -56,6 +56,8 @@ res = gen_rc_res.process(rc, extra_args : extra_args)
 idl0 = files(
     '../../include/wincodec.idl',
     '../../include/wincodecsdk.idl',
+    '../../include/dxgiformat.idl',
+    '../../include/dcommon.idl',
 )
 
 idls = files(

@@ -49,7 +49,8 @@ extra_flags_lib_32 = [
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-gdwarf-4', '-mabi=ms',
 ]
 
-extra_flags_unix_lib_64 = [
+extra_flags_unix_64 = [
+   '-D__WINESRC__',
 #  '-Wall',
 #  '-pipe',
 #  '-fcf-protection=none',
@@ -72,7 +73,7 @@ extra_flags_unix_lib_64 = [
 #  '-fasynchronous-unwind-tables',
 #  '-fshort-wchar',
 #  '-Wno-format',
-  '-fno-builtin', '-fvisibility=hidden', '-gdwarf-4', '-mabi=ms',
+  '-fvisibility=hidden', '-gdwarf-4', #'-fno-builtin', '-mabi=ms',
 ]
 
 extra_flags_wine_64 = [
@@ -101,7 +102,6 @@ extra_flags_lib_64 = [
   '-fno-builtin', '-ffunction-sections', '-fvisibility=hidden', '-mcx16', '-mcmodel=small', '-gdwarf-4',
 ]
 
-extra_flags_unix_64 = extra_flags_wine_32 + extra_flags_unix_lib_64
 extra_flags_64_32 = extra_flags_wine_64 + extra_flags_lib_32
 extra_flags_32 = extra_flags_wine_32 + extra_flags_lib_32
 extra_flags_64 = extra_flags_wine_64 + extra_flags_lib_64

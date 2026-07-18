@@ -20,6 +20,8 @@ idls = files(
     'oleaut32_oaidl.idl',
     'oleaut32_ocidl.idl',
     '../../include/wincodec.idl',
+    '../../include/dxgiformat.idl',
+    '../../include/dcommon.idl',
 )
 
 idl_c = gen_idl_c.process(idls, extra_args : extra_args + extra_dll_args)

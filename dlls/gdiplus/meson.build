@@ -29,6 +29,8 @@ idls = files(
     '../../include/mlang.idl',
     '../../include/wincodec.idl',
     '../../include/wincodecsdk.idl',
+    '../../include/dxgiformat.idl',
+    '../../include/dcommon.idl',
 )
 
 idl_h = gen_idl_h.process(idls, extra_args : extra_args)

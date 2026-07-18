@@ -1,21 +1,22 @@
 src = files(
-    'userenv_main.c',
+    'compstui_main.c',
+)
+
+rc = files(
+    'compstui.rc'
 )
 
 extra_args = [
     '-I../include/msvcrt',
     '-D_UCRT',
-    '-D_USERENV_',
+    '-D__WINESRC__',
 ]
 
-idls = files(
-    '../../include/wbemcli.idl',
-)
-
-idl_h = gen_idl_h.process(idls, extra_args : extra_args)
+res = gen_rc_res.process(rc, extra_args : extra_args)
 
 deps = [
-    'advapi32',
+    'comctl32',
+    'user32',
     'winecrt0',
     'ucrtbase',
     'kernel32',
@@ -23,10 +24,10 @@ deps = [
 ]
 
 dlls += {
-    'userenv' : {
+    'compstui' : {
         'idl_c' : [],
-        'idl_h' : idl_h,
-        'res' : [],
+        'idl_h' : [],
+        'res' : res,
         'extra_args' : extra_args,
         'src' : src,
         'obj' : [],

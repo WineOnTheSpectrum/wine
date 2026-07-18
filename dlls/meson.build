@@ -4,7 +4,6 @@ subdir('ntdll')
 subdir('kernelbase')
 subdir('kernel32')
 subdir('win32u')
-subdir('winspool.drv')
 
 # Populate lists of files for dlls that depend on other dlls
 dlls = {}
@@ -79,6 +78,10 @@ subdir('hal')
 subdir('newdev')
 subdir('mswsock')
 subdir('wsock32')
+subdir('compstui')
+
+subdir('winspool.drv')
+subdir('winewayland.drv')
 
 #subdir('msvcrtd')
 
@@ -103,10 +106,16 @@ custom_target('dlls_symlink',
 # Build all 64 bit libraries
 foreach dllname, contents : dlls
 
+    if 'drv' in contents
+        spec = files('@0@.drv/@0@.drv.spec'.format(dllname))
+    else
+        spec = files('@0@/@0@.spec'.format(dllname))
+    endif
+
     set_variable('@0@_af_64'.format(dllname), static_library('@0@_af_64'.format(dllname),
         [headers] + contents['idl_h'] + contents['idl_c'] + contents['src'],
         include_directories : [incdir, '.'],
-        c_args : contents['extra_args'] + extra_flags_64,
+        c_args : contents['extra_args'] + extra_flags_64 + ['-nostdinc'],
         native : false,
         pic : true,
         build_by_default : meson.is_cross_build(),
@@ -115,9 +124,26 @@ foreach dllname, contents : dlls
     set_variable('@0@_o_64'.format(dllname),
         get_variable('@0@_af_64'.format(dllname)).extract_all_objects(recursive : true)
     )
-    
+
+    set_variable('@0@_w_64'.format(dllname), custom_target('@0@_w_64'.format(dllname),
+        input : spec + contents['obj'],
+        output : 'lib@0@_w_64.a'.format(dllname),
+        command : [
+          winebuild_bin,
+          '-w', '--implib', '-o', '@OUTPUT@',
+          '-m64',
+          '--export',
+          '@INPUT@',
+        ],
+        depends : [
+            winebuild_bin,
+            get_variable('@0@_af_64'.format(dllname)),
+        ],
+        build_by_default : meson.is_cross_build(),
+    ))
+
     set_variable('@0@_64'.format(dllname), custom_target('@0@_64'.format(dllname),
-        input : ['@0@/@0@.spec'.format(dllname)] + contents['obj'],
+        input : spec + contents['obj'],
         output : 'lib@0@_64.a'.format(dllname),
         command : [
             winebuild_bin,
@@ -129,10 +155,42 @@ foreach dllname, contents : dlls
         ],
         depends : [
             winebuild_bin,
-            get_variable('@0@_af_64'.format(dllname)),
+            get_variable('@0@_w_64'.format(dllname)),
         ],
         build_by_default : meson.is_cross_build(),
     ))
+
+    if 'so' in contents
+
+        so_link_64 = []
+        foreach dep : contents['so']['link']
+            so_link_64 += get_variable('@0@_64'.format(dep))
+        endforeach
+
+        set_variable('@0@_u_af_64'.format(dllname), static_library('@0@_u_64'.format(dllname),
+            [headers] + contents['so']['src'],
+            include_directories : [config_h_inc, incdir, '.'],
+            c_args : ['-DWINE_UNIX_LIB', '-Idlls/@0@/@0@_u_64.a.p'.format(dllname)] + extra_flags_unix_64,
+            native : true,
+            pic : true,
+            build_by_default : true,
+        ))
+
+        set_variable('@0@_u_o_64'.format(dllname),
+            get_variable('@0@_u_af_64'.format(dllname)).extract_all_objects(recursive : true)
+        )
+
+        set_variable('@0@_so_64'.format(dllname), shared_library(dllname, [],
+            name_prefix : '',
+            objects : get_variable('@0@_u_o_64'.format(dllname)),
+            c_args : ['-Wl,-Bsymbolic', '-Wl,-z,defs'],
+            dependencies : contents['so']['deps'],
+            link_with : so_link_64,
+            native : true,
+            build_by_default : true,
+        ))
+
+    endif
 
 endforeach
 
@@ -144,28 +202,75 @@ foreach dllname, contents : dlls
         deps_64 += get_variable('@0@_64'.format(dep))
     endforeach
 
-    custom_target('@0@_64.dll'.format(dllname),
-        output : '@0@.dll'.format(dllname),
-        input : [
-            '@0@/@0@.spec'.format(dllname), get_variable('@0@_o_64'.format(dllname)),
-        ] + contents['res'] + deps_64,
-        command : [
-            winegcc_bin,
-            '-I../dlls/@0@'.format(dllname),
-            '-o', '@OUTPUT@',
-            '--wine-objdir', '.',
-            '-b', 'x86_64-w64-mingw32',
-            '-Wl,--wine-builtin',
-            '-Wb,--dll-name,@0@'.format(dllname),
-            '-shared',
-            '@INPUT@',
-        ],
-        depends : [
-            winegcc_bin,
-            get_variable('@0@_64'.format(dllname)),
-        ],
-        build_by_default : meson.is_cross_build(),
-    )
+    if 'drv' in contents
+
+        spec = files('@0@.drv/@0@.drv.spec'.format(dllname))
+
+        set_variable('@0@_64_drv'.format(dllname), custom_target('@0@_64.drv'.format(dllname),
+            output : '@0@_64.drv'.format(dllname),
+            input : [
+                spec, get_variable('@0@_o_64'.format(dllname)),
+            ] + contents['res'] + deps_64,
+            command : [
+                winegcc_bin,
+                '-I../dlls/@0@'.format(dllname),
+                '-o', '@OUTPUT@',
+                '--wine-objdir', '.',
+                '-b', 'x86_64-w64-mingw32',
+                '-Wl,--wine-builtin',
+                '-nodefaultlibs',
+                '-shared',
+                '@INPUT@',
+            ],
+            depends : [
+                winegcc_bin,
+                get_variable('@0@_64'.format(dllname)),
+            ],
+            build_by_default : meson.is_cross_build(),
+        ))
+
+        custom_target('@0@_64_drv_symlink'.format(dllname),
+            output : '@0@_64_drv_symlink'.format(dllname),
+            input : [],
+            command : [
+                sh,
+                '-c',
+                'mkdir -p dlls/@0@.drv && cd dlls/@0@.drv && ln -sf ../@0@_64.drv @0@.drv && cd ../..'.format(dllname),
+            ],
+            depends : [
+                get_variable('@0@_64_drv'.format(dllname)),
+            ],
+            build_by_default : meson.is_cross_build(),
+        )
+
+    else
+
+        spec = files('@0@/@0@.spec'.format(dllname))
+
+        custom_target('@0@_64.dll'.format(dllname),
+            output : '@0@.dll'.format(dllname),
+            input : [
+                spec, get_variable('@0@_o_64'.format(dllname)),
+            ] + contents['res'] + deps_64,
+            command : [
+                winegcc_bin,
+                '-I../dlls/@0@'.format(dllname),
+                '-o', '@OUTPUT@',
+                '--wine-objdir', '.',
+                '-b', 'x86_64-w64-mingw32',
+                '-Wl,--wine-builtin',
+                '-nodefaultlibs',
+                '-shared',
+                '@INPUT@',
+            ],
+            depends : [
+                winegcc_bin,
+                get_variable('@0@_64'.format(dllname)),
+            ],
+            build_by_default : meson.is_cross_build(),
+        )
+
+    endif
 
     # Only copy manifests that exist
     if 'manifest' in contents
@@ -274,6 +379,7 @@ endforeach
 #            '-Wl,--wine-builtin',
 #            '-Wb,--dll-name,@0@'.format(dllname),
 #            '-m16',
+#            '-nodefaultlibs',
 #            '-shared',
 #            '@INPUT@',
 #        ],
@@ -285,5 +391,3 @@ endforeach
 #    )
 #
 #endforeach
-
-subdir('winewayland.drv')
