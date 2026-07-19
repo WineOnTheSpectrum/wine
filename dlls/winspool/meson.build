@@ -41,6 +41,7 @@ dlls += {
         'deps' : deps,
         'so' : {
             'src' : u_src,
+            'extra_args' : [],
             'deps' : [cups, libdl],
             'link' : ['ntdll_so'],
         },

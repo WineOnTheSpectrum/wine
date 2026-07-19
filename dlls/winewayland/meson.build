@@ -59,6 +59,7 @@ dlls += {
         ],
         'so' : {
             'src' : [wayland_h, wayland_c, u_src],
+            'extra_args' : [],
             'deps' : [
                 waylandclient,
                 waylandegl,

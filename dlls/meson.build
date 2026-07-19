@@ -170,7 +170,10 @@ foreach dllname, contents : dlls
         set_variable('@0@_u_af_64'.format(dllname), static_library('@0@_u_64'.format(dllname),
             [headers] + contents['so']['src'],
             include_directories : [config_h_inc, incdir, '.'],
-            c_args : ['-DWINE_UNIX_LIB', '-Idlls/@0@/@0@_u_64.a.p'.format(dllname)] + extra_flags_unix_64,
+            c_args : [
+                '-DWINE_UNIX_LIB',
+                '-Idlls/@0@/@0@_u_64.a.p'.format(dllname)
+            ] + contents['so']['extra_args'] + extra_flags_unix_64,
             native : true,
             pic : true,
             build_by_default : true,
