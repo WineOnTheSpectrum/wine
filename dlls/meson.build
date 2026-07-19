@@ -3,7 +3,6 @@ subdir('winecrt0')
 subdir('ntdll')
 subdir('kernelbase')
 subdir('kernel32')
-subdir('win32u')
 
 # Populate lists of files for dlls that depend on other dlls
 dlls = {}
@@ -14,6 +13,7 @@ subdir('apisetschema')
 subdir('tzres')
 
 # regular dlls
+subdir('win32u')
 subdir('user32')
 subdir('advapi32')
 subdir('ucrtbase')
