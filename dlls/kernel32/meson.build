@@ -5,12 +5,16 @@ rc = files(
     'version.rc',
 )
 
-rc_extra_flags = [
+extra_flags_msvc = [
     '-I../include/msvcrt',
-    '-D_MSVCR_VER=0', '-D_KERNEL32_', '-D_NORMALIZE_',
+    '-D_MSVCR_VER=0',
 ]
 
-version_res = gen_rc_res.process(rc, extra_args : rc_extra_args)
+extra_flags = [
+    '-D_KERNEL32_', '-D_NORMALIZE_',
+]
+
+res = gen_rc_res.process(rc, extra_args : extra_flags_msvc + extra_flags)
 
 src = files(
     'atom.c',
@@ -38,64 +42,18 @@ src = files(
     'volume.c',
 )
 
-kernel32_af_64 = static_library('kernel32_af_64', [headers, src],
-    include_directories : [
-        incdir, '.',
-    ],
-    c_args : extra_flags_64 + rc_extra_flags,
-    native : false,
-    build_by_default : meson.is_cross_build(),
-)
-
-kernel32_o_64 = kernel32_af_64.extract_all_objects(recursive : true)
-
-kernel32_64 = custom_target('kernel32_64',
-    input : 'kernel32.spec',
-    output : 'libkernel32_64.a',
-    command : [
-      winebuild_bin,
-      '-w', '--implib', '-o', '@OUTPUT@',
-      '--without-dlltool',
-      '-b', 'x86_64-w64-mingw32',
-      '--export',
-      '@INPUT@',
-    ],
-    depends : [
-        winebuild_bin,
-        kernel32_af_64,
-    ],
-    build_by_default : meson.is_cross_build(),
-)
-
-custom_target('kernel32_64.dll',
-    output : 'kernel32.dll',
-    input : [
-        'kernel32.spec', kernel32_o_64, version_res,
-        kernelbase_64, ntdll_64, winecrt0_64,
-    ],
-    command : [
-        winegcc_bin,
-	'-o', '@OUTPUT@',
-	'--wine-objdir', '.',
-	'-b', 'x86_64-w64-mingw32',
-	'-Wl,--wine-builtin',
-	'-shared',
-	'-nodefaultlibs',
-	'-Wb,-F,KERNEL32.dll',
-	'-Wl,--image-base,0x178000000',
-	'@INPUT@'
-    ],
-    depends : winegcc_bin,
-    build_by_default : meson.is_cross_build(),
-)
-
-custom_target('kernel32_64_symlink',
-    input : [],
-    output : 'x86_64-windows',
-    command : [
-      sh,
-      '-c',
-      'cd dlls/kernel32 && ln -sf . x86_64-windows && cd ../..',
-    ],
-    build_by_default : meson.is_cross_build(),
-)
+dlls += {
+    'kernel32' : {
+        'src' : src,
+        'res' : res,
+        'extra_args' : extra_flags_msvc + extra_flags,
+        'obj' : [],
+        'idl_h' : [],
+        'idl_c' : [],
+        'deps' : [
+            'kernelbase',
+            'ntdll',
+            'winecrt0',
+        ],
+    }
+}

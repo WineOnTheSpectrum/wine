@@ -1,15 +1,11 @@
-#EXTRADEFS = -D_NTSYSTEM_ -D_ACRTIMP= -DWINBASEAPI=
-#MODULE    = ntdll.dll
-#UNIXLIB   = ntdll.so
-#IMPORTLIB = ntdll
-#IMPORTS   = $(TOMCRYPT_PE_LIBS) $(MUSL_PE_LIBS)
-#EXTRAINCL = $(TOMCRYPT_PE_CFLAGS)
-#UNIX_CFLAGS  = $(UNWIND_CFLAGS)
-#UNIX_LIBS    = $(IOKIT_LIBS) $(COREFOUNDATION_LIBS) $(CORESERVICES_LIBS) $(RT_LIBS) $(PTHREAD_LIBS) $(UNWIND_LIBS) $(I386_LIBS) $(PROCSTAT_LIBS)
-#
-#EXTRADLLFLAGS = -nodefaultlibs
 #i386_EXTRADLLFLAGS = -Wl,--image-base,0x7bc00000
 #x86_64_EXTRADLLFLAGS = -Wl,--image-base,0x170000000
+
+#unix_loader_EXTRADEFS =',
+#	-DBINDIR=\"${bindir}\"',
+#	-DLIBDIR=\"${libdir}\"',
+#	-DDATADIR=\"${datadir}\"',
+#	-DSYSTEMDLLPATH=\"${system_dllpath}\"
 
 rc = files(
     'version.rc',
@@ -22,6 +18,7 @@ extra_msvc = [
 ]
 
 extra_args = [
+    '-I../dlls/ntdll',
     '-DLTC_NO_PROTOTYPES', '-DLTC_SOURCE', '-D_NTSYSTEM_', '-D_ACRTIMP=', '-DWINBASEAPI=',
     '-D__WINESRC__',
 ]
@@ -93,89 +90,28 @@ unix_src = files(
     'unix/version.c', # FIXME generate from version string
 )
 
-ntdll_so_64 = shared_library('ntdll', [unix_src],
-    name_prefix : '',
-    include_directories : [
-        config_h_inc,
-	incdir,
-    ],
-    c_args : extra_args + extra_flags_lib_64 + [
-        '-DWINE_UNIX_LIB',
-        '-static-libgcc',
-    ] + datadir_define + dllpath_define,
-    native : true,
-    dependencies : [libdl, pthread, unwind],
-    build_by_default : true,
-)
-
-ntdll_w_af_64 = static_library('ntdll_artefacts_64', [w_src],
-    include_directories : [
-	incdir,
-        '../../include/msvcrt',
-        '../../libs/tomcrypt/src/headers',
-    ],
-    c_args : extra_msvc + extra_args + extra_flags_64,
-    native : false,
-    pic : true,
-    build_by_default : meson.is_cross_build(),
-)
-ntdll_w_o_64 = ntdll_w_af_64.extract_all_objects(recursive : true)
-
-ntdll_64 = custom_target('ntdll_64',
-    input : 'ntdll.spec',
-    output : 'libntdll_64.a',
-    command : [
-      winebuild_bin,
-      '-w', '--implib', '-o', '@OUTPUT@',
-      '--without-dlltool',
-      '-b', 'x86_64-w64-mingw32',
-      '--export',
-      '@INPUT@',
-    ],
-    depends : [
-        winebuild_bin,
-        ntdll_w_af_64,
-    ],
-    build_by_default : meson.is_cross_build(),
-)
-
-custom_target('ntdll_64.dll',
-    output : 'ntdll.dll',
-    input : [
-        'ntdll.spec', ntdll_w_o_64, version_res,
-        tomcrypt_64, musl_64, winecrt0_64,
-    ],
-    command : [
-        winegcc_bin,
-	'-o', '@OUTPUT@',
-	'--wine-objdir', '.',
-	'-b', 'x86_64-w64-mingw32',
-	'-Wl,--wine-builtin',
-	'-shared',
-        '-nodefaultlibs',
-        '-Wl,--image-base,0x170000000',
-	'@INPUT@'
-    ] + extra_dll_flags_64,
-    depends : [
-        winegcc_bin,
-        ntdll_64,
-    ],
-    build_by_default : meson.is_cross_build(),
-)
-
-custom_target('ntdll_64_symlink',
-  input : [],
-    output : 'x86_64-windows',
-    command : [
-      sh,
-      '-c',
-      'cd dlls/ntdll && ln -sf . x86_64-windows && cd ../..',
-    ],
-    build_by_default : meson.is_cross_build(),
-)
-
-#unix_loader_EXTRADEFS =',
-#	-DBINDIR=\"${bindir}\"',
-#	-DLIBDIR=\"${libdir}\"',
-#	-DDATADIR=\"${datadir}\"',
-#	-DSYSTEMDLLPATH=\"${system_dllpath}\"
+dlls += {
+    'ntdll' : {
+        'src': w_src,
+        'extra_args' : extra_msvc + extra_args,
+        'idl_h' : [],
+        'idl_c' : [],
+        'obj' : [],
+        'res' : version_res,
+        'deps' : [
+            'tomcrypt',
+            'musl',
+            'winecrt0',
+        ],
+        'so' : {
+            'src' : unix_src,
+            'extra_args' : datadir_define + dllpath_define + extra_args + ['-static-libgcc'],
+            'deps' : [
+                libdl,
+                pthread,
+                unwind,
+            ],
+            'link' : [],
+        },
+    }
+}

@@ -2,10 +2,6 @@ u_src = files(
     'schannel_gnutls.c',
 )
 
-u_extra_args = [
-    '-DWINE_UNIX_LIB', '-D__WINESRC__',
-]
-
 w_src = files(
     'lsa.c',
     'negotiate.c',
@@ -30,19 +26,6 @@ deps = [
     'ntdll',
 ]
 
-secur32_so_64 = shared_library('secur32', [u_src],
-    name_prefix : '',
-    include_directories : [
-        config_h_inc,
-	incdir,
-    ],
-    c_args : u_extra_args,
-    dependencies : [gnutls, libdl],
-    link_with : [ntdll_so_64],
-    native : true,
-    build_by_default : not meson.is_cross_build(),
-)
-
 dlls += {
     'secur32' : {
         'idl_c' : [],
@@ -52,5 +35,16 @@ dlls += {
         'src' : w_src,
         'obj' : [],
         'deps': deps,
+        'so' : {
+            'src' : u_src,
+            'extra_args' : [],
+            'link' : [
+                'ntdll_so',
+            ],
+            'deps' : [
+                gnutls,
+                libdl,
+            ],
+        },
     }
 }

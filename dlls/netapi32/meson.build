@@ -37,21 +37,6 @@ deps = [
     'ntdll',
 ]
 
-netapi32_so_64 = shared_library('netapi32', [src_u],
-    name_prefix : '',
-    include_directories : [
-        config_h_inc,
-	incdir,
-    ],
-    c_args : [
-        '-DWINE_UNIX_LIB', '-D__WINESRC__',
-    ] + datadir_define + dllpath_define,
-    native : true,
-    link_with : [ntdll_so_64],
-    dependencies : [libdl, pthread],
-    build_by_default : not meson.is_cross_build(),
-)
-
 netapi32_w_af2_64 = static_library('netapi32_w_af2_64', [headers, src_w, idl_h, idl_c],
     include_directories : [incdir, '.'],
     c_args : extra_flags_64 + extra_args,
@@ -70,5 +55,16 @@ dlls += {
         'src' : src_w,
         'obj' : netapi32_w_o2_64,
         'deps' : deps,
+        'so' : {
+            'src' : src_u,
+            'extra_args' : [],
+            'link' : [
+                'ntdll_so',
+            ],
+            'deps' : [
+                libdl,
+                pthread,
+            ],
+        },
     }
 }

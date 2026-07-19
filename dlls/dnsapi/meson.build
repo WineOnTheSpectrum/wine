@@ -29,21 +29,6 @@ deps = [
     'netapi32', # delay?
 ]
 
-dnsapi_so_64 = shared_library('dnsapi', [src_u],
-    name_prefix : '',
-    include_directories : [
-        config_h_inc,
-	incdir,
-    ],
-    c_args : [
-        '-DWINE_UNIX_LIB', '-D__WINESRC__',
-    ] + datadir_define + dllpath_define,
-    native : true,
-    link_with : [ntdll_so_64],
-    dependencies : [libdl, pthread],
-    build_by_default : not meson.is_cross_build(),
-)
-
 dlls += {
     'dnsapi' : {
         'idl_c' : [],
@@ -53,5 +38,16 @@ dlls += {
         'src' : src_w,
         'obj' : [],
         'deps' : deps,
+        'so' : {
+            'src' : src_u,
+            'extra_args' : [],
+            'link' : [
+                'ntdll_so',
+            ],
+            'deps': [
+                libdl,
+                pthread,
+            ],
+        },
     }
 }

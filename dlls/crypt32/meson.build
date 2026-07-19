@@ -47,19 +47,6 @@ w_src = files(
     'str.c',
 )
 
-crypt32_so_64 = shared_library('crypt32', [u_src],
-    name_prefix : '',
-    include_directories : [
-        config_h_inc,
-	incdir,
-    ],
-    c_args : u_extra_args,
-    dependencies : [libdl],
-    link_with : [bcrypt_so_64, ntdll_so_64],
-    native : true,
-    build_by_default : not meson.is_cross_build(),
-)
-
 deps = [
     'user32',
     'advapi32',
@@ -80,5 +67,14 @@ dlls += {
         'src' : w_src,
         'obj' : [],
         'deps': deps,
+        'so' : {
+            'src' : u_src,
+            'extra_args' : u_extra_args,
+            'deps' : [libdl],
+            'link' : [
+                'bcrypt_so',
+                'ntdll_so',
+            ],
+        },
     }
 }

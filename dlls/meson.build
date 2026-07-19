@@ -1,11 +1,11 @@
-# Build core dlls completely in one go
-subdir('winecrt0')
-subdir('ntdll')
-subdir('kernelbase')
-subdir('kernel32')
-
 # Populate lists of files for dlls that depend on other dlls
 dlls = {}
+
+# core dlls
+subdir('ntdll')
+subdir('winecrt0')
+subdir('kernelbase')
+subdir('kernel32')
 
 # data only dlls
 subdir('stdole2.tlb')
@@ -223,6 +223,7 @@ foreach dllname, contents : dlls
                 '-Wl,--wine-builtin',
                 '-Wb,--dll-name,@0@.drv'.format(dllname),
                 '-nodefaultlibs',
+                '-nostartfiles',
                 '-shared',
                 '@INPUT@',
             ],
@@ -251,6 +252,7 @@ foreach dllname, contents : dlls
                 '-Wl,--wine-builtin',
                 '-Wb,--dll-name,@0@.dll'.format(dllname),
                 '-nodefaultlibs',
+                '-nostartfiles',
                 '-shared',
                 '@INPUT@',
             ],
