@@ -246,6 +246,7 @@ foreach dllname, contents : dlls
                 '--wine-objdir', '.',
                 '-b', 'x86_64-w64-mingw32',
                 '-Wl,--wine-builtin',
+                '-Wb,--dll-name,@0@.dll'.format(dllname),
                 '-nodefaultlibs',
                 '-shared',
                 '@INPUT@',
