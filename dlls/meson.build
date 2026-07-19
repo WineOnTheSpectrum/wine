@@ -80,8 +80,8 @@ subdir('mswsock')
 subdir('wsock32')
 subdir('compstui')
 
-subdir('winspool.drv')
-subdir('winewayland.drv')
+subdir('winspool')
+subdir('winewayland')
 
 #subdir('msvcrtd')
 
@@ -107,7 +107,7 @@ custom_target('dlls_symlink',
 foreach dllname, contents : dlls
 
     if 'drv' in contents
-        spec = files('@0@.drv/@0@.drv.spec'.format(dllname))
+        spec = files('@0@/@0@.drv.spec'.format(dllname))
     else
         spec = files('@0@/@0@.spec'.format(dllname))
     endif
@@ -204,10 +204,10 @@ foreach dllname, contents : dlls
 
     if 'drv' in contents
 
-        spec = files('@0@.drv/@0@.drv.spec'.format(dllname))
+        spec = files('@0@/@0@.drv.spec'.format(dllname))
 
-        set_variable('@0@_64_drv'.format(dllname), custom_target('@0@_64.drv'.format(dllname),
-            output : '@0@_64.drv'.format(dllname),
+        set_variable('@0@_64_drv'.format(dllname), custom_target('@0@.drv'.format(dllname),
+            output : '@0@.drv'.format(dllname),
             input : [
                 spec, get_variable('@0@_o_64'.format(dllname)),
             ] + contents['res'] + deps_64,
@@ -218,6 +218,7 @@ foreach dllname, contents : dlls
                 '--wine-objdir', '.',
                 '-b', 'x86_64-w64-mingw32',
                 '-Wl,--wine-builtin',
+                '-Wb,--dll-name,@0@.drv'.format(dllname),
                 '-nodefaultlibs',
                 '-shared',
                 '@INPUT@',
@@ -228,20 +229,6 @@ foreach dllname, contents : dlls
             ],
             build_by_default : meson.is_cross_build(),
         ))
-
-        custom_target('@0@_64_drv_symlink'.format(dllname),
-            output : '@0@_64_drv_symlink'.format(dllname),
-            input : [],
-            command : [
-                sh,
-                '-c',
-                'mkdir -p dlls && cd dlls && ln -sf @0@_64.drv @0@.drv && touch @0@_64_drv_symlink && cd ..'.format(dllname),
-            ],
-            depends : [
-                get_variable('@0@_64_drv'.format(dllname)),
-            ],
-            build_by_default : meson.is_cross_build(),
-        )
 
     else
 
