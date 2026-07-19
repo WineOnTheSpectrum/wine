@@ -1,14 +1,14 @@
 project('wine', 'c')
 
 #add_global_arguments('-DWINE_NO_INLINE_STRING', language : 'c', native : true)
-add_global_arguments('-DINCLUDEDIR="\"/usr/local/include\""', language : 'c', native : true)
-add_global_arguments('-DBINDIR="\"/usr/local/bin\""', language : 'c', native : true)
-add_global_arguments('-DLIBDIR="\"/usr/local/lib\""', language : 'c', native : true)
+add_global_arguments('-DINCLUDEDIR="/usr/local/include"', language : 'c', native : true)
+add_global_arguments('-DBINDIR="/usr/local/bin"', language : 'c', native : true)
+add_global_arguments('-DLIBDIR="/usr/local/lib"', language : 'c', native : true)
 
 #add_global_arguments('-DWINE_NO_INLINE_STRING', language : 'c', native : false)
-add_global_arguments('-DINCLUDEDIR="\"/usr/local/include\""', language : 'c', native : false)
-add_global_arguments('-DBINDIR="\"/usr/local/bin\""', language : 'c', native : false)
-add_global_arguments('-DLIBDIR="\"/usr/local/lib\""', language : 'c', native : false)
+add_global_arguments('-DINCLUDEDIR="/usr/local/include"', language : 'c', native : false)
+add_global_arguments('-DBINDIR="/usr/local/bin"', language : 'c', native : false)
+add_global_arguments('-DLIBDIR="/usr/local/lib"', language : 'c', native : false)
 
 datadir_define = [
     '-DDATADIR="/usr/local/share"',
